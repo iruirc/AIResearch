@@ -30,12 +30,14 @@ dependencies {
 
     // Content Negotiation для JSON
     implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // HTTP Client для запросов к Claude API
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.client.logging)
 
     // CORS support
     implementation(libs.ktor.server.cors)

@@ -43,3 +43,15 @@ data class ClaudeUsage(
     @SerialName("output_tokens")
     val outputTokens: Int
 )
+
+@Serializable
+data class ClaudeError(
+    val type: String,
+    val error: ClaudeErrorDetails
+)
+
+@Serializable
+data class ClaudeErrorDetails(
+    val type: String,
+    val message: String
+)

@@ -4,9 +4,23 @@
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
-    <logger name="org.eclipse.jetty" level="INFO"/>
-    <logger name="io.netty" level="INFO"/>
+
+    <!-- Ktor Server -->
+    <logger name="io.ktor.server" level="INFO"/>
+    <logger name="io.ktor.application" level="INFO"/>
+
+    <!-- Ktor Client (HTTP запросы к Claude API) -->
+    <logger name="io.ktor.client" level="INFO"/>
+
+    <!-- Наш сервис -->
+    <logger name="com.example.services.ClaudeService" level="INFO"/>
+    <logger name="com.example" level="INFO"/>
+
+    <!-- Внешние библиотеки (менее важные логи) -->
+    <logger name="org.eclipse.jetty" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
 </configuration>

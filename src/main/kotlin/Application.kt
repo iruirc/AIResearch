@@ -4,9 +4,12 @@ import com.example.config.getClaudeConfig
 import com.example.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.request.*
 import kotlinx.serialization.json.Json
+import org.slf4j.event.Level
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
@@ -23,6 +26,16 @@ fun Application.module() {
     }
 
     // Установка плагинов
+    install(CallLogging) {
+        level = Level.INFO
+        format { call ->
+            val status = call.response.status()
+            val httpMethod = call.request.httpMethod.value
+            val uri = call.request.uri
+            "$httpMethod $uri - $status"
+        }
+    }
+
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
