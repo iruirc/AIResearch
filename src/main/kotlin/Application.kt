@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.config.DotenvLoader
 import com.example.config.getClaudeConfig
 import com.example.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
@@ -12,6 +13,9 @@ import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
 fun main(args: Array<String>) {
+    // Загружаем переменные окружения из .env файла (если существует)
+    DotenvLoader.load()
+
     io.ktor.server.netty.EngineMain.main(args)
 }
 
