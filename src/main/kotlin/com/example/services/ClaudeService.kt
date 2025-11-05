@@ -65,27 +65,39 @@ class ClaudeService(private val config: ClaudeConfig) {
      * Enhances user message with JSON formatting instructions
      */
     private fun enhanceMessageForJson(userMessage: String, format_template: String): String {
-        return """Ответь ТОЛЬКО в формате JSON, без дополнительного текста.
+        return """Запрос пользователя: $userMessage
 
-Требуемый формат ответа:
+CRITICAL: Respond ONLY with raw JSON. Your response must start with { and end with }
+
+Required JSON format:
 $format_template
 
-Запрос пользователя: $userMessage
+STRICT RULES:
+- NO markdown code blocks (NO ```json or ```)
+- NO explanatory text before or after JSON
+- NO additional formatting
+- Start immediately with {
+- End immediately with }
+- Use only the specified keys
 
-ВАЖНО:
-- Ответ должен быть валидным JSON
-- Не добавляй никакого текста до и после JSON
-- Используй только указанные ключи
-- Не добавляй лидирующие и финальные символы ``` Если они есть - удали их
-
-ПРИМЕР ВАЛИДНОГО ОТВЕТА:
+CORRECT example (your response should look EXACTLY like this):
 {
   "title": "Расположение Древнего Рима",
   "source_request": "Где находится Древний Рим",
   "answer": "Древний Рим находился на территории современной Италии, в центральной части Апеннинского полуострова"
 }
 
-"""
+WRONG examples (DO NOT do this):
+```json
+{...}
+```
+
+or
+
+Here is the JSON:
+{...}
+
+Your response must be pure JSON only."""
     }
 
     /**
