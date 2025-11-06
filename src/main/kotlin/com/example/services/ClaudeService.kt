@@ -12,6 +12,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import org.slf4j.LoggerFactory
 
 class ClaudeService(private val config: ClaudeConfig) {
@@ -54,7 +55,13 @@ class ClaudeService(private val config: ClaudeConfig) {
      * Processes JSON response
      */
     private fun processJsonResponse(responseText: String): String {
-        return cleanJsonResponse(responseText)
+        val cleaned = cleanJsonResponse(responseText)
+        return try {
+            val jsonElement = Json.parseToJsonElement(cleaned)
+            Json { prettyPrint = true }.encodeToString(JsonElement.serializer(), jsonElement)
+        } catch (e: Exception) {
+            "Некорректный JSON"
+        }
     }
 
     /**
