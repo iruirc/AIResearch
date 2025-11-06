@@ -44,7 +44,7 @@ class ClaudeService(private val config: ClaudeConfig) {
                 maxTokens = config.maxTokens,
                 messages = listOf(
                     ClaudeMessage(
-                        role = "user",
+                        role = MessageRole.USER,
                         content = enhancedMessage
                     )
                 ),

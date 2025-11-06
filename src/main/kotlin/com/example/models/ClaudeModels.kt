@@ -4,6 +4,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class MessageRole {
+    @SerialName("user")
+    USER,
+
+    @SerialName("assistant")
+    ASSISTANT
+}
+
+@Serializable
 data class ClaudeRequest(
     val model: String,
     @SerialName("max_tokens")
@@ -14,7 +23,7 @@ data class ClaudeRequest(
 
 @Serializable
 data class ClaudeMessage(
-    val role: String,
+    val role: MessageRole,
     val content: String
 )
 
@@ -22,7 +31,7 @@ data class ClaudeMessage(
 data class ClaudeResponse(
     val id: String,
     val type: String,
-    val role: String,
+    val role: MessageRole,
     val content: List<ClaudeContent>,
     val model: String,
     @SerialName("stop_reason")
