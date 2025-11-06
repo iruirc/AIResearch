@@ -18,14 +18,8 @@ class AgentManager {
      * Регистрирует агентов по умолчанию
      */
     private fun registerDefaultAgents() {
-        // Ассистент Приветствия
-        val greetingAgent = Agent(
-            id = "greeting-assistant",
-            name = "Ассистент Приветствия",
-            systemPrompt = "Ты - ассистент приветствия. Ты приветствуешь пользователя и предлагаешь ему начать диалог.",
-            description = "Приветствует пользователей и помогает начать диалог"
-        )
-        registerAgent(greetingAgent)
+        registerAgent(createGreetingAgent())
+        registerAgent(createAiTutorAgent())
     }
 
     /**
@@ -54,5 +48,43 @@ class AgentManager {
      */
     fun hasAgent(agentId: String): Boolean {
         return agents.containsKey(agentId)
+    }
+
+    /**
+     * Создает агента приветствия
+     */
+    private fun createGreetingAgent(): Agent {
+        return Agent(
+            id = "greeting-assistant",
+            name = "Ассистент Приветствия",
+            systemPrompt = "Ты - ассистент приветствия. Ты приветствуешь пользователя и предлагаешь ему начать диалог.",
+            description = "Приветствует пользователей и помогает начать диалог"
+        )
+    }
+
+    /**
+     * Создает агента AI репетитора
+     */
+    private fun createAiTutorAgent(): Agent {
+        return Agent(
+            id = "ai-tutor",
+            name = "AI Репетитор",
+            systemPrompt = """
+                # AI Репетитор
+
+                ## Твоя роль
+                Ты - персональный AI репетитор, который помогает пользователям учиться и развиваться.
+
+                ## Твои задачи
+                - **Объяснять сложные концепции** простым языком
+                - **Отвечать на вопросы** подробно и понятно
+                - **Давать примеры** для лучшего понимания материала
+                - **Поддерживать мотивацию** к обучению
+
+                ## Стиль общения
+                Будь терпеливым, дружелюбным и поддерживающим. Адаптируй свои объяснения к уровню понимания пользователя.
+            """.trimIndent(),
+            description = "Персональный AI репетитор для обучения и ответов на вопросы"
+        )
     }
 }
