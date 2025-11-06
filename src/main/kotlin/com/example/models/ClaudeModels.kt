@@ -18,7 +18,8 @@ data class ClaudeRequest(
     @SerialName("max_tokens")
     val maxTokens: Int,
     val messages: List<ClaudeMessage>,
-    val temperature: Double = 1.0
+    val temperature: Double = 1.0,
+    val system: String? = null // System prompt для определения поведения агента
 )
 
 @Serializable

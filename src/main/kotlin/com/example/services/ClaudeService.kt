@@ -35,7 +35,8 @@ class ClaudeService(private val config: ClaudeConfig) {
     suspend fun sendMessage(
         userMessage: String,
         format: ResponseFormat = ResponseFormat.PLAIN_TEXT,
-        messageHistory: List<ClaudeMessage> = emptyList()
+        messageHistory: List<ClaudeMessage> = emptyList(),
+        systemPrompt: String? = null
     ): String {
         return try {
             logger.info("Sending message to Claude API: $userMessage")
@@ -51,12 +52,14 @@ class ClaudeService(private val config: ClaudeConfig) {
                     content = enhancedMessage
                 ))
             }
+            logger.info("Claude Request's messages: $messages")
 
             val claudeRequest = ClaudeRequest(
                 model = config.model,
                 maxTokens = config.maxTokens,
                 messages = messages,
-                temperature = config.temperature
+                temperature = config.temperature,
+                system = systemPrompt
             )
 
             logger.info("Claude Request: model=${config.model}, maxTokens=${config.maxTokens}")

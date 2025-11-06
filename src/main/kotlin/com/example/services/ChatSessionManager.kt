@@ -15,12 +15,17 @@ class ChatSessionManager {
 
     /**
      * Создает новую сессию чата
+     * @param agentId ID агента (опционально)
      * @return ID новой сессии
      */
-    fun createSession(): String {
-        val session = ChatSession()
+    fun createSession(agentId: String? = null): String {
+        val session = ChatSession(agentId = agentId)
         sessions[session.id] = session
-        logger.info("Created new session: ${session.id}")
+        if (agentId != null) {
+            logger.info("Created new session with agent: ${session.id}, agentId=$agentId")
+        } else {
+            logger.info("Created new session: ${session.id}")
+        }
         return session.id
     }
 
@@ -120,7 +125,8 @@ class ChatSessionManager {
                 id = session.id,
                 messageCount = session.messages.size,
                 createdAt = session.createdAt,
-                lastAccessedAt = session.lastAccessedAt
+                lastAccessedAt = session.lastAccessedAt,
+                agentId = session.agentId
             )
         }
     }
@@ -133,5 +139,6 @@ data class SessionInfo(
     val id: String,
     val messageCount: Int,
     val createdAt: Long,
-    val lastAccessedAt: Long
+    val lastAccessedAt: Long,
+    val agentId: String? = null
 )

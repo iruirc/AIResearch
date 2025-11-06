@@ -10,7 +10,8 @@ data class SessionListItem(
     val id: String,
     val messageCount: Int,
     val createdAt: Long,
-    val lastAccessedAt: Long
+    val lastAccessedAt: Long,
+    val agentId: String? = null
 )
 
 /**
@@ -48,4 +49,40 @@ data class MessageItem(
 data class StatusResponse(
     val success: Boolean,
     val message: String? = null
+)
+
+/**
+ * Информация об агенте для отображения
+ */
+@Serializable
+data class AgentListItem(
+    val id: String,
+    val name: String,
+    val description: String
+)
+
+/**
+ * Список всех доступных агентов
+ */
+@Serializable
+data class AgentListResponse(
+    val agents: List<AgentListItem>
+)
+
+/**
+ * Запрос на создание сессии с агентом
+ */
+@Serializable
+data class CreateAgentSessionRequest(
+    val agentId: String
+)
+
+/**
+ * Ответ на создание сессии с агентом
+ */
+@Serializable
+data class CreateAgentSessionResponse(
+    val sessionId: String,
+    val agentName: String,
+    val initialMessage: String
 )

@@ -1,6 +1,7 @@
 package com.example.routes
 
 import com.example.models.*
+import com.example.services.AgentManager
 import com.example.services.ChatSessionManager
 import com.example.services.ClaudeService
 import io.ktor.http.*
@@ -9,7 +10,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.chatRoutes(claudeService: ClaudeService, sessionManager: ChatSessionManager) {
+fun Route.chatRoutes(claudeService: ClaudeService, sessionManager: ChatSessionManager, agentManager: AgentManager) {
     route("/chat") {
         post {
             try {
@@ -26,11 +27,17 @@ fun Route.chatRoutes(claudeService: ClaudeService, sessionManager: ChatSessionMa
                 // Получаем историю сообщений из сессии
                 val messageHistory = session.messages
 
-                // Отправляем сообщение в Claude API с историей
+                // Получаем system prompt если сессия связана с агентом
+                val systemPrompt = session.agentId?.let { agentId ->
+                    agentManager.getAgent(agentId)?.systemPrompt
+                }
+
+                // Отправляем сообщение в Claude API с историей и system prompt
                 val claudeResponse = claudeService.sendMessage(
                     userMessage = request.message,
                     format = request.format,
-                    messageHistory = messageHistory
+                    messageHistory = messageHistory,
+                    systemPrompt = systemPrompt
                 )
 
                 // Сохраняем сообщение пользователя в историю (без форматирования)
@@ -61,7 +68,8 @@ fun Route.chatRoutes(claudeService: ClaudeService, sessionManager: ChatSessionMa
                         id = id,
                         messageCount = info.messageCount,
                         createdAt = info.createdAt,
-                        lastAccessedAt = info.lastAccessedAt
+                        lastAccessedAt = info.lastAccessedAt,
+                        agentId = info.agentId
                     )
                 }.sortedByDescending { it.lastAccessedAt }
 
@@ -154,6 +162,72 @@ fun Route.chatRoutes(claudeService: ClaudeService, sessionManager: ChatSessionMa
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf("error" to "Failed to clear session: ${e.message}")
+                )
+            }
+        }
+    }
+
+    // Получить список всех доступных агентов
+    route("/agents") {
+        get {
+            try {
+                val agents = agentManager.getAllAgents()
+                val agentList = agents.map { agent ->
+                    AgentListItem(
+                        id = agent.id,
+                        name = agent.name,
+                        description = agent.description
+                    )
+                }
+                call.respond(AgentListResponse(agents = agentList))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to get agents: ${e.message}")
+                )
+            }
+        }
+
+        // Создать новую сессию с агентом
+        post("/start") {
+            try {
+                val request = call.receive<CreateAgentSessionRequest>()
+
+                val agent = agentManager.getAgent(request.agentId)
+                if (agent == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Agent not found"))
+                    return@post
+                }
+
+                // Создаем новую сессию с агентом
+                val sessionId = sessionManager.createSession(agentId = agent.id)
+                val session = sessionManager.getSession(sessionId)!!
+
+                // Отправляем пустое сообщение с system prompt для инициализации агента
+                val initialMessage = claudeService.sendMessage(
+                    userMessage = "Привет",
+                    format = ResponseFormat.PLAIN_TEXT,
+                    messageHistory = emptyList(),
+                    systemPrompt = agent.systemPrompt
+                )
+
+                // Сохраняем приветственное сообщение пользователя
+                session.addMessage(MessageRole.USER, "Привет")
+
+                // Сохраняем ответ агента
+                session.addMessage(MessageRole.ASSISTANT, initialMessage)
+
+                call.respond(
+                    CreateAgentSessionResponse(
+                        sessionId = sessionId,
+                        agentName = agent.name,
+                        initialMessage = initialMessage
+                    )
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to start agent session: ${e.message}")
                 )
             }
         }

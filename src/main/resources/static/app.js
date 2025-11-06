@@ -1,6 +1,7 @@
 // Конфигурация
 const API_URL = '/chat';
 const SESSIONS_URL = '/sessions';
+const AGENTS_URL = '/agents';
 const REQUEST_TIMEOUT = 30000; // 30 секунд
 
 // DOM элементы
@@ -13,11 +14,16 @@ const sessionsList = document.getElementById('sessionsList');
 const newChatButton = document.getElementById('newChatButton');
 const clearChatButton = document.getElementById('clearChatButton');
 const deleteSessionButton = document.getElementById('deleteSessionButton');
+const agentsButton = document.getElementById('agentsButton');
+const agentModal = document.getElementById('agentModal');
+const closeModal = document.getElementById('closeModal');
+const agentsListElement = document.getElementById('agentsList');
 
 // Состояние
 let isLoading = false;
 let currentSessionId = null; // ID текущей сессии чата
 let sessions = []; // Список всех сессий
+let agents = []; // Список всех агентов
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
@@ -51,6 +57,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки "Удалить сессию"
     if (deleteSessionButton) {
         deleteSessionButton.addEventListener('click', handleDeleteSession);
+    }
+
+    // Обработчик кнопки "Агенты"
+    if (agentsButton) {
+        agentsButton.addEventListener('click', openAgentModal);
+    }
+
+    // Обработчик закрытия модального окна
+    if (closeModal) {
+        closeModal.addEventListener('click', closeAgentModal);
+    }
+
+    // Закрытие модального окна при клике вне его
+    if (agentModal) {
+        agentModal.addEventListener('click', (e) => {
+            if (e.target === agentModal) {
+                closeAgentModal();
+            }
+        });
     }
 
     // Загружаем список сессий
@@ -456,4 +481,114 @@ function getTimeAgo(timestamp) {
     if (hours > 0) return `${hours} ч. назад`;
     if (minutes > 0) return `${minutes} мин. назад`;
     return 'только что';
+}
+
+// Открытие модального окна выбора агента
+async function openAgentModal() {
+    if (isLoading) {
+        return;
+    }
+
+    agentModal.classList.add('active');
+
+    // Загружаем список агентов
+    await loadAgents();
+}
+
+// Закрытие модального окна
+function closeAgentModal() {
+    agentModal.classList.remove('active');
+}
+
+// Загрузка списка агентов
+async function loadAgents() {
+    try {
+        agentsListElement.innerHTML = '<div class="agents-loading">Загрузка агентов...</div>';
+
+        const response = await fetch(AGENTS_URL);
+        if (!response.ok) {
+            throw new Error('Failed to load agents');
+        }
+
+        const data = await response.json();
+        agents = data.agents || [];
+
+        renderAgentsList();
+    } catch (error) {
+        console.error('Error loading agents:', error);
+        agentsListElement.innerHTML = '<div class="agents-loading">Ошибка загрузки агентов</div>';
+    }
+}
+
+// Отрисовка списка агентов
+function renderAgentsList() {
+    if (agents.length === 0) {
+        agentsListElement.innerHTML = '<div class="agents-loading">Нет доступных агентов</div>';
+        return;
+    }
+
+    agentsListElement.innerHTML = '';
+    agents.forEach(agent => {
+        const agentItem = document.createElement('div');
+        agentItem.className = 'agent-item';
+
+        agentItem.innerHTML = `
+            <div class="agent-name">${agent.name}</div>
+            <div class="agent-description">${agent.description}</div>
+        `;
+
+        agentItem.addEventListener('click', () => startAgentSession(agent.id));
+        agentsListElement.appendChild(agentItem);
+    });
+}
+
+// Создание новой сессии с агентом
+async function startAgentSession(agentId) {
+    if (isLoading) {
+        return;
+    }
+
+    try {
+        setLoading(true);
+        updateStatus('Создание сессии с агентом...');
+
+        const response = await fetch(`${AGENTS_URL}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ agentId }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to start agent session');
+        }
+
+        const data = await response.json();
+
+        // Закрываем модальное окно
+        closeAgentModal();
+
+        // Устанавливаем текущую сессию
+        currentSessionId = data.sessionId;
+
+        // Очищаем контейнер сообщений
+        messagesContainer.innerHTML = '';
+
+        // Отображаем начальное сообщение агента
+        addMessage('Привет', 'user');
+        addMessage(data.initialMessage, 'assistant');
+
+        // Обновляем список сессий
+        await loadSessions();
+
+        updateStatus('Сессия с агентом создана', 'success');
+        setTimeout(() => updateStatus(''), 2000);
+    } catch (error) {
+        console.error('Error starting agent session:', error);
+        updateStatus('Ошибка создания сессии с агентом', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    } finally {
+        setLoading(false);
+    }
 }

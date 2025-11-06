@@ -22,12 +22,20 @@
         <div class="chat-container">
             <!-- Заголовок с кнопками управления -->
             <div class="chat-header">
-                <button id="newChatButton" class="new-chat-button" title="Начать новый чат">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Новый чат
-                </button>
+                <div class="header-left">
+                    <button id="newChatButton" class="new-chat-button" title="Начать новый чат">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Новый чат
+                    </button>
+                    <button id="agentsButton" class="agents-button" title="Создать чат с агентом">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm11 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Агенты
+                    </button>
+                </div>
                 <div class="chat-actions">
                     <button id="clearChatButton" class="action-button" title="Очистить чат">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -76,6 +84,19 @@
                     </button>
                 </div>
                 <div class="status" id="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для выбора агента -->
+    <div id="agentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Выберите агента</h3>
+                <button id="closeModal" class="close-button">&times;</button>
+            </div>
+            <div id="agentsList" class="agents-list">
+                <div class="agents-loading">Загрузка агентов...</div>
             </div>
         </div>
     </div>
