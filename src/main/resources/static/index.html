@@ -7,49 +7,76 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chat-container">
-        <!-- Заголовок с кнопкой нового чата -->
-        <div class="chat-header">
-            <h1>Claude Chat</h1>
-            <button id="newChatButton" class="new-chat-button" title="Начать новый чат">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Новый чат
-            </button>
-        </div>
-
-        <!-- Область переписки (4/5 высоты) -->
-        <div class="messages-container" id="messagesContainer">
-            <div class="welcome-message">
-                <h2>👋 Добро пожаловать в чат с Claude!</h2>
-                <p>Задайте свой вопрос ниже</p>
-            </div>
-        </div>
-
-        <!-- Область ввода (1/5 высоты) -->
-        <div class="input-container">
-            <div class="format-selector">
-                <label for="formatSelect">Формат ответа:</label>
-                <select id="formatSelect" class="format-select">
-                    <option value="PLAIN_TEXT" selected>Обычный текст</option>
-                    <option value="JSON">JSON</option>
-                    <option value="XML">XML</option>
-                </select>
-            </div>
-            <div class="input-wrapper">
-                <textarea
-                    id="messageInput"
-                    placeholder="Введите ваш вопрос..."
-                    rows="3"
-                ></textarea>
-                <button id="sendButton" class="send-button" title="Отправить">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <div class="app-container">
+        <!-- Боковая панель со списком сессий -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Чаты</h2>
+                <button id="newChatButton" class="new-chat-button" title="Начать новый чат">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
             </div>
-            <div class="status" id="status"></div>
+            <div class="sessions-list" id="sessionsList">
+                <div class="sessions-empty">Нет активных чатов</div>
+            </div>
+        </div>
+
+        <!-- Основная область чата -->
+        <div class="chat-container">
+            <!-- Заголовок с кнопками управления -->
+            <div class="chat-header">
+                <h1>Claude Chat</h1>
+                <div class="chat-actions">
+                    <button id="clearChatButton" class="action-button" title="Очистить чат">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6h18M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2m3 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Очистить
+                    </button>
+                    <button id="deleteSessionButton" class="action-button delete" title="Удалить сессию">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Удалить
+                    </button>
+                </div>
+            </div>
+
+            <!-- Область переписки -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">
+                    <h2>👋 Добро пожаловать в чат с Claude!</h2>
+                    <p>Задайте свой вопрос ниже</p>
+                </div>
+            </div>
+
+            <!-- Область ввода -->
+            <div class="input-container">
+                <div class="format-selector">
+                    <label for="formatSelect">Формат ответа:</label>
+                    <select id="formatSelect" class="format-select">
+                        <option value="PLAIN_TEXT" selected>Обычный текст</option>
+                        <option value="JSON">JSON</option>
+                        <option value="XML">XML</option>
+                    </select>
+                </div>
+                <div class="input-wrapper">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Введите ваш вопрос..."
+                        rows="3"
+                    ></textarea>
+                    <button id="sendButton" class="send-button" title="Отправить">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="status" id="status"></div>
+            </div>
         </div>
     </div>
 

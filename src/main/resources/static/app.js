@@ -1,5 +1,6 @@
 // Конфигурация
 const API_URL = '/chat';
+const SESSIONS_URL = '/sessions';
 const REQUEST_TIMEOUT = 30000; // 30 секунд
 
 // DOM элементы
@@ -8,10 +9,15 @@ const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const statusElement = document.getElementById('status');
 const formatSelect = document.getElementById('formatSelect');
+const sessionsList = document.getElementById('sessionsList');
+const newChatButton = document.getElementById('newChatButton');
+const clearChatButton = document.getElementById('clearChatButton');
+const deleteSessionButton = document.getElementById('deleteSessionButton');
 
 // Состояние
 let isLoading = false;
 let currentSessionId = null; // ID текущей сессии чата
+let sessions = []; // Список всех сессий
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,10 +39,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Обработчик кнопки "Новый чат"
-    const newChatButton = document.getElementById('newChatButton');
     if (newChatButton) {
         newChatButton.addEventListener('click', startNewChat);
     }
+
+    // Обработчик кнопки "Очистить чат"
+    if (clearChatButton) {
+        clearChatButton.addEventListener('click', handleClearChat);
+    }
+
+    // Обработчик кнопки "Удалить сессию"
+    if (deleteSessionButton) {
+        deleteSessionButton.addEventListener('click', handleDeleteSession);
+    }
+
+    // Загружаем список сессий
+    loadSessions();
 });
 
 // Основная функция отправки сообщения
@@ -106,6 +124,8 @@ async function handleSendMessage() {
             if (data.sessionId) {
                 currentSessionId = data.sessionId;
                 console.log('Session ID:', currentSessionId);
+                // Обновляем список сессий
+                await loadSessions();
             }
 
             addMessage(data.response, 'assistant');
@@ -216,8 +236,99 @@ function fetchWithTimeout(url, options, timeout) {
     ]);
 }
 
+// Загрузка списка сессий
+async function loadSessions() {
+    try {
+        const response = await fetch(SESSIONS_URL);
+        if (!response.ok) {
+            throw new Error('Failed to load sessions');
+        }
+
+        const data = await response.json();
+        sessions = data.sessions || [];
+
+        renderSessionsList();
+    } catch (error) {
+        console.error('Error loading sessions:', error);
+    }
+}
+
+// Отрисовка списка сессий
+function renderSessionsList() {
+    if (sessions.length === 0) {
+        sessionsList.innerHTML = '<div class="sessions-empty">Нет активных чатов</div>';
+        return;
+    }
+
+    sessionsList.innerHTML = '';
+    sessions.forEach(session => {
+        const sessionItem = document.createElement('div');
+        sessionItem.className = 'session-item';
+        if (session.id === currentSessionId) {
+            sessionItem.classList.add('active');
+        }
+
+        const title = `Чат ${sessions.indexOf(session) + 1}`;
+        const timeAgo = getTimeAgo(session.lastAccessedAt);
+
+        sessionItem.innerHTML = `
+            <div class="session-item-header">
+                <span class="session-title">${title}</span>
+                <span class="session-message-count">${session.messageCount} сообщ.</span>
+            </div>
+            <div class="session-time">${timeAgo}</div>
+        `;
+
+        sessionItem.addEventListener('click', () => loadSessionHistory(session.id));
+        sessionsList.appendChild(sessionItem);
+    });
+}
+
+// Загрузка истории сессии
+async function loadSessionHistory(sessionId) {
+    if (isLoading || sessionId === currentSessionId) {
+        return;
+    }
+
+    try {
+        updateStatus('Загрузка истории чата...');
+
+        const response = await fetch(`${SESSIONS_URL}/${sessionId}`);
+        if (!response.ok) {
+            throw new Error('Failed to load session history');
+        }
+
+        const data = await response.json();
+
+        // Устанавливаем текущую сессию
+        currentSessionId = sessionId;
+
+        // Очищаем контейнер сообщений
+        messagesContainer.innerHTML = '';
+
+        // Отображаем историю сообщений
+        if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+                addMessage(msg.content, msg.role);
+            });
+        } else {
+            // Показываем приветственное сообщение если история пуста
+            showWelcomeMessage();
+        }
+
+        // Обновляем список сессий для подсветки активной
+        renderSessionsList();
+
+        updateStatus('');
+    } catch (error) {
+        console.error('Error loading session history:', error);
+        updateStatus('Ошибка загрузки истории чата', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
 // Создание нового чата
-function startNewChat() {
+async function startNewChat() {
     if (isLoading) {
         return;
     }
@@ -230,6 +341,99 @@ function startNewChat() {
     messagesContainer.innerHTML = '';
 
     // Показываем приветственное сообщение
+    showWelcomeMessage();
+
+    // Очищаем поле ввода
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+
+    // Обновляем список сессий
+    renderSessionsList();
+
+    // Очищаем статус
+    updateStatus('Начат новый чат');
+    setTimeout(() => updateStatus(''), 2000);
+}
+
+// Очистка текущего чата
+async function handleClearChat() {
+    if (isLoading || !currentSessionId) {
+        return;
+    }
+
+    if (!confirm('Вы уверены, что хотите очистить историю этого чата?')) {
+        return;
+    }
+
+    try {
+        updateStatus('Очистка чата...');
+
+        const response = await fetch(`${SESSIONS_URL}/${currentSessionId}/clear`, {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to clear chat');
+        }
+
+        // Очищаем сообщения в интерфейсе
+        messagesContainer.innerHTML = '';
+        showWelcomeMessage();
+
+        // Обновляем список сессий
+        await loadSessions();
+
+        updateStatus('Чат очищен', 'success');
+        setTimeout(() => updateStatus(''), 2000);
+    } catch (error) {
+        console.error('Error clearing chat:', error);
+        updateStatus('Ошибка очистки чата', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
+// Удаление текущей сессии
+async function handleDeleteSession() {
+    if (isLoading || !currentSessionId) {
+        return;
+    }
+
+    if (!confirm('Вы уверены, что хотите удалить эту сессию?')) {
+        return;
+    }
+
+    try {
+        updateStatus('Удаление сессии...');
+
+        const response = await fetch(`${SESSIONS_URL}/${currentSessionId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete session');
+        }
+
+        // Сбрасываем текущую сессию
+        currentSessionId = null;
+
+        // Очищаем сообщения
+        messagesContainer.innerHTML = '';
+        showWelcomeMessage();
+
+        // Обновляем список сессий
+        await loadSessions();
+
+        updateStatus('Сессия удалена', 'success');
+        setTimeout(() => updateStatus(''), 2000);
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        updateStatus('Ошибка удаления сессии', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
+// Показать приветственное сообщение
+function showWelcomeMessage() {
     const welcomeDiv = document.createElement('div');
     welcomeDiv.className = 'welcome-message';
     welcomeDiv.innerHTML = `
@@ -237,12 +441,19 @@ function startNewChat() {
         <p>Задайте свой вопрос ниже</p>
     `;
     messagesContainer.appendChild(welcomeDiv);
+}
 
-    // Очищаем поле ввода
-    messageInput.value = '';
-    messageInput.style.height = 'auto';
+// Форматирование времени "назад"
+function getTimeAgo(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
 
-    // Очищаем статус
-    updateStatus('Начат новый чат');
-    setTimeout(() => updateStatus(''), 2000);
+    if (days > 0) return `${days} дн. назад`;
+    if (hours > 0) return `${hours} ч. назад`;
+    if (minutes > 0) return `${minutes} мин. назад`;
+    return 'только что';
 }
