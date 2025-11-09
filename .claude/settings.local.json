@@ -3,7 +3,8 @@
     "allow": [
       "Bash(./gradlew:*)",
       "Bash(docker-compose:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
