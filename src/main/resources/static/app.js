@@ -3,7 +3,7 @@ const API_URL = '/chat';
 const SESSIONS_URL = '/sessions';
 const AGENTS_URL = '/agents';
 const MODELS_URL = '/models';
-const REQUEST_TIMEOUT = 30000; // 30 секунд
+const REQUEST_TIMEOUT = 300000; // 300 секунд (5 минут)
 
 // DOM элементы
 const messagesContainer = document.getElementById('messagesContainer');

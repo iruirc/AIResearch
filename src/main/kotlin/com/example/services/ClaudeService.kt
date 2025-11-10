@@ -5,6 +5,7 @@ import com.example.models.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
@@ -20,6 +21,11 @@ class ClaudeService(private val config: ClaudeConfig) {
     private val formatter = ClaudeMessageFormatter()
 
     private val client = HttpClient(CIO) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 300_000 // 300 секунд (5 минут)
+            connectTimeoutMillis = 10_000  // 10 секунд на подключение
+            socketTimeoutMillis = 300_000  // 300 секунд на чтение/запись
+        }
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
