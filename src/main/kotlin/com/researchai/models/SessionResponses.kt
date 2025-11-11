@@ -86,3 +86,21 @@ data class CreateAgentSessionResponse(
     val agentName: String,
     val initialMessage: String
 )
+
+/**
+ * Информация о провайдере
+ */
+@Serializable
+data class ProviderDTO(
+    val id: String,
+    val name: String,
+    val defaultModel: String
+)
+
+/**
+ * Список всех доступных провайдеров
+ */
+@Serializable
+data class ProvidersListResponse(
+    val providers: List<ProviderDTO>
+)

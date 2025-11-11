@@ -255,18 +255,55 @@ fun Route.chatRoutes(
         }
     }
 
+    // Получить список провайдеров
+    route("/providers") {
+        get {
+            try {
+                val providers = listOf(
+                    ProviderDTO(
+                        id = "claude",
+                        name = "Claude (Anthropic)",
+                        defaultModel = AvailableClaudeModels.DEFAULT_MODEL
+                    ),
+                    ProviderDTO(
+                        id = "openai",
+                        name = "OpenAI",
+                        defaultModel = AvailableOpenAIModels.DEFAULT_MODEL
+                    )
+                )
+                call.respond(ProvidersListResponse(providers = providers))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to get providers: ${e.message}")
+                )
+            }
+        }
+    }
+
     // Получить список доступных моделей
     route("/models") {
         get {
             try {
+                // Получаем query параметр provider (опционально)
+                val providerFilter = call.request.queryParameters["provider"]
+
                 // Получаем предустановленные модели Claude и OpenAI
                 val claudeModels = AvailableClaudeModels.models
                 val openAIModels = AvailableOpenAIModels.models
 
-                // Объединяем списки
-                val allModels = claudeModels + openAIModels
+                // Фильтруем по провайдеру, если указан
+                val filteredModels = when (providerFilter?.lowercase()) {
+                    "claude" -> claudeModels
+                    "openai" -> openAIModels
+                    null -> claudeModels + openAIModels // Все модели, если фильтр не указан
+                    else -> {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Unknown provider: $providerFilter"))
+                        return@get
+                    }
+                }
 
-                call.respond(ModelsListResponse(models = allModels))
+                call.respond(ModelsListResponse(models = filteredModels))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,

@@ -3,6 +3,7 @@ const API_URL = '/chat';
 const SESSIONS_URL = '/sessions';
 const AGENTS_URL = '/agents';
 const MODELS_URL = '/models';
+const PROVIDERS_URL = '/providers';
 const CONFIG_URL = '/config';
 const REQUEST_TIMEOUT = 300000; // 300 секунд (5 минут)
 
@@ -24,6 +25,7 @@ const settingsModal = document.getElementById('settingsModal');
 const closeSettingsModal = document.getElementById('closeSettingsModal');
 const saveSettingsButton = document.getElementById('saveSettingsButton');
 const cancelSettingsButton = document.getElementById('cancelSettingsButton');
+const modalProviderSelect = document.getElementById('modalProviderSelect');
 const modalModelSelect = document.getElementById('modalModelSelect');
 const modalTemperatureSlider = document.getElementById('modalTemperatureSlider');
 const modalTemperatureValue = document.getElementById('modalTemperatureValue');
@@ -36,7 +38,9 @@ let isLoading = false;
 let currentSessionId = null; // ID текущей сессии чата
 let sessions = []; // Список всех сессий
 let agents = []; // Список всех агентов
+let providers = []; // Список всех провайдеров
 let models = []; // Список всех доступных моделей
+let currentProvider = null; // Текущий выбранный провайдер
 
 // Настройки (текущие активные значения)
 // Дефолтные значения будут заменены на значения из конфигурации бэкенда при загрузке
@@ -77,6 +81,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalMaxTokensSlider) {
         modalMaxTokensSlider.addEventListener('input', (e) => {
             modalMaxTokensValue.textContent = e.target.value;
+        });
+    }
+
+    // Обработчик изменения провайдера
+    if (modalProviderSelect) {
+        modalProviderSelect.addEventListener('change', async (e) => {
+            const providerId = e.target.value;
+            if (providerId) {
+                currentProvider = providerId;
+                await loadModelsForProvider(providerId);
+            }
         });
     }
 
@@ -143,10 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Загружаем конфигурацию, список сессий и моделей
+    // Загружаем конфигурацию, список сессий, провайдеров и моделей
     loadConfig();
     loadSessions();
-    loadModels();
+    loadProviders();
 });
 
 // Основная функция отправки сообщения
@@ -688,10 +703,27 @@ async function loadConfig() {
     }
 }
 
-// Загрузка списка доступных моделей
-async function loadModels() {
+// Загрузка списка провайдеров
+async function loadProviders() {
     try {
-        const response = await fetch(MODELS_URL);
+        const response = await fetch(PROVIDERS_URL);
+        if (!response.ok) {
+            throw new Error('Failed to load providers');
+        }
+
+        const data = await response.json();
+        providers = data.providers || [];
+
+        renderProvidersList();
+    } catch (error) {
+        console.error('Error loading providers:', error);
+    }
+}
+
+// Загрузка списка моделей для конкретного провайдера
+async function loadModelsForProvider(providerId) {
+    try {
+        const response = await fetch(`${MODELS_URL}?provider=${providerId}`);
         if (!response.ok) {
             throw new Error('Failed to load models');
         }
@@ -703,6 +735,43 @@ async function loadModels() {
     } catch (error) {
         console.error('Error loading models:', error);
     }
+}
+
+// Отрисовка списка провайдеров в селекторе
+function renderProvidersList() {
+    if (providers.length === 0) {
+        return;
+    }
+
+    modalProviderSelect.innerHTML = '';
+    providers.forEach(provider => {
+        const option = document.createElement('option');
+        option.value = provider.id;
+        option.textContent = provider.name;
+
+        modalProviderSelect.appendChild(option);
+    });
+
+    // После загрузки провайдеров определяем провайдера текущей модели
+    const currentModelId = currentSettings.model;
+    const detectedProvider = detectProviderFromModel(currentModelId);
+
+    if (detectedProvider) {
+        currentProvider = detectedProvider;
+        modalProviderSelect.value = detectedProvider;
+        // Загружаем модели для этого провайдера
+        loadModelsForProvider(detectedProvider);
+    }
+}
+
+// Определяем провайдера по ID модели
+function detectProviderFromModel(modelId) {
+    if (modelId.startsWith('claude-')) {
+        return 'claude';
+    } else if (modelId.startsWith('gpt-')) {
+        return 'openai';
+    }
+    return 'claude'; // По умолчанию Claude
 }
 
 // Отрисовка списка моделей в селекторе
@@ -730,6 +799,12 @@ function renderModelsList() {
 function openSettingsModal() {
     if (isLoading) {
         return;
+    }
+
+    // Определяем провайдера текущей модели и устанавливаем его
+    const detectedProvider = detectProviderFromModel(currentSettings.model);
+    if (detectedProvider) {
+        modalProviderSelect.value = detectedProvider;
     }
 
     // Загружаем текущие настройки в модальное окно
