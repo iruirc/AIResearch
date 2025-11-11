@@ -15,7 +15,7 @@ data class LLMModel(
 /**
  * Список доступных моделей Claude
  */
-object AvailableModels {
+object AvailableClaudeModels {
     val models = listOf(
         LLMModel(
             id = "claude-haiku-4-5-20251001",

@@ -260,7 +260,7 @@ fun Route.chatRoutes(
         get {
             try {
                 // Получаем модели Claude
-                val claudeModels = AvailableModels.models
+                val claudeModels = AvailableClaudeModels.models
 
                 // Получаем модели OpenAI и фильтруем только gpt-5 основные версии
                 val openAIModelsResult = appModule.getModelsUseCase(com.researchai.domain.models.ProviderType.OPENAI)
