@@ -4,11 +4,11 @@ plugins {
     alias(libs.plugins.ktor)
 }
 
-group = "com.example"
+group = "com.researchai"
 version = "0.0.1"
 
 application {
-    mainClass = "com.example.ApplicationKt"
+    mainClass = "com.researchai.ApplicationKt"
 }
 
 java {

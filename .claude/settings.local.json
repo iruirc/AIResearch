@@ -4,7 +4,13 @@
       "Bash(./gradlew:*)",
       "Bash(docker-compose:*)",
       "Bash(curl:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(timeout 5 ./gradlew:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

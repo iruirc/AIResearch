@@ -1,8 +1,9 @@
-package com.example
+package com.researchai
 
-import com.example.config.DotenvLoader
-import com.example.config.getClaudeConfig
-import com.example.services.ClaudeService
+import com.researchai.config.DotenvLoader
+import com.researchai.config.getClaudeConfig
+import com.researchai.di.AppModule
+import com.researchai.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.calllogging.*
@@ -20,13 +21,19 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    // Инициализация ClaudeService
+    // Инициализация конфигурации
     val claudeConfig = getClaudeConfig()
+
+    // Инициализация DI контейнера
+    val appModule = AppModule(claudeConfig)
+
+    // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)
 
-    // Закрытие клиента при остановке приложения
+    // Закрытие ресурсов при остановке приложения
     monitor.subscribe(ApplicationStopped) {
         claudeService.close()
+        appModule.close()
     }
 
     // Установка плагинов
@@ -53,5 +60,5 @@ fun Application.module() {
     }
 
     // Конфигурация роутинга
-    configureRouting(claudeService, claudeConfig)
+    configureRouting(claudeService, claudeConfig, appModule)
 }
