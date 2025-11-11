@@ -2,6 +2,7 @@ package com.researchai
 
 import com.researchai.config.DotenvLoader
 import com.researchai.config.getClaudeConfig
+import com.researchai.config.getOpenAIConfig
 import com.researchai.di.AppModule
 import com.researchai.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
@@ -23,9 +24,21 @@ fun main(args: Array<String>) {
 fun Application.module() {
     // Инициализация конфигурации
     val claudeConfig = getClaudeConfig()
+    val openAIConfig = getOpenAIConfig()
+
+    // Вывод информации о доступных провайдерах
+    println("✅ Claude API: Configured")
+    if (openAIConfig != null) {
+        println("✅ OpenAI API: Configured")
+        println("   - Organization: ${openAIConfig.organizationId ?: "not specified"}")
+        println("   - Project: ${openAIConfig.projectId ?: "not specified"}")
+        println("   - Model: ${openAIConfig.model}")
+    } else {
+        println("⚠️  OpenAI API: Not configured (add OPENAI_API_KEY to .env)")
+    }
 
     // Инициализация DI контейнера
-    val appModule = AppModule(claudeConfig)
+    val appModule = AppModule(claudeConfig, openAIConfig)
 
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)

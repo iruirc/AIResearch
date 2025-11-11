@@ -1,6 +1,7 @@
 package com.researchai.data.repository
 
 import com.researchai.config.ClaudeConfig
+import com.researchai.config.OpenAIConfig
 import com.researchai.domain.models.AIError
 import com.researchai.domain.models.ProviderConfig
 import com.researchai.domain.models.ProviderType
@@ -11,7 +12,8 @@ import com.researchai.domain.repository.ConfigRepository
  * Использует существующую ClaudeConfig и in-memory хранилище для других провайдеров
  */
 class ConfigRepositoryImpl(
-    private val claudeConfig: ClaudeConfig
+    private val claudeConfig: ClaudeConfig,
+    private val openAIConfig: OpenAIConfig? = null
 ) : ConfigRepository {
 
     // In-memory хранилище для других провайдеров
@@ -25,6 +27,17 @@ class ConfigRepositoryImpl(
             apiVersion = claudeConfig.apiVersion,
             defaultModel = claudeConfig.model
         )
+
+        // Инициализируем OpenAI конфигурацию, если доступна
+        openAIConfig?.let { config ->
+            configs[ProviderType.OPENAI] = ProviderConfig.OpenAIConfig(
+                apiKey = config.apiKey,
+                baseUrl = config.baseUrl,
+                organization = config.organizationId,
+                projectId = config.projectId,
+                defaultModel = config.model
+            )
+        }
     }
 
     override suspend fun saveProviderConfig(

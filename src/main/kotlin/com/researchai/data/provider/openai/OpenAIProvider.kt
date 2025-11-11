@@ -36,6 +36,7 @@ class OpenAIProvider(
             val httpResponse: HttpResponse = httpClient.post(config.baseUrl) {
                 header("Authorization", "Bearer ${config.apiKey}")
                 config.organization?.let { header("OpenAI-Organization", it) }
+                config.projectId?.let { header("OpenAI-Project", it) }
                 header("Content-Type", "application/json")
                 setBody(openAIRequest)
             }

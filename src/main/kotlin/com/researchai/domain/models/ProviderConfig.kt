@@ -22,6 +22,7 @@ sealed class ProviderConfig {
         override val apiKey: String,
         override val baseUrl: String = "https://api.openai.com/v1/chat/completions",
         val organization: String? = null,
+        val projectId: String? = null,
         override val timeout: TimeoutConfig = TimeoutConfig(),
         val defaultModel: String = "gpt-4-turbo"
     ) : ProviderConfig()

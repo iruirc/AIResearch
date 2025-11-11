@@ -10,7 +10,8 @@
       "Bash(timeout 5 ./gradlew:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
