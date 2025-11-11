@@ -3,6 +3,7 @@ package com.researchai
 import com.researchai.config.DotenvLoader
 import com.researchai.config.getClaudeConfig
 import com.researchai.config.getOpenAIConfig
+import com.researchai.config.getHuggingFaceConfig
 import com.researchai.di.AppModule
 import com.researchai.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
@@ -25,6 +26,7 @@ fun Application.module() {
     // Инициализация конфигурации
     val claudeConfig = getClaudeConfig()
     val openAIConfig = getOpenAIConfig()
+    val huggingFaceConfig = getHuggingFaceConfig()
 
     // Вывод информации о доступных провайдерах
     println("✅ Claude API: Configured")
@@ -36,9 +38,15 @@ fun Application.module() {
     } else {
         println("⚠️  OpenAI API: Not configured (add OPENAI_API_KEY to .env)")
     }
+    if (huggingFaceConfig != null) {
+        println("✅ HuggingFace API: Configured")
+        println("   - Model: ${huggingFaceConfig.model}")
+    } else {
+        println("⚠️  HuggingFace API: Not configured (add HUGGINGFACE_API_KEY to .env)")
+    }
 
     // Инициализация DI контейнера
-    val appModule = AppModule(claudeConfig, openAIConfig)
+    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig)
 
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)

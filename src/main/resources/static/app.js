@@ -832,6 +832,8 @@ function detectProviderFromModel(modelId) {
         return 'claude';
     } else if (modelId.startsWith('gpt-')) {
         return 'openai';
+    } else if (modelId.includes('/') || modelId.toLowerCase().includes('deepseek')) {
+        return 'huggingface';
     }
     return 'claude'; // По умолчанию Claude
 }

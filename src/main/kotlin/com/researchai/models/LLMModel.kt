@@ -113,6 +113,56 @@ object AvailableOpenAIModels {
 }
 
 /**
+ * Список доступных моделей HuggingFace
+ */
+object AvailableHuggingFaceModels {
+    val models = listOf(
+        LLMModel(
+            id = "deepseek-ai/DeepSeek-R1:fastest",
+            displayName = "DeepSeek R1 (Fastest)",
+            createdAt = "2025-01-20T00:00:00Z"
+        ),
+        LLMModel(
+            id = "deepseek-ai/DeepSeek-R1",
+            displayName = "DeepSeek R1",
+            createdAt = "2025-01-20T00:00:00Z"
+        ),
+        LLMModel(
+            id = "meta-llama/Llama-3.3-70B-Instruct",
+            displayName = "Llama 3.3 70B Instruct",
+            createdAt = "2024-12-06T00:00:00Z"
+        ),
+        LLMModel(
+            id = "Qwen/Qwen2.5-72B-Instruct",
+            displayName = "Qwen 2.5 72B Instruct",
+            createdAt = "2024-09-19T00:00:00Z"
+        ),
+        LLMModel(
+            id = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF",
+            displayName = "Llama 3.1 Nemotron 70B Instruct",
+            createdAt = "2024-10-31T00:00:00Z"
+        ),
+        LLMModel(
+            id = "mistralai/Mistral-7B-Instruct-v0.3",
+            displayName = "Mistral 7B Instruct v0.3",
+            createdAt = "2024-05-22T00:00:00Z"
+        )
+    )
+
+    /**
+     * Модель по умолчанию (DeepSeek R1 Fastest)
+     */
+    const val DEFAULT_MODEL = "deepseek-ai/DeepSeek-R1:fastest"
+
+    /**
+     * Проверяет, доступна ли модель
+     */
+    fun isValidModel(modelId: String): Boolean {
+        return models.any { it.id == modelId }
+    }
+}
+
+/**
  * Ответ со списком моделей
  */
 @Serializable

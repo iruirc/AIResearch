@@ -2,6 +2,7 @@ package com.researchai.data.repository
 
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
+import com.researchai.config.HuggingFaceConfig
 import com.researchai.domain.models.AIError
 import com.researchai.domain.models.ProviderConfig
 import com.researchai.domain.models.ProviderType
@@ -13,7 +14,8 @@ import com.researchai.domain.repository.ConfigRepository
  */
 class ConfigRepositoryImpl(
     private val claudeConfig: ClaudeConfig,
-    private val openAIConfig: OpenAIConfig? = null
+    private val openAIConfig: OpenAIConfig? = null,
+    private val huggingFaceConfig: HuggingFaceConfig? = null
 ) : ConfigRepository {
 
     // In-memory хранилище для других провайдеров
@@ -35,6 +37,15 @@ class ConfigRepositoryImpl(
                 baseUrl = config.baseUrl,
                 organization = config.organizationId,
                 projectId = config.projectId,
+                defaultModel = config.model
+            )
+        }
+
+        // Инициализируем HuggingFace конфигурацию, если доступна
+        huggingFaceConfig?.let { config ->
+            configs[ProviderType.HUGGINGFACE] = ProviderConfig.HuggingFaceConfig(
+                apiKey = config.apiKey,
+                baseUrl = config.baseUrl,
                 defaultModel = config.model
             )
         }

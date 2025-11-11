@@ -73,6 +73,7 @@ class SendMessageUseCase(
             val selectedModel = model ?: when (config) {
                 is ProviderConfig.ClaudeConfig -> config.defaultModel
                 is ProviderConfig.OpenAIConfig -> config.defaultModel
+                is ProviderConfig.HuggingFaceConfig -> config.defaultModel
                 is ProviderConfig.GeminiConfig -> config.defaultModel
                 is ProviderConfig.CustomConfig -> "default"
             }

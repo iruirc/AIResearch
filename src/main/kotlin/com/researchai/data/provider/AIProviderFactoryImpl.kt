@@ -2,6 +2,7 @@ package com.researchai.data.provider
 
 import com.researchai.data.provider.claude.ClaudeProvider
 import com.researchai.data.provider.openai.OpenAIProvider
+import com.researchai.data.provider.huggingface.HuggingFaceProvider
 import com.researchai.domain.models.AIError
 import com.researchai.domain.models.ProviderConfig
 import com.researchai.domain.models.ProviderType
@@ -25,6 +26,9 @@ class AIProviderFactoryImpl(
         }
         register(ProviderType.OPENAI) { config ->
             OpenAIProvider(httpClient, config as ProviderConfig.OpenAIConfig)
+        }
+        register(ProviderType.HUGGINGFACE) { config ->
+            HuggingFaceProvider(httpClient, config as ProviderConfig.HuggingFaceConfig)
         }
     }
 

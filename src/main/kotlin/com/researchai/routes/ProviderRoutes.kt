@@ -96,6 +96,10 @@ fun Route.providerRoutes(appModule: AppModule) {
                         organization = request.organization,
                         defaultModel = request.defaultModel ?: "gpt-4-turbo"
                     )
+                    ProviderType.HUGGINGFACE -> ProviderConfig.HuggingFaceConfig(
+                        apiKey = request.apiKey,
+                        defaultModel = request.defaultModel ?: "deepseek-ai/DeepSeek-R1:fastest"
+                    )
                     ProviderType.GEMINI -> ProviderConfig.GeminiConfig(
                         apiKey = request.apiKey,
                         defaultModel = request.defaultModel ?: "gemini-pro"

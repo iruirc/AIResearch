@@ -34,6 +34,13 @@ sealed class ProviderConfig {
         val defaultModel: String = "gemini-pro"
     ) : ProviderConfig()
 
+    data class HuggingFaceConfig(
+        override val apiKey: String,
+        override val baseUrl: String = "https://router.huggingface.co/v1/chat/completions",
+        override val timeout: TimeoutConfig = TimeoutConfig(),
+        val defaultModel: String = "deepseek-ai/DeepSeek-R1:fastest"
+    ) : ProviderConfig()
+
     data class CustomConfig(
         override val apiKey: String,
         override val baseUrl: String,

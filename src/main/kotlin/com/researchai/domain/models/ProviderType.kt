@@ -6,6 +6,7 @@ package com.researchai.domain.models
 enum class ProviderType(val id: String, val displayName: String) {
     CLAUDE("claude", "Anthropic Claude"),
     OPENAI("openai", "OpenAI"),
+    HUGGINGFACE("huggingface", "HuggingFace"),
     GEMINI("gemini", "Google Gemini"),
     CUSTOM("custom", "Custom Provider");
 

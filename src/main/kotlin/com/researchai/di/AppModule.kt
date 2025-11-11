@@ -2,6 +2,7 @@ package com.researchai.di
 
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
+import com.researchai.config.HuggingFaceConfig
 import com.researchai.data.provider.AIProviderFactoryImpl
 import com.researchai.data.repository.ConfigRepositoryImpl
 import com.researchai.data.repository.SessionRepositoryImpl
@@ -25,7 +26,8 @@ import kotlinx.serialization.json.Json
  */
 class AppModule(
     private val claudeConfig: ClaudeConfig,
-    private val openAIConfig: OpenAIConfig? = null
+    private val openAIConfig: OpenAIConfig? = null,
+    private val huggingFaceConfig: HuggingFaceConfig? = null
 ) {
     // HTTP Client
     val httpClient: HttpClient by lazy {
@@ -63,7 +65,7 @@ class AppModule(
     }
 
     val configRepository: ConfigRepository by lazy {
-        ConfigRepositoryImpl(claudeConfig, openAIConfig)
+        ConfigRepositoryImpl(claudeConfig, openAIConfig, huggingFaceConfig)
     }
 
     // Provider Factory

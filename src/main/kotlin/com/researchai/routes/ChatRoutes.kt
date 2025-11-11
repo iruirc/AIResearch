@@ -34,6 +34,8 @@ fun Route.chatRoutes(
                 // Определяем провайдер по модели
                 val providerId = when {
                     request.model?.startsWith("gpt-") == true -> com.researchai.domain.models.ProviderType.OPENAI
+                    request.model?.contains("deepseek", ignoreCase = true) == true -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                    request.model?.contains("/") == true -> com.researchai.domain.models.ProviderType.HUGGINGFACE
                     else -> com.researchai.domain.models.ProviderType.CLAUDE
                 }
 
@@ -293,6 +295,11 @@ fun Route.chatRoutes(
                         id = "openai",
                         name = "OpenAI",
                         defaultModel = AvailableOpenAIModels.DEFAULT_MODEL
+                    ),
+                    ProviderDTO(
+                        id = "huggingface",
+                        name = "HuggingFace",
+                        defaultModel = AvailableHuggingFaceModels.DEFAULT_MODEL
                     )
                 )
                 call.respond(ProvidersListResponse(providers = providers))
@@ -312,15 +319,17 @@ fun Route.chatRoutes(
                 // Получаем query параметр provider (опционально)
                 val providerFilter = call.request.queryParameters["provider"]
 
-                // Получаем предустановленные модели Claude и OpenAI
+                // Получаем предустановленные модели Claude, OpenAI и HuggingFace
                 val claudeModels = AvailableClaudeModels.models
                 val openAIModels = AvailableOpenAIModels.models
+                val huggingFaceModels = AvailableHuggingFaceModels.models
 
                 // Фильтруем по провайдеру, если указан
                 val filteredModels = when (providerFilter?.lowercase()) {
                     "claude" -> claudeModels
                     "openai" -> openAIModels
-                    null -> claudeModels + openAIModels // Все модели, если фильтр не указан
+                    "huggingface" -> huggingFaceModels
+                    null -> claudeModels + openAIModels + huggingFaceModels // Все модели, если фильтр не указан
                     else -> {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Unknown provider: $providerFilter"))
                         return@get
