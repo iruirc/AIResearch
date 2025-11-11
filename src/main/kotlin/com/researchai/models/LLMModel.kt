@@ -3,10 +3,10 @@ package com.researchai.models
 import kotlinx.serialization.Serializable
 
 /**
- * Информация о модели Claude
+ * Информация о модели LLM (Language Model)
  */
 @Serializable
-data class ClaudeModel(
+data class LLMModel(
     val id: String,
     val displayName: String,
     val createdAt: String
@@ -17,42 +17,42 @@ data class ClaudeModel(
  */
 object AvailableModels {
     val models = listOf(
-        ClaudeModel(
+        LLMModel(
             id = "claude-haiku-4-5-20251001",
             displayName = "Claude Haiku 4.5",
             createdAt = "2025-10-15T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-sonnet-4-5-20250929",
             displayName = "Claude Sonnet 4.5",
             createdAt = "2025-09-29T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-opus-4-1-20250805",
             displayName = "Claude Opus 4.1",
             createdAt = "2025-08-05T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-opus-4-20250514",
             displayName = "Claude Opus 4",
             createdAt = "2025-05-22T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-sonnet-4-20250514",
             displayName = "Claude Sonnet 4",
             createdAt = "2025-05-22T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-3-7-sonnet-20250219",
             displayName = "Claude Sonnet 3.7",
             createdAt = "2025-02-24T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-3-5-haiku-20241022",
             displayName = "Claude Haiku 3.5",
             createdAt = "2024-10-22T00:00:00Z"
         ),
-        ClaudeModel(
+        LLMModel(
             id = "claude-3-haiku-20240307",
             displayName = "Claude Haiku 3",
             createdAt = "2024-03-07T00:00:00Z"
@@ -77,5 +77,5 @@ object AvailableModels {
  */
 @Serializable
 data class ModelsListResponse(
-    val models: List<ClaudeModel>
+    val models: List<LLMModel>
 )

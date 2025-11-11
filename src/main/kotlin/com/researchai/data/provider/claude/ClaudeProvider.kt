@@ -4,7 +4,7 @@ import com.researchai.domain.models.*
 import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
-import com.researchai.models.ClaudeModel as LegacyClaudeModel
+import com.researchai.models.LLMModel as LegacyLLMModel
 import com.researchai.services.ClaudeMessageFormatter
 import io.ktor.client.*
 import io.ktor.client.call.*

@@ -268,7 +268,7 @@ fun Route.chatRoutes(
                 val openAIModels = openAIModelsResult.getOrNull()
                     ?.filter { model -> model.id in allowedGPT5Models }
                     ?.map { model ->
-                        ClaudeModel(
+                        LLMModel(
                             id = model.id,
                             displayName = model.name,
                             createdAt = "2025-01-01T00:00:00Z"
