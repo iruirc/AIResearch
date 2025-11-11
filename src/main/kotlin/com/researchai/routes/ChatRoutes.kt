@@ -21,6 +21,8 @@ fun Route.chatRoutes(
 ) {
     route("/chat") {
         post {
+            val startTime = System.currentTimeMillis()
+
             try {
                 val request = call.receive<ChatRequest>()
 
@@ -59,11 +61,27 @@ fun Route.chatRoutes(
                 )
 
                 result.onSuccess { messageResult ->
+                    val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+
+                    // Логируем результат с временем выполнения
+                    call.application.environment.log.info(
+                        "Request completed in ${String.format("%.3f", elapsedTime)}s " +
+                        "[sessionId: ${messageResult.sessionId}, model: ${messageResult.model}, " +
+                        "tokens: ${messageResult.usage.totalTokens}]"
+                    )
+
                     call.respond(ChatResponse(
                         response = messageResult.response,
-                        sessionId = messageResult.sessionId
+                        sessionId = messageResult.sessionId,
+                        tokensUsed = messageResult.usage.totalTokens
                     ))
                 }.onFailure { error ->
+                    val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+
+                    call.application.environment.log.error(
+                        "Request failed in ${String.format("%.3f", elapsedTime)}s: ${error.message}"
+                    )
+
                     call.respond(
                         HttpStatusCode.InternalServerError,
                         mapOf("error" to (error.message ?: "Failed to process request"))
@@ -71,6 +89,12 @@ fun Route.chatRoutes(
                 }
 
             } catch (e: Exception) {
+                val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+
+                call.application.environment.log.error(
+                    "Request failed in ${String.format("%.3f", elapsedTime)}s: ${e.message}", e
+                )
+
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf("error" to "Failed to process request: ${e.message}")

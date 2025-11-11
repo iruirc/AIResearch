@@ -309,6 +309,7 @@ body {
     display: flex;
     gap: 4px;
     align-items: center;
+    margin-bottom: 10px;
 }
 
 .typing-indicator span {
@@ -336,6 +337,61 @@ body {
         transform: translateY(-10px);
         opacity: 1;
     }
+}
+
+/* Таймер во время загрузки */
+.message-timer {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.timer-icon {
+    font-size: 12px;
+}
+
+.timer-value {
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* Метаданные сообщения (время, модель, токены) */
+.message-metadata {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f1f3f5;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 8px 8px;
+    font-size: 11px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.metadata-time,
+.metadata-model,
+.metadata-tokens {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.metadata-time {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.metadata-separator {
+    color: #dee2e6;
+    font-weight: 300;
 }
 
 /* Сообщение об ошибке */

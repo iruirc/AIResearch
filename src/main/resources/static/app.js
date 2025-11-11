@@ -41,6 +41,8 @@ let agents = []; // Список всех агентов
 let providers = []; // Список всех провайдеров
 let models = []; // Список всех доступных моделей
 let currentProvider = null; // Текущий выбранный провайдер
+let requestStartTime = null; // Время начала запроса
+let timerInterval = null; // Интервал для обновления таймера
 
 // Настройки (текущие активные значения)
 // Дефолтные значения будут заменены на значения из конфигурации бэкенда при загрузке
@@ -185,6 +187,9 @@ async function handleSendMessage() {
     // Отображаем сообщение пользователя
     addMessage(message, 'user');
 
+    // Сохраняем время начала запроса
+    requestStartTime = Date.now();
+
     // Показываем индикатор загрузки
     const loadingMessageId = addLoadingMessage();
 
@@ -231,6 +236,9 @@ async function handleSendMessage() {
 
         const data = await response.json();
 
+        // Вычисляем время выполнения запроса
+        const elapsedTime = ((Date.now() - requestStartTime) / 1000).toFixed(2);
+
         // Проверяем наличие ответа
         if (data.response) {
             // Сохраняем sessionId из ответа
@@ -241,7 +249,14 @@ async function handleSendMessage() {
                 await loadSessions();
             }
 
-            addMessage(data.response, 'assistant');
+            // Формируем метаданные для отображения
+            const metadata = {
+                time: elapsedTime,
+                model: currentSettings.model,
+                tokens: data.tokensUsed || 'N/A'
+            };
+
+            addMessage(data.response, 'assistant', metadata);
             updateStatus('');
         } else {
             throw new Error('Пустой ответ от сервера');
@@ -274,13 +289,29 @@ async function handleSendMessage() {
 }
 
 // Добавление сообщения в чат
-function addMessage(text, type) {
+function addMessage(text, type, metadata = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     contentDiv.textContent = text;
+
+    // Если есть метаданные (для сообщений assistant), добавляем их
+    if (metadata && type === 'assistant') {
+        const metadataDiv = document.createElement('div');
+        metadataDiv.className = 'message-metadata';
+
+        metadataDiv.innerHTML = `
+            <span class="metadata-time">⏱ ${metadata.time}с</span>
+            <span class="metadata-separator">│</span>
+            <span class="metadata-model">🤖 ${metadata.model}</span>
+            <span class="metadata-separator">│</span>
+            <span class="metadata-tokens">🎫 ${metadata.tokens} токенов</span>
+        `;
+
+        contentDiv.appendChild(metadataDiv);
+    }
 
     messageDiv.appendChild(contentDiv);
     messagesContainer.appendChild(messageDiv);
@@ -303,17 +334,48 @@ function addLoadingMessage() {
     typingIndicator.className = 'typing-indicator';
     typingIndicator.innerHTML = '<span></span><span></span><span></span>';
 
+    // Добавляем таймер
+    const timerDiv = document.createElement('div');
+    timerDiv.className = 'message-timer';
+    timerDiv.innerHTML = '<span class="timer-icon">⏱</span> <span class="timer-text">Время ожидания: <span class="timer-value">0.0</span>с</span>';
+
     contentDiv.appendChild(typingIndicator);
+    contentDiv.appendChild(timerDiv);
     messageDiv.appendChild(contentDiv);
     messagesContainer.appendChild(messageDiv);
 
     scrollToBottom();
 
+    // Запускаем обновление таймера
+    startTimer(loadingId);
+
     return loadingId;
+}
+
+// Функция для запуска таймера
+function startTimer(loadingId) {
+    // Очищаем предыдущий интервал, если он был
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    timerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
+        const timerElement = document.querySelector(`#${loadingId} .timer-value`);
+        if (timerElement) {
+            timerElement.textContent = elapsed;
+        }
+    }, 100); // Обновляем каждые 100мс
 }
 
 // Удаление индикатора загрузки
 function removeLoadingMessage(loadingId) {
+    // Останавливаем таймер
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
     const loadingMessage = document.getElementById(loadingId);
     if (loadingMessage) {
         loadingMessage.remove();
