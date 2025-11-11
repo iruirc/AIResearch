@@ -73,6 +73,46 @@ object AvailableClaudeModels {
 }
 
 /**
+ * Список доступных моделей OpenAI
+ */
+object AvailableOpenAIModels {
+    val models = listOf(
+        LLMModel(
+            id = "gpt-5-nano",
+            displayName = "gpt-5-nano",
+            createdAt = "2025-08-05T11:33:04Z"
+        ),
+        LLMModel(
+            id = "gpt-5-mini",
+            displayName = "gpt-5-mini",
+            createdAt = "2025-08-05T11:25:28Z"
+        ),
+        LLMModel(
+            id = "gpt-5",
+            displayName = "gpt-5",
+            createdAt = "2025-08-05T11:22:57Z"
+        ),
+        LLMModel(
+            id = "gpt-5-pro",
+            displayName = "gpt-5-pro",
+            createdAt = "2025-10-03T07:03:42Z"
+        )
+    )
+
+    /**
+     * Модель по умолчанию (GPT-5)
+     */
+    const val DEFAULT_MODEL = "gpt-5"
+
+    /**
+     * Проверяет, доступна ли модель
+     */
+    fun isValidModel(modelId: String): Boolean {
+        return models.any { it.id == modelId }
+    }
+}
+
+/**
  * Ответ со списком моделей
  */
 @Serializable

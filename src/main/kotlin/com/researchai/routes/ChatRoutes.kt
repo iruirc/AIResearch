@@ -259,21 +259,9 @@ fun Route.chatRoutes(
     route("/models") {
         get {
             try {
-                // Получаем модели Claude
+                // Получаем предустановленные модели Claude и OpenAI
                 val claudeModels = AvailableClaudeModels.models
-
-                // Получаем модели OpenAI и фильтруем только gpt-5 основные версии
-                val openAIModelsResult = appModule.getModelsUseCase(com.researchai.domain.models.ProviderType.OPENAI)
-                val allowedGPT5Models = setOf("gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-5-pro")
-                val openAIModels = openAIModelsResult.getOrNull()
-                    ?.filter { model -> model.id in allowedGPT5Models }
-                    ?.map { model ->
-                        LLMModel(
-                            id = model.id,
-                            displayName = model.name,
-                            createdAt = "2025-01-01T00:00:00Z"
-                        )
-                    } ?: emptyList()
+                val openAIModels = AvailableOpenAIModels.models
 
                 // Объединяем списки
                 val allModels = claudeModels + openAIModels
