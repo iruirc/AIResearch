@@ -534,7 +534,7 @@ function showWelcomeMessage() {
     const welcomeDiv = document.createElement('div');
     welcomeDiv.className = 'welcome-message';
     welcomeDiv.innerHTML = `
-        <h2>👋 Добро пожаловать в чат с Claude!</h2>
+        <h2>👋 Добро пожаловать в чат!</h2>
         <p>Задайте свой вопрос ниже</p>
     `;
     messagesContainer.appendChild(welcomeDiv);
