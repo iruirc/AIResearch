@@ -35,11 +35,15 @@ class OpenAIMapper {
             )
         })
 
+        // GPT-5 модели требуют max_completion_tokens вместо max_tokens
+        val isGPT5 = request.model.startsWith("gpt-5")
+
         return OpenAIApiRequest(
             model = request.model,
             messages = messages,
             temperature = request.parameters.temperature,
-            maxTokens = request.parameters.maxTokens,
+            maxTokens = if (!isGPT5) request.parameters.maxTokens else null,
+            maxCompletionTokens = if (isGPT5) request.parameters.maxTokens else null,
             topP = request.parameters.topP,
             frequencyPenalty = request.parameters.frequencyPenalty,
             presencePenalty = request.parameters.presencePenalty,

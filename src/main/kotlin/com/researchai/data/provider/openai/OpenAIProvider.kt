@@ -130,6 +130,10 @@ class OpenAIProvider(
 
     private fun getMaxTokensForModel(modelId: String): Int {
         return when {
+            modelId.contains("gpt-5-pro") -> 32768
+            modelId.contains("gpt-5-mini") -> 8192
+            modelId.contains("gpt-5-nano") -> 4096
+            modelId.contains("gpt-5") -> 16384
             modelId.contains("gpt-4o") -> 16384
             modelId.contains("gpt-4-turbo") -> 4096
             modelId.contains("gpt-4") -> 8192
@@ -140,6 +144,10 @@ class OpenAIProvider(
 
     private fun getContextWindowForModel(modelId: String): Int {
         return when {
+            modelId.contains("gpt-5-pro") -> 200000
+            modelId.contains("gpt-5-mini") -> 128000
+            modelId.contains("gpt-5-nano") -> 128000
+            modelId.contains("gpt-5") -> 200000
             modelId.contains("gpt-4o") -> 128000
             modelId.contains("gpt-4-turbo") -> 128000
             modelId.contains("gpt-4-32k") -> 32768

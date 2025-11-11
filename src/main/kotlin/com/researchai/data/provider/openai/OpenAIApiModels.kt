@@ -14,6 +14,8 @@ data class OpenAIApiRequest(
     val temperature: Double = 1.0,
     @SerialName("max_tokens")
     val maxTokens: Int? = null,
+    @SerialName("max_completion_tokens")
+    val maxCompletionTokens: Int? = null,
     @SerialName("top_p")
     val topP: Double = 1.0,
     @SerialName("frequency_penalty")

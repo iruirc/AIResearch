@@ -29,36 +29,46 @@ fun Route.chatRoutes(
                     return@post
                 }
 
+                // Определяем провайдер по модели
+                val providerId = when {
+                    request.model?.startsWith("gpt-") == true -> com.researchai.domain.models.ProviderType.OPENAI
+                    else -> com.researchai.domain.models.ProviderType.CLAUDE
+                }
+
                 // Получаем или создаем сессию
                 val (sessionId, session) = sessionManager.getOrCreateSession(request.sessionId)
-
-                // Получаем историю сообщений из сессии
-                val messageHistory = session.messages
 
                 // Получаем system prompt если сессия связана с агентом
                 val systemPrompt = session.agentId?.let { agentId ->
                     agentManager.getAgent(agentId)?.systemPrompt
                 }
 
-                // Отправляем сообщение в Claude API с историей, system prompt, моделью, температурой и maxTokens
-                val claudeResponse = claudeService.sendMessage(
-                    userMessage = request.message,
-                    format = request.format,
-                    messageHistory = messageHistory,
-                    systemPrompt = systemPrompt,
-                    model = request.model,
-                    temperature = request.temperature,
-                    maxTokens = request.maxTokens
+                // Используем новую архитектуру с SendMessageUseCase
+                val parameters = com.researchai.domain.models.RequestParameters(
+                    temperature = request.temperature ?: 1.0,
+                    maxTokens = request.maxTokens ?: 4096,
+                    responseFormat = request.format
                 )
 
-                // Сохраняем сообщение пользователя в историю (без форматирования)
-                session.addMessage(MessageRole.USER, request.message)
+                val result = appModule.sendMessageUseCase(
+                    message = request.message,
+                    sessionId = sessionId,
+                    providerId = providerId,
+                    model = request.model,
+                    parameters = parameters
+                )
 
-                // Сохраняем ответ ассистента в историю
-                session.addMessage(MessageRole.ASSISTANT, claudeResponse)
-
-                // Возвращаем ответ вместе с sessionId
-                call.respond(ChatResponse(response = claudeResponse, sessionId = sessionId))
+                result.onSuccess { messageResult ->
+                    call.respond(ChatResponse(
+                        response = messageResult.response,
+                        sessionId = messageResult.sessionId
+                    ))
+                }.onFailure { error ->
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to (error.message ?: "Failed to process request"))
+                    )
+                }
 
             } catch (e: Exception) {
                 call.respond(
@@ -249,7 +259,26 @@ fun Route.chatRoutes(
     route("/models") {
         get {
             try {
-                call.respond(ModelsListResponse(models = AvailableModels.models))
+                // Получаем модели Claude
+                val claudeModels = AvailableModels.models
+
+                // Получаем модели OpenAI и фильтруем только gpt-5 основные версии
+                val openAIModelsResult = appModule.getModelsUseCase(com.researchai.domain.models.ProviderType.OPENAI)
+                val allowedGPT5Models = setOf("gpt-5-nano", "gpt-5-mini", "gpt-5", "gpt-5-pro")
+                val openAIModels = openAIModelsResult.getOrNull()
+                    ?.filter { model -> model.id in allowedGPT5Models }
+                    ?.map { model ->
+                        ClaudeModel(
+                            id = model.id,
+                            displayName = model.name,
+                            createdAt = "2025-01-01T00:00:00Z"
+                        )
+                    } ?: emptyList()
+
+                // Объединяем списки
+                val allModels = claudeModels + openAIModels
+
+                call.respond(ModelsListResponse(models = allModels))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
