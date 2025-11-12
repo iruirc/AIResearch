@@ -138,39 +138,9 @@ object AvailableHuggingFaceModels {
             createdAt = "2024-09-19T00:00:00Z"
         ),
         LLMModel(
-            id = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF",
-            displayName = "Llama 3.1 Nemotron 70B Instruct",
-            createdAt = "2024-10-31T00:00:00Z"
-        ),
-        LLMModel(
-            id = "mistralai/Mistral-7B-Instruct-v0.3",
-            displayName = "Mistral 7B Instruct v0.3",
-            createdAt = "2024-05-22T00:00:00Z"
-        ),
-        LLMModel(
-            id = "microsoft/Phi-3-mini-4k-instruct",
-            displayName = "Phi-3 Mini 4K Instruct",
-            createdAt = "2024-04-23T00:00:00Z"
-        ),
-        LLMModel(
-            id = "google/gemma-2-9b-it",
-            displayName = "Gemma 2 9B Instruct",
-            createdAt = "2024-06-27T00:00:00Z"
-        ),
-        LLMModel(
-            id = "HuggingFaceH4/zephyr-7b-beta",
-            displayName = "Zephyr 7B Beta",
-            createdAt = "2023-10-30T00:00:00Z"
-        ),
-        LLMModel(
             id = "meta-llama/Llama-3.2-3B-Instruct",
             displayName = "Llama 3.2 3B Instruct",
             createdAt = "2024-09-25T00:00:00Z"
-        ),
-        LLMModel(
-            id = "tiiuae/falcon-7b-instruct",
-            displayName = "Falcon 7B Instruct",
-            createdAt = "2023-05-25T00:00:00Z"
         )
     )
 
