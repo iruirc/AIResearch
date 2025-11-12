@@ -107,32 +107,32 @@ class OpenAIProvider(
                     "gpt-5-nano" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 4096,
-                        contextWindow = 128000
+                        maxTokens = 128*1024,
+                        contextWindow = 400*1024
                     )
                     "gpt-5-mini" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 128000
+                        maxTokens = 128*1024,
+                        contextWindow = 400*1024
                     )
                     "gpt-5" -> ModelCapabilities(
                         supportsVision = true,
                         supportsStreaming = true,
-                        maxTokens = 16384,
-                        contextWindow = 200000
+                        maxTokens = 128*1024,
+                        contextWindow = 400*1024
                     )
                     "gpt-5-pro" -> ModelCapabilities(
                         supportsVision = true,
                         supportsStreaming = true,
-                        maxTokens = 32768,
-                        contextWindow = 200000
+                        maxTokens = 272*1024,
+                        contextWindow = 400*1024
                     )
                     else -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 4096,
-                        contextWindow = 128000
+                        maxTokens = 128*1024,
+                        contextWindow = 400*1024
                     )
                 }
             )

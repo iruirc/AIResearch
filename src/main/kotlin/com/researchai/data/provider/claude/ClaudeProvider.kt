@@ -110,56 +110,56 @@ class ClaudeProvider(
                     "claude-haiku-4-5-20251001" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 16*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-sonnet-4-5-20250929" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 64*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-opus-4-1-20250805" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 16384,
-                        contextWindow = 200000
+                        maxTokens = 16*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-opus-4-20250514" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 16384,
-                        contextWindow = 200000
+                        maxTokens = 16*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-sonnet-4-20250514" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 16*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-3-7-sonnet-20250219" -> ModelCapabilities(
                         supportsVision = true,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 8*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-3-5-haiku-20241022" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 8*1024,
+                        contextWindow = 20*1024
                     )
                     "claude-3-haiku-20240307" -> ModelCapabilities(
                         supportsVision = true,
                         supportsStreaming = true,
-                        maxTokens = 4096,
-                        contextWindow = 200000
+                        maxTokens = 4*1024,
+                        contextWindow = 20*1024
                     )
                     else -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 200000
+                        maxTokens = 4*1024,
+                        contextWindow = 20*1024
                     )
                 }
             )
