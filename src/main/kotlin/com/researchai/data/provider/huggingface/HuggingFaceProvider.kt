@@ -112,7 +112,7 @@ class HuggingFaceProvider(
                     "meta-llama/Llama-3.3-70B-Instruct" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8*`,
+                        maxTokens = 8*1024,
                         contextWindow = 128*1024
                     )
                     "Qwen/Qwen2.5-72B-Instruct" -> ModelCapabilities(
