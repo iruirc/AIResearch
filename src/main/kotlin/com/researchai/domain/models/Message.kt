@@ -9,7 +9,18 @@ import kotlinx.serialization.Serializable
 data class Message(
     val role: MessageRole,
     val content: MessageContent,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val metadata: MessageMetadata? = null
+)
+
+/**
+ * Метаданные сообщения (для ответов AI)
+ */
+@Serializable
+data class MessageMetadata(
+    val model: String,
+    val tokensUsed: Int,
+    val responseTime: Double // в секундах
 )
 
 @Serializable

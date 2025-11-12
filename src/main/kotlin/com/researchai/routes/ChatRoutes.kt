@@ -72,6 +72,23 @@ fun Route.chatRoutes(
                         "tokens: ${messageResult.usage.totalTokens}]"
                     )
 
+                    // Обновляем последнее сообщение в сессии с метаданными
+                    val session = sessionManager.getSession(messageResult.sessionId)
+                    session?.updateLastMessage { lastMessage ->
+                        // Добавляем метаданные только если это сообщение ассистента
+                        if (lastMessage.role == com.researchai.domain.models.MessageRole.ASSISTANT) {
+                            lastMessage.copy(
+                                metadata = com.researchai.domain.models.MessageMetadata(
+                                    model = messageResult.model,
+                                    tokensUsed = messageResult.usage.totalTokens,
+                                    responseTime = elapsedTime
+                                )
+                            )
+                        } else {
+                            lastMessage
+                        }
+                    }
+
                     call.respond(ChatResponse(
                         response = messageResult.response,
                         sessionId = messageResult.sessionId,
@@ -145,9 +162,26 @@ fun Route.chatRoutes(
                 }
 
                 val messages = session.messages.map { message ->
+                    // Получаем текстовое содержимое сообщения
+                    val contentText = when (val content = message.content) {
+                        is com.researchai.domain.models.MessageContent.Text -> content.text
+                        is com.researchai.domain.models.MessageContent.MultiModal -> content.text ?: ""
+                    }
+
+                    // Преобразуем метаданные если они есть
+                    val metadataDTO = message.metadata?.let {
+                        MessageMetadataDTO(
+                            model = it.model,
+                            tokensUsed = it.tokensUsed,
+                            responseTime = it.responseTime
+                        )
+                    }
+
                     MessageItem(
                         role = message.role.name.lowercase(),
-                        content = message.content
+                        content = contentText,
+                        timestamp = message.timestamp,
+                        metadata = metadataDTO
                     )
                 }
 

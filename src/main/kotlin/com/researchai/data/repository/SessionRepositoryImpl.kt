@@ -43,15 +43,8 @@ class SessionRepositoryImpl(
             val legacySession = sessionManager.getSession(sessionId)
                 ?: return Result.failure(AIError.NotFoundException("Session not found: $sessionId"))
 
-            val messages = legacySession.messages.map { legacyMsg ->
-                Message(
-                    role = when (legacyMsg.role) {
-                        com.researchai.models.MessageRole.USER -> com.researchai.domain.models.MessageRole.USER
-                        com.researchai.models.MessageRole.ASSISTANT -> com.researchai.domain.models.MessageRole.ASSISTANT
-                    },
-                    content = com.researchai.domain.models.MessageContent.Text(legacyMsg.content)
-                )
-            }
+            // ChatSession теперь использует domain.Message напрямую
+            val messages = legacySession.messages
 
             val session = ChatSession(
                 id = legacySession.id,
@@ -78,15 +71,7 @@ class SessionRepositoryImpl(
                     id = info.id,
                     providerId = ProviderType.CLAUDE,
                     agentId = info.agentId,
-                    messages = legacySession.messages.map { legacyMsg ->
-                        Message(
-                            role = when (legacyMsg.role) {
-                                com.researchai.models.MessageRole.USER -> com.researchai.domain.models.MessageRole.USER
-                                com.researchai.models.MessageRole.ASSISTANT -> com.researchai.domain.models.MessageRole.ASSISTANT
-                            },
-                            content = com.researchai.domain.models.MessageContent.Text(legacyMsg.content)
-                        )
-                    },
+                    messages = legacySession.messages, // ChatSession теперь использует domain.Message напрямую
                     createdAt = info.createdAt,
                     lastAccessedAt = info.lastAccessedAt
                 )
@@ -126,18 +111,8 @@ class SessionRepositoryImpl(
             val legacySession = sessionManager.getSession(sessionId)
                 ?: return Result.failure(AIError.NotFoundException("Session not found: $sessionId"))
 
-            val content = when (val msgContent = message.content) {
-                is com.researchai.domain.models.MessageContent.Text -> msgContent.text
-                is com.researchai.domain.models.MessageContent.MultiModal -> msgContent.text ?: ""
-            }
-
-            val legacyRole = when (message.role) {
-                com.researchai.domain.models.MessageRole.USER -> com.researchai.models.MessageRole.USER
-                com.researchai.domain.models.MessageRole.ASSISTANT -> com.researchai.models.MessageRole.ASSISTANT
-                com.researchai.domain.models.MessageRole.SYSTEM -> com.researchai.models.MessageRole.USER
-            }
-
-            sessionManager.addMessageToSession(sessionId, legacyRole, content)
+            // ChatSession теперь принимает domain.Message напрямую
+            legacySession.addMessage(message)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(AIError.DatabaseException("Failed to add message", e))
@@ -149,15 +124,8 @@ class SessionRepositoryImpl(
             val legacySession = sessionManager.getSession(sessionId)
                 ?: return Result.failure(AIError.NotFoundException("Session not found: $sessionId"))
 
-            val messages = legacySession.messages.map { legacyMsg ->
-                Message(
-                    role = when (legacyMsg.role) {
-                        com.researchai.models.MessageRole.USER -> com.researchai.domain.models.MessageRole.USER
-                        com.researchai.models.MessageRole.ASSISTANT -> com.researchai.domain.models.MessageRole.ASSISTANT
-                    },
-                    content = com.researchai.domain.models.MessageContent.Text(legacyMsg.content)
-                )
-            }
+            // ChatSession теперь использует domain.Message напрямую
+            val messages = legacySession.messages
 
             Result.success(messages)
         } catch (e: Exception) {

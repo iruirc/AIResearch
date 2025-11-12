@@ -483,7 +483,14 @@ async function loadSessionHistory(sessionId) {
         // Отображаем историю сообщений
         if (data.messages && data.messages.length > 0) {
             data.messages.forEach(msg => {
-                addMessage(msg.content, msg.role);
+                // Если есть метаданные, передаем их
+                const metadata = msg.metadata ? {
+                    time: msg.metadata.responseTime.toFixed(2),
+                    model: msg.metadata.model,
+                    tokens: msg.metadata.tokensUsed
+                } : null;
+
+                addMessage(msg.content, msg.role, metadata);
             });
         } else {
             // Показываем приветственное сообщение если история пуста

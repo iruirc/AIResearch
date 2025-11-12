@@ -39,7 +39,19 @@ data class SessionDetailResponse(
 @Serializable
 data class MessageItem(
     val role: String,
-    val content: String
+    val content: String,
+    val timestamp: Long? = null,
+    val metadata: MessageMetadataDTO? = null
+)
+
+/**
+ * DTO для метаданных сообщения
+ */
+@Serializable
+data class MessageMetadataDTO(
+    val model: String,
+    val tokensUsed: Int,
+    val responseTime: Double
 )
 
 /**
