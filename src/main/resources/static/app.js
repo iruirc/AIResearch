@@ -314,29 +314,35 @@ function addMessage(text, type, metadata = null) {
 
         // Проверяем, есть ли раздельные токены (новый формат)
         if (metadata.inputTokens !== undefined && metadata.outputTokens !== undefined) {
-            let tokensHtml = `
-                <span class="metadata-time">⏱ ${metadata.time}с</span>
-                <span class="metadata-separator">│</span>
-                <span class="metadata-model">🤖 ${metadata.model}</span>
-                <span class="metadata-separator">│</span>
-            `;
+            let tokensHtml = '';
 
-            // API токены (реальные)
+            // Строка 1: Модель и время ответа
             tokensHtml += `
-                <span class="metadata-section-title">API:</span>
-                <span class="metadata-tokens-input">📥 ${metadata.inputTokens}</span>
-                <span class="metadata-separator">│</span>
-                <span class="metadata-tokens-output">📤 ${metadata.outputTokens}</span>
-                <span class="metadata-separator">│</span>
-                <span class="metadata-tokens-total">🎫 ${metadata.totalTokens}</span>
+                <div class="metadata-line">
+                    <span class="metadata-model">🤖 ${metadata.model}</span>
+                    <span class="metadata-separator">│</span>
+                    <span class="metadata-time">⏱ ${metadata.time}с</span>
+                </div>
             `;
 
-            // Локальные токены (оценочные), если есть
+            // Строка 2: API токены (реальные)
+            tokensHtml += `
+                <div class="metadata-line">
+                    <span class="metadata-section-title">API:</span>
+                    <span class="metadata-tokens-input">📥 ${metadata.inputTokens}</span>
+                    <span class="metadata-separator">│</span>
+                    <span class="metadata-tokens-output">📤 ${metadata.outputTokens}</span>
+                    <span class="metadata-separator">│</span>
+                    <span class="metadata-tokens-total">🎫 ${metadata.totalTokens}</span>
+                </div>
+            `;
+
+            // Строка 3: Локальные токены (оценочные), если есть
             if (metadata.estimatedInputTokens !== undefined && metadata.estimatedInputTokens > 0) {
                 tokensHtml += `
-                    <span class="metadata-separator">│</span>
-                    <span class="metadata-section-title">Local:</span>
-                    <span class="metadata-tokens-estimated">📥 ${metadata.estimatedInputTokens}</span>
+                    <div class="metadata-line">
+                        <span class="metadata-section-title">Local:</span>
+                        <span class="metadata-tokens-estimated">📥 ${metadata.estimatedInputTokens}</span>
                 `;
 
                 // Добавляем выходные локальные токены если есть
@@ -354,6 +360,8 @@ function addMessage(text, type, metadata = null) {
                         <span class="metadata-tokens-estimated">🎫 ${metadata.estimatedTotalTokens}</span>
                     `;
                 }
+
+                tokensHtml += `</div>`;
             }
 
             metadataDiv.innerHTML = tokensHtml;
