@@ -165,7 +165,7 @@ export $(cat .env | xargs)
 **Сборка JAR:**
 ```bash
 ./gradlew buildFatJar
-java -jar build/libs/ktor-firtsAI-0.0.1-all.jar
+java -jar build/libs/ResearchAI-0.0.1-all.jar
 ```
 
 Сервер будет доступен по адресу: `http://localhost:8080`
@@ -248,8 +248,8 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
 # 2. Клонируйте проект
-git clone https://github.com/your-repo/ktor-firtsAI.git
-cd ktor-firtsAI
+git clone https://github.com/your-repo/ResearchAI.git
+cd ResearchAI
 
 # 3. Настройте переменные окружения
 nano .env

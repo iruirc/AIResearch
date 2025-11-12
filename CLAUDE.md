@@ -20,7 +20,7 @@ ResearchAI is a multi-provider AI chat API server built with Kotlin and Ktor. It
 ./gradlew buildFatJar
 
 # Run the JAR
-java -jar build/libs/ktor-firtsAI-0.0.1-all.jar
+java -jar build/libs/ResearchAI-0.0.1-all.jar
 ```
 
 ### Environment Setup

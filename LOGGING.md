@@ -12,7 +12,7 @@
 
 ### При запуске JAR файла:
 ```bash
-java -jar build/libs/ktor-firtsAI-0.0.1-all.jar
+java -jar build/libs/ResearchAI-0.0.1-all.jar
 ```
 Логи также выводятся в терминал.
 
@@ -20,7 +20,7 @@ java -jar build/libs/ktor-firtsAI-0.0.1-all.jar
 ```bash
 ./gradlew run > logs/app.log 2>&1
 # или
-java -jar build/libs/ktor-firtsAI-0.0.1-all.jar > logs/app.log 2>&1
+java -jar build/libs/ResearchAI-0.0.1-all.jar > logs/app.log 2>&1
 ```
 
 ## Что логируется?
@@ -179,7 +179,7 @@ sudo nano /etc/logrotate.d/claude-chat
 ./gradlew run | grep -i "claude\|error"
 
 # JAR
-java -jar build/libs/ktor-firtsAI-0.0.1-all.jar | tee logs.txt
+java -jar build/libs/ResearchAI-0.0.1-all.jar | tee logs.txt
 ```
 
 ### Фильтрация логов:

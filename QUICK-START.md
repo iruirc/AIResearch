@@ -40,7 +40,7 @@ docker-compose down
 
 ```bash
 # Загрузите проект на VPS
-scp -r ktor-firtsAI username@your-vps-ip:~/
+scp -r ResearchAI username@your-vps-ip:~/
 ```
 
 ### На VPS сервере:
@@ -51,7 +51,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
 # 2. Перейдите в проект
-cd ~/ktor-firtsAI
+cd ~/ResearchAI
 
 # 3. Создайте .env файл
 nano .env
@@ -83,7 +83,7 @@ curl http://localhost:8080/health
 ## Структура файлов проекта
 
 ```
-ktor-firtsAI/
+ResearchAI/
 ├── src/main/
 │   ├── kotlin/                 # Kotlin код
 │   │   ├── Application.kt      # Главный файл

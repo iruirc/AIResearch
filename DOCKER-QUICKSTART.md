@@ -136,8 +136,8 @@ docker-compose up -d --build
 # На VPS сервере:
 
 # 1. Клонируйте проект
-git clone https://github.com/your-repo/ktor-firtsAI.git
-cd ktor-firtsAI
+git clone https://github.com/your-repo/ResearchAI.git
+cd ResearchAI
 
 # 2. Создайте .env
 nano .env

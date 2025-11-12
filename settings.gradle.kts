@@ -1,4 +1,4 @@
-rootProject.name = "ktor-firtsAI"
+rootProject.name = "ResearchAI"
 
 dependencyResolutionManagement {
     repositories {

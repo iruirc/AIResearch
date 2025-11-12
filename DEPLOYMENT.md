@@ -140,8 +140,8 @@ sudo ufw status
 sudo apt install -y git
 
 # Клонируем репозиторий (если он на GitHub/GitLab)
-git clone https://github.com/your-username/ktor-firtsAI.git
-cd ktor-firtsAI
+git clone https://github.com/your-username/ResearchAI.git
+cd ResearchAI
 ```
 
 **Вариант Б: Загрузка с локального компьютера**
@@ -150,7 +150,7 @@ cd ktor-firtsAI
 
 ```bash
 # Переходим в директорию проекта
-cd /path/to/ktor-firtsAI
+cd /path/to/ResearchAI
 
 # Создаем архив (исключая ненужные файлы)
 tar -czf claude-chat.tar.gz \
