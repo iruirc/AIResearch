@@ -19,8 +19,18 @@ data class Message(
 @Serializable
 data class MessageMetadata(
     val model: String,
-    val tokensUsed: Int,
-    val responseTime: Double // в секундах
+    val tokensUsed: Int, // Deprecated: используйте totalTokens
+    val responseTime: Double, // в секундах
+
+    // Токены от API провайдера (реальные)
+    val inputTokens: Int = 0, // Входные токены от API
+    val outputTokens: Int = 0, // Выходные токены от API
+    val totalTokens: Int = inputTokens + outputTokens, // Общее от API
+
+    // Токены, подсчитанные локально (оценочные)
+    val estimatedInputTokens: Int = 0, // Локальная оценка входных токенов
+    val estimatedOutputTokens: Int = 0, // Локальная оценка выходных токенов
+    val estimatedTotalTokens: Int = estimatedInputTokens + estimatedOutputTokens // Локальная оценка общих
 )
 
 @Serializable

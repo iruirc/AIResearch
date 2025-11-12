@@ -114,7 +114,9 @@ class SendMessageUseCase(
                     sessionId = session.id,
                     usage = response.usage,
                     model = response.model,
-                    providerId = providerId
+                    providerId = providerId,
+                    estimatedInputTokens = response.estimatedInputTokens,
+                    estimatedOutputTokens = response.estimatedOutputTokens
                 )
             )
         } catch (e: Exception) {
@@ -130,7 +132,9 @@ class SendMessageUseCase(
 data class MessageResult(
     val response: String,
     val sessionId: String,
-    val usage: TokenUsage,
+    val usage: TokenUsage, // Токены от API провайдера
     val model: String,
-    val providerId: ProviderType
+    val providerId: ProviderType,
+    val estimatedInputTokens: Int = 0, // Локально подсчитанные входные токены
+    val estimatedOutputTokens: Int = 0 // Локально подсчитанные выходные токены
 )

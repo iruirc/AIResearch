@@ -42,6 +42,9 @@ dependencies {
     // CORS support
     implementation(libs.ktor.server.cors)
 
+    // JTokkit - tokenizer for counting tokens
+    implementation("com.knuddels:jtokkit:1.1.0")
+
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }

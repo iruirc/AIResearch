@@ -256,6 +256,16 @@ async function handleSendMessage() {
                 tokens: data.tokensUsed || 'N/A'
             };
 
+            // Добавляем детальную информацию о токенах, если есть
+            if (data.tokenDetails) {
+                metadata.inputTokens = data.tokenDetails.inputTokens;
+                metadata.outputTokens = data.tokenDetails.outputTokens;
+                metadata.totalTokens = data.tokenDetails.totalTokens;
+                metadata.estimatedInputTokens = data.tokenDetails.estimatedInputTokens;
+                metadata.estimatedOutputTokens = data.tokenDetails.estimatedOutputTokens;
+                metadata.estimatedTotalTokens = data.tokenDetails.estimatedTotalTokens;
+            }
+
             addMessage(data.response, 'assistant', metadata);
             updateStatus('');
         } else {
@@ -302,13 +312,61 @@ function addMessage(text, type, metadata = null) {
         const metadataDiv = document.createElement('div');
         metadataDiv.className = 'message-metadata';
 
-        metadataDiv.innerHTML = `
-            <span class="metadata-time">⏱ ${metadata.time}с</span>
-            <span class="metadata-separator">│</span>
-            <span class="metadata-model">🤖 ${metadata.model}</span>
-            <span class="metadata-separator">│</span>
-            <span class="metadata-tokens">🎫 ${metadata.tokens} токенов</span>
-        `;
+        // Проверяем, есть ли раздельные токены (новый формат)
+        if (metadata.inputTokens !== undefined && metadata.outputTokens !== undefined) {
+            let tokensHtml = `
+                <span class="metadata-time">⏱ ${metadata.time}с</span>
+                <span class="metadata-separator">│</span>
+                <span class="metadata-model">🤖 ${metadata.model}</span>
+                <span class="metadata-separator">│</span>
+            `;
+
+            // API токены (реальные)
+            tokensHtml += `
+                <span class="metadata-section-title">API:</span>
+                <span class="metadata-tokens-input">📥 ${metadata.inputTokens}</span>
+                <span class="metadata-separator">│</span>
+                <span class="metadata-tokens-output">📤 ${metadata.outputTokens}</span>
+                <span class="metadata-separator">│</span>
+                <span class="metadata-tokens-total">🎫 ${metadata.totalTokens}</span>
+            `;
+
+            // Локальные токены (оценочные), если есть
+            if (metadata.estimatedInputTokens !== undefined && metadata.estimatedInputTokens > 0) {
+                tokensHtml += `
+                    <span class="metadata-separator">│</span>
+                    <span class="metadata-section-title">Local:</span>
+                    <span class="metadata-tokens-estimated">📥 ${metadata.estimatedInputTokens}</span>
+                `;
+
+                // Добавляем выходные локальные токены если есть
+                if (metadata.estimatedOutputTokens !== undefined && metadata.estimatedOutputTokens > 0) {
+                    tokensHtml += `
+                        <span class="metadata-separator">│</span>
+                        <span class="metadata-tokens-estimated">📤 ${metadata.estimatedOutputTokens}</span>
+                    `;
+                }
+
+                // Добавляем итоговые локальные токены если есть
+                if (metadata.estimatedTotalTokens !== undefined && metadata.estimatedTotalTokens > 0) {
+                    tokensHtml += `
+                        <span class="metadata-separator">│</span>
+                        <span class="metadata-tokens-estimated">🎫 ${metadata.estimatedTotalTokens}</span>
+                    `;
+                }
+            }
+
+            metadataDiv.innerHTML = tokensHtml;
+        } else {
+            // Старый формат (обратная совместимость)
+            metadataDiv.innerHTML = `
+                <span class="metadata-time">⏱ ${metadata.time}с</span>
+                <span class="metadata-separator">│</span>
+                <span class="metadata-model">🤖 ${metadata.model}</span>
+                <span class="metadata-separator">│</span>
+                <span class="metadata-tokens">🎫 ${metadata.tokens} токенов</span>
+            `;
+        }
 
         contentDiv.appendChild(metadataDiv);
     }
@@ -487,7 +545,15 @@ async function loadSessionHistory(sessionId) {
                 const metadata = msg.metadata ? {
                     time: msg.metadata.responseTime.toFixed(2),
                     model: msg.metadata.model,
-                    tokens: msg.metadata.tokensUsed
+                    tokens: msg.metadata.tokensUsed,
+                    // API токены (реальные)
+                    inputTokens: msg.metadata.inputTokens,
+                    outputTokens: msg.metadata.outputTokens,
+                    totalTokens: msg.metadata.totalTokens,
+                    // Локальные токены (оценочные)
+                    estimatedInputTokens: msg.metadata.estimatedInputTokens,
+                    estimatedOutputTokens: msg.metadata.estimatedOutputTokens,
+                    estimatedTotalTokens: msg.metadata.estimatedTotalTokens
                 } : null;
 
                 addMessage(msg.content, msg.role, metadata);

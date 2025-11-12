@@ -4,6 +4,7 @@ import com.researchai.domain.models.*
 import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
+import com.researchai.domain.tokenizer.TokenCounter
 import com.researchai.models.LLMModel as LegacyLLMModel
 import com.researchai.services.ClaudeMessageFormatter
 import io.ktor.client.*
@@ -19,7 +20,8 @@ import org.slf4j.LoggerFactory
  */
 class ClaudeProvider(
     private val httpClient: HttpClient,
-    override val config: ProviderConfig.ClaudeConfig
+    override val config: ProviderConfig.ClaudeConfig,
+    private val tokenCounter: TokenCounter
 ) : AIProvider {
 
     override val providerId: ProviderType = ProviderType.CLAUDE
@@ -31,6 +33,13 @@ class ClaudeProvider(
     override suspend fun sendMessage(request: AIRequest): Result<AIResponse> {
         return try {
             logger.info("Claude Provider: Sending message")
+
+            // Подсчёт входных токенов локально (приблизительная оценка)
+            val estimatedInputTokens = tokenCounter.countTokensWithFormatting(
+                request.messages,
+                request.systemPrompt
+            )
+            logger.info("Estimated input tokens: $estimatedInputTokens")
 
             // Маппинг domain модели в Claude API модель
             val claudeRequest = mapper.toClaudeRequest(request, config, formatter)
@@ -67,8 +76,20 @@ class ClaudeProvider(
             // Маппинг обратно в domain модель
             val aiResponse = mapper.fromClaudeResponse(claudeResponse, request.parameters.responseFormat, formatter)
 
+            // Подсчёт выходных токенов локально (приблизительная оценка)
+            val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
+
+            // Добавляем локально подсчитанные токены
+            val finalResponse = aiResponse.copy(
+                estimatedInputTokens = estimatedInputTokens,
+                estimatedOutputTokens = estimatedOutputTokens
+            )
+
             logger.info("Successfully received response from Claude API")
-            Result.success(aiResponse)
+            logger.info("Actual tokens - Input: ${finalResponse.usage.inputTokens}, Output: ${finalResponse.usage.outputTokens}")
+            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: $estimatedOutputTokens (diff: ${finalResponse.usage.outputTokens - estimatedOutputTokens})")
+
+            Result.success(finalResponse)
 
         } catch (e: Exception) {
             logger.error("Exception in ClaudeProvider: ${e.message}", e)

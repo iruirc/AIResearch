@@ -81,7 +81,15 @@ fun Route.chatRoutes(
                                 metadata = com.researchai.domain.models.MessageMetadata(
                                     model = messageResult.model,
                                     tokensUsed = messageResult.usage.totalTokens,
-                                    responseTime = elapsedTime
+                                    responseTime = elapsedTime,
+                                    // Токены от API провайдера (реальные)
+                                    inputTokens = messageResult.usage.inputTokens,
+                                    outputTokens = messageResult.usage.outputTokens,
+                                    totalTokens = messageResult.usage.totalTokens,
+                                    // Локально подсчитанные токены (оценочные)
+                                    estimatedInputTokens = messageResult.estimatedInputTokens,
+                                    estimatedOutputTokens = 0, // Выходные токены нельзя оценить локально
+                                    estimatedTotalTokens = messageResult.estimatedInputTokens
                                 )
                             )
                         } else {
@@ -92,7 +100,15 @@ fun Route.chatRoutes(
                     call.respond(ChatResponse(
                         response = messageResult.response,
                         sessionId = messageResult.sessionId,
-                        tokensUsed = messageResult.usage.totalTokens
+                        tokensUsed = messageResult.usage.totalTokens,
+                        tokenDetails = TokenDetails(
+                            inputTokens = messageResult.usage.inputTokens,
+                            outputTokens = messageResult.usage.outputTokens,
+                            totalTokens = messageResult.usage.totalTokens,
+                            estimatedInputTokens = messageResult.estimatedInputTokens,
+                            estimatedOutputTokens = messageResult.estimatedOutputTokens,
+                            estimatedTotalTokens = messageResult.estimatedInputTokens + messageResult.estimatedOutputTokens
+                        )
                     ))
                 }.onFailure { error ->
                     val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0

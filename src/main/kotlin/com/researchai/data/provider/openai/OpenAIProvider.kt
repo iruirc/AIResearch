@@ -4,6 +4,7 @@ import com.researchai.domain.models.*
 import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
+import com.researchai.domain.tokenizer.TokenCounter
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -17,7 +18,8 @@ import org.slf4j.LoggerFactory
  */
 class OpenAIProvider(
     private val httpClient: HttpClient,
-    override val config: ProviderConfig.OpenAIConfig
+    override val config: ProviderConfig.OpenAIConfig,
+    private val tokenCounter: TokenCounter
 ) : AIProvider {
 
     override val providerId: ProviderType = ProviderType.OPENAI
@@ -28,6 +30,13 @@ class OpenAIProvider(
     override suspend fun sendMessage(request: AIRequest): Result<AIResponse> {
         return try {
             logger.info("OpenAI Provider: Sending message")
+
+            // Подсчёт входных токенов локально
+            val estimatedInputTokens = tokenCounter.countTokensWithFormatting(
+                request.messages,
+                request.systemPrompt
+            )
+            logger.info("Estimated input tokens: $estimatedInputTokens")
 
             // Маппинг domain модели в OpenAI API модель
             val openAIRequest = mapper.toOpenAIRequest(request, config)
@@ -65,8 +74,20 @@ class OpenAIProvider(
             // Маппинг обратно в domain модель
             val aiResponse = mapper.fromOpenAIResponse(openAIResponse)
 
+            // Подсчёт выходных токенов локально (приблизительная оценка)
+            val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
+
+            // Добавляем локально подсчитанные токены
+            val finalResponse = aiResponse.copy(
+                estimatedInputTokens = estimatedInputTokens,
+                estimatedOutputTokens = estimatedOutputTokens
+            )
+
             logger.info("Successfully received response from OpenAI API")
-            Result.success(aiResponse)
+            logger.info("Actual tokens - Input: ${finalResponse.usage.inputTokens}, Output: ${finalResponse.usage.outputTokens}")
+            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: $estimatedOutputTokens (diff: ${finalResponse.usage.outputTokens - estimatedOutputTokens})")
+
+            Result.success(finalResponse)
 
         } catch (e: Exception) {
             logger.error("Exception in OpenAIProvider: ${e.message}", e)

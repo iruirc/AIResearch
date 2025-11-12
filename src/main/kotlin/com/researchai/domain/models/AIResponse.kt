@@ -11,10 +11,12 @@ data class AIResponse(
     val content: String,
     val role: MessageRole = MessageRole.ASSISTANT,
     val model: String,
-    val usage: TokenUsage,
+    val usage: TokenUsage, // Токены от API провайдера (реальные)
     val finishReason: FinishReason,
     val metadata: Map<String, String> = emptyMap(),
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val estimatedInputTokens: Int = 0, // Локально подсчитанные входные токены
+    val estimatedOutputTokens: Int = 0 // Локально подсчитанные выходные токены
 )
 
 @Serializable

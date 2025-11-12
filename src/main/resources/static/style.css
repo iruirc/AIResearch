@@ -378,7 +378,12 @@ body {
 
 .metadata-time,
 .metadata-model,
-.metadata-tokens {
+.metadata-tokens,
+.metadata-tokens-input,
+.metadata-tokens-output,
+.metadata-tokens-total,
+.metadata-tokens-estimated,
+.metadata-section-title {
     display: flex;
     align-items: center;
     gap: 3px;
@@ -387,6 +392,48 @@ body {
 .metadata-time {
     font-weight: 600;
     color: #667eea;
+}
+
+.metadata-model {
+    color: #6c757d;
+}
+
+/* Заголовки секций (API, Local) */
+.metadata-section-title {
+    font-weight: 700;
+    color: #868e96;
+    font-size: 10px;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+/* Цветовое выделение токенов API (реальные) */
+.metadata-tokens-input {
+    font-weight: 600;
+    color: #4dabf7; /* Синий для входных токенов */
+}
+
+.metadata-tokens-output {
+    font-weight: 600;
+    color: #51cf66; /* Зелёный для выходных токенов */
+}
+
+.metadata-tokens-total {
+    font-weight: 700;
+    color: #495057; /* Тёмно-серый для общего количества */
+}
+
+/* Локально подсчитанные токены (оценочные) */
+.metadata-tokens-estimated {
+    font-weight: 600;
+    color: #ff8c42; /* Оранжевый для локальных оценок */
+    font-style: italic;
+}
+
+/* Старый формат (обратная совместимость) */
+.metadata-tokens {
+    font-weight: 600;
+    color: #868e96;
 }
 
 .metadata-separator {

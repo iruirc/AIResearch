@@ -12,7 +12,8 @@
       "Bash(xargs kill:*)",
       "Bash(pkill:*)",
       "Bash(chmod:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
