@@ -437,6 +437,12 @@ body {
     font-style: italic;
 }
 
+/* Прогресс контекстного окна */
+.metadata-context-progress {
+    font-weight: 600;
+    color: #7950f2; /* Фиолетовый для прогресса */
+}
+
 /* Старый формат (обратная совместимость) */
 .metadata-tokens {
     font-weight: 600;

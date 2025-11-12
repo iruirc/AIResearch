@@ -43,6 +43,8 @@ let models = []; // Список всех доступных моделей
 let currentProvider = null; // Текущий выбранный провайдер
 let requestStartTime = null; // Время начала запроса
 let timerInterval = null; // Интервал для обновления таймера
+let sessionTotalTokens = 0; // Суммарное количество токенов в текущей сессии
+let currentContextWindow = 200000; // Размер контекстного окна текущей модели (по умолчанию)
 
 // Настройки (текущие активные значения)
 // Дефолтные значения будут заменены на значения из конфигурации бэкенда при загрузке
@@ -264,7 +266,14 @@ async function handleSendMessage() {
                 metadata.estimatedInputTokens = data.tokenDetails.estimatedInputTokens;
                 metadata.estimatedOutputTokens = data.tokenDetails.estimatedOutputTokens;
                 metadata.estimatedTotalTokens = data.tokenDetails.estimatedTotalTokens;
+
+                // Обновляем счётчик токенов сессии
+                sessionTotalTokens += data.tokenDetails.totalTokens;
             }
+
+            // Добавляем информацию о контекстном окне
+            metadata.contextWindow = currentContextWindow;
+            metadata.sessionTotalTokens = sessionTotalTokens;
 
             addMessage(data.response, 'assistant', metadata);
             updateStatus('');
@@ -362,6 +371,20 @@ function addMessage(text, type, metadata = null) {
                 }
 
                 tokensHtml += `</div>`;
+            }
+
+            // Строка 4: Прогресс контекстного окна
+            if (metadata.sessionTotalTokens !== undefined && metadata.contextWindow !== undefined) {
+                const percentage = ((metadata.sessionTotalTokens / metadata.contextWindow) * 100).toFixed(1);
+                const formattedTotal = metadata.sessionTotalTokens.toLocaleString('ru-RU');
+                const formattedWindow = metadata.contextWindow.toLocaleString('ru-RU');
+
+                tokensHtml += `
+                    <div class="metadata-line">
+                        <span class="metadata-section-title">Context:</span>
+                        <span class="metadata-context-progress">📊 ${formattedTotal} / ${formattedWindow} (${percentage}%)</span>
+                    </div>
+                `;
             }
 
             metadataDiv.innerHTML = tokensHtml;
@@ -546,6 +569,9 @@ async function loadSessionHistory(sessionId) {
         // Очищаем контейнер сообщений
         messagesContainer.innerHTML = '';
 
+        // Сбрасываем счётчик токенов
+        sessionTotalTokens = 0;
+
         // Отображаем историю сообщений
         if (data.messages && data.messages.length > 0) {
             data.messages.forEach(msg => {
@@ -563,6 +589,17 @@ async function loadSessionHistory(sessionId) {
                     estimatedOutputTokens: msg.metadata.estimatedOutputTokens,
                     estimatedTotalTokens: msg.metadata.estimatedTotalTokens
                 } : null;
+
+                // Суммируем токены из истории
+                if (metadata && metadata.totalTokens) {
+                    sessionTotalTokens += metadata.totalTokens;
+                }
+
+                // Добавляем информацию о контекстном окне для каждого сообщения
+                if (metadata) {
+                    metadata.contextWindow = currentContextWindow;
+                    metadata.sessionTotalTokens = sessionTotalTokens;
+                }
 
                 addMessage(msg.content, msg.role, metadata);
             });
@@ -591,6 +628,9 @@ async function startNewChat() {
     // Сбрасываем sessionId
     currentSessionId = null;
     console.log('Начат новый чат');
+
+    // Сбрасываем счётчик токенов
+    sessionTotalTokens = 0;
 
     // Очищаем все сообщения
     messagesContainer.innerHTML = '';
@@ -840,9 +880,24 @@ async function loadConfig() {
         currentSettings.format = data.format;
 
         console.log('Конфигурация загружена с бэкенда:', currentSettings);
+
+        // Загружаем capabilities для получения contextWindow
+        await updateContextWindow(currentSettings.model);
     } catch (error) {
         console.error('Error loading config:', error);
         // Если не удалось загрузить конфигурацию, используем дефолтные значения
+    }
+}
+
+// Обновление contextWindow для модели
+async function updateContextWindow(modelId) {
+    try {
+        const capabilities = await loadModelCapabilities(modelId);
+        currentContextWindow = capabilities.contextWindow;
+        console.log(`Context window for ${modelId}: ${currentContextWindow}`);
+    } catch (error) {
+        console.error('Error updating context window:', error);
+        // Используем дефолтное значение
     }
 }
 
@@ -1047,14 +1102,18 @@ function closeSettingsModalFunc() {
 }
 
 // Сохранение настроек
-function saveSettings() {
+async function saveSettings() {
     // Сохраняем новые настройки
-    currentSettings.model = modalModelSelect.value;
+    const newModel = modalModelSelect.value;
+    currentSettings.model = newModel;
     currentSettings.temperature = parseFloat(modalTemperatureSlider.value);
     currentSettings.maxTokens = parseInt(modalMaxTokensSlider.value);
     currentSettings.format = modalFormatSelect.value;
 
     console.log('Настройки сохранены:', currentSettings);
+
+    // Обновляем contextWindow для новой модели
+    await updateContextWindow(newModel);
 
     // Закрываем модальное окно
     closeSettingsModalFunc();
