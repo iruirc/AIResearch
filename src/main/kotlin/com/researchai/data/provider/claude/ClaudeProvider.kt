@@ -5,6 +5,7 @@ import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
+import com.researchai.models.AvailableClaudeModels
 import com.researchai.models.LLMModel as LegacyLLMModel
 import com.researchai.services.ClaudeMessageFormatter
 import io.ktor.client.*
@@ -99,42 +100,71 @@ class ClaudeProvider(
 
     override suspend fun getModels(): Result<List<AIModel>> {
         // Claude не предоставляет endpoint для списка моделей
-        // Возвращаем хардкод список
-        return Result.success(listOf(
+        // Возвращаем список из AvailableClaudeModels
+        val models = AvailableClaudeModels.models.map { llmModel ->
             AIModel(
-                id = "claude-sonnet-4-5-20250929",
-                name = "Claude Sonnet 4.5",
+                id = llmModel.id,
+                name = llmModel.displayName,
                 providerId = ProviderType.CLAUDE,
-                capabilities = ModelCapabilities(
-                    supportsVision = false,
-                    supportsStreaming = true,
-                    maxTokens = 8192,
-                    contextWindow = 200000
-                )
-            ),
-            AIModel(
-                id = "claude-haiku-4-5-20251001",
-                name = "Claude Haiku 4.5",
-                providerId = ProviderType.CLAUDE,
-                capabilities = ModelCapabilities(
-                    supportsVision = false,
-                    supportsStreaming = true,
-                    maxTokens = 8192,
-                    contextWindow = 200000
-                )
-            ),
-            AIModel(
-                id = "claude-opus-4-1-20250805",
-                name = "Claude Opus 4.1",
-                providerId = ProviderType.CLAUDE,
-                capabilities = ModelCapabilities(
-                    supportsVision = false,
-                    supportsStreaming = true,
-                    maxTokens = 16384,
-                    contextWindow = 200000
-                )
+                capabilities = when (llmModel.id) {
+                    "claude-haiku-4-5-20251001" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                    "claude-sonnet-4-5-20250929" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                    "claude-opus-4-1-20250805" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 16384,
+                        contextWindow = 200000
+                    )
+                    "claude-opus-4-20250514" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 16384,
+                        contextWindow = 200000
+                    )
+                    "claude-sonnet-4-20250514" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                    "claude-3-7-sonnet-20250219" -> ModelCapabilities(
+                        supportsVision = true,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                    "claude-3-5-haiku-20241022" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                    "claude-3-haiku-20240307" -> ModelCapabilities(
+                        supportsVision = true,
+                        supportsStreaming = true,
+                        maxTokens = 4096,
+                        contextWindow = 200000
+                    )
+                    else -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 200000
+                    )
+                }
             )
-        ))
+        }
+        return Result.success(models)
     }
 
     override fun validateConfig(): ValidationResult {

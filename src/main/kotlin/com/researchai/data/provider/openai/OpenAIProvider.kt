@@ -5,6 +5,7 @@ import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
+import com.researchai.models.AvailableOpenAIModels
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -96,40 +97,47 @@ class OpenAIProvider(
     }
 
     override suspend fun getModels(): Result<List<AIModel>> {
-        return try {
-            val httpResponse: HttpResponse = httpClient.get("https://api.openai.com/v1/models") {
-                header("Authorization", "Bearer ${config.apiKey}")
-            }
-
-            if (!httpResponse.status.isSuccess()) {
-                return Result.failure(
-                    AIError.NetworkException("Failed to fetch OpenAI models: ${httpResponse.status}")
-                )
-            }
-
-            val modelsResponse: OpenAIModelsResponse = httpResponse.body()
-
-            val aiModels = modelsResponse.data
-                .filter { it.id.startsWith("gpt-") }
-                .map { model ->
-                    AIModel(
-                        id = model.id,
-                        name = model.id,
-                        providerId = ProviderType.OPENAI,
-                        capabilities = ModelCapabilities(
-                            supportsVision = model.id.contains("vision") || model.id.contains("4o"),
-                            supportsStreaming = true,
-                            maxTokens = getMaxTokensForModel(model.id),
-                            contextWindow = getContextWindowForModel(model.id)
-                        )
+        // OpenAI возвращает список моделей из AvailableOpenAIModels
+        val models = AvailableOpenAIModels.models.map { llmModel ->
+            AIModel(
+                id = llmModel.id,
+                name = llmModel.displayName,
+                providerId = ProviderType.OPENAI,
+                capabilities = when (llmModel.id) {
+                    "gpt-5-nano" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 4096,
+                        contextWindow = 128000
+                    )
+                    "gpt-5-mini" -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 8192,
+                        contextWindow = 128000
+                    )
+                    "gpt-5" -> ModelCapabilities(
+                        supportsVision = true,
+                        supportsStreaming = true,
+                        maxTokens = 16384,
+                        contextWindow = 200000
+                    )
+                    "gpt-5-pro" -> ModelCapabilities(
+                        supportsVision = true,
+                        supportsStreaming = true,
+                        maxTokens = 32768,
+                        contextWindow = 200000
+                    )
+                    else -> ModelCapabilities(
+                        supportsVision = false,
+                        supportsStreaming = true,
+                        maxTokens = 4096,
+                        contextWindow = 128000
                     )
                 }
-
-            Result.success(aiModels)
-        } catch (e: Exception) {
-            logger.error("Failed to get OpenAI models: ${e.message}", e)
-            Result.failure(AIError.NetworkException("Failed to get models", e))
+            )
         }
+        return Result.success(models)
     }
 
     override fun validateConfig(): ValidationResult {
@@ -146,36 +154,6 @@ class OpenAIProvider(
             ValidationResult.Valid
         } else {
             ValidationResult.Invalid(errors)
-        }
-    }
-
-    private fun getMaxTokensForModel(modelId: String): Int {
-        return when {
-            modelId.contains("gpt-5-pro") -> 32768
-            modelId.contains("gpt-5-mini") -> 8192
-            modelId.contains("gpt-5-nano") -> 4096
-            modelId.contains("gpt-5") -> 16384
-            modelId.contains("gpt-4o") -> 16384
-            modelId.contains("gpt-4-turbo") -> 4096
-            modelId.contains("gpt-4") -> 8192
-            modelId.contains("gpt-3.5-turbo") -> 4096
-            else -> 4096
-        }
-    }
-
-    private fun getContextWindowForModel(modelId: String): Int {
-        return when {
-            modelId.contains("gpt-5-pro") -> 200000
-            modelId.contains("gpt-5-mini") -> 128000
-            modelId.contains("gpt-5-nano") -> 128000
-            modelId.contains("gpt-5") -> 200000
-            modelId.contains("gpt-4o") -> 128000
-            modelId.contains("gpt-4-turbo") -> 128000
-            modelId.contains("gpt-4-32k") -> 32768
-            modelId.contains("gpt-4") -> 8192
-            modelId.contains("gpt-3.5-turbo-16k") -> 16384
-            modelId.contains("gpt-3.5-turbo") -> 4096
-            else -> 4096
         }
     }
 }
