@@ -394,6 +394,74 @@ fun Route.chatRoutes(
                 )
             }
         }
+
+        // Получить capabilities для конкретной модели
+        get("/{modelId}/capabilities") {
+            try {
+                val modelId = call.parameters["modelId"]
+                if (modelId == null) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Model ID is required"))
+                    return@get
+                }
+
+                // Определяем провайдер по модели
+                val providerId = when {
+                    modelId.startsWith("gpt-") -> com.researchai.domain.models.ProviderType.OPENAI
+                    modelId.contains("deepseek", ignoreCase = true) -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                    modelId.contains("/") -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                    else -> com.researchai.domain.models.ProviderType.CLAUDE
+                }
+
+                // Получаем конфигурацию провайдера
+                val configResult = appModule.configRepository.getProviderConfig(providerId)
+                if (configResult.isFailure) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
+                    return@get
+                }
+
+                val config = configResult.getOrNull()
+                if (config == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
+                    return@get
+                }
+
+                // Создаем провайдер
+                val provider = appModule.providerFactory.create(providerId, config)
+
+                // Получаем список моделей от провайдера
+                val modelsResult = provider.getModels()
+
+                modelsResult.onSuccess { models ->
+                    // Ищем модель по ID
+                    val model = models.find { it.id == modelId }
+                    if (model == null) {
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Model not found: $modelId"))
+                        return@get
+                    }
+
+                    // Возвращаем capabilities
+                    val capabilitiesDTO = ModelCapabilitiesDTO(
+                        modelId = model.id,
+                        maxTokens = model.capabilities.maxTokens,
+                        contextWindow = model.capabilities.contextWindow,
+                        supportsVision = model.capabilities.supportsVision,
+                        supportsStreaming = model.capabilities.supportsStreaming
+                    )
+
+                    call.respond(capabilitiesDTO)
+                }.onFailure { error ->
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        mapOf("error" to "Failed to get model capabilities: ${error.message}")
+                    )
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to get model capabilities: ${e.message}")
+                )
+            }
+        }
     }
 
     // Получить текущую конфигурацию

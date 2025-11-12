@@ -116,3 +116,15 @@ data class ProviderDTO(
 data class ProvidersListResponse(
     val providers: List<ProviderDTO>
 )
+
+/**
+ * Информация о возможностях модели
+ */
+@Serializable
+data class ModelCapabilitiesDTO(
+    val modelId: String,
+    val maxTokens: Int,
+    val contextWindow: Int,
+    val supportsVision: Boolean,
+    val supportsStreaming: Boolean
+)

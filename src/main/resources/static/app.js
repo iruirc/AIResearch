@@ -880,6 +880,56 @@ async function loadModelsForProvider(providerId) {
     }
 }
 
+// Загрузка capabilities для конкретной модели
+async function loadModelCapabilities(modelId) {
+    try {
+        const response = await fetch(`${MODELS_URL}/${encodeURIComponent(modelId)}/capabilities`);
+        if (!response.ok) {
+            throw new Error('Failed to load model capabilities');
+        }
+
+        const capabilities = await response.json();
+        return capabilities;
+    } catch (error) {
+        console.error('Error loading model capabilities:', error);
+        // В случае ошибки возвращаем дефолтные значения
+        return {
+            maxTokens: 4096,
+            contextWindow: 200000,
+            supportsVision: false,
+            supportsStreaming: true
+        };
+    }
+}
+
+// Обновление слайдера maxTokens на основе capabilities модели
+function updateMaxTokensSlider(maxTokens) {
+    const minTokens = 1024;
+    const step = 1024;
+
+    // Обновляем атрибуты слайдера
+    modalMaxTokensSlider.min = minTokens;
+    modalMaxTokensSlider.max = maxTokens;
+    modalMaxTokensSlider.step = step;
+
+    // Если текущее значение больше нового максимума, устанавливаем на максимум
+    if (parseInt(modalMaxTokensSlider.value) > maxTokens) {
+        modalMaxTokensSlider.value = maxTokens;
+        modalMaxTokensValue.textContent = maxTokens;
+    }
+
+    // Обновляем лейблы
+    const maxTokensLabels = document.querySelector('.max-tokens-labels');
+    if (maxTokensLabels) {
+        maxTokensLabels.innerHTML = `
+            <span>${minTokens}</span>
+            <span>${maxTokens}</span>
+        `;
+    }
+
+    console.log(`MaxTokens slider updated: min=${minTokens}, max=${maxTokens}, current=${modalMaxTokensSlider.value}`);
+}
+
 // Отрисовка списка провайдеров в селекторе
 function renderProvidersList() {
     if (providers.length === 0) {
@@ -920,7 +970,7 @@ function detectProviderFromModel(modelId) {
 }
 
 // Отрисовка списка моделей в селекторе
-function renderModelsList() {
+async function renderModelsList() {
     if (models.length === 0) {
         return;
     }
@@ -938,10 +988,34 @@ function renderModelsList() {
 
         modalModelSelect.appendChild(option);
     });
+
+    // Добавляем обработчик изменения модели для обновления слайдера maxTokens
+    modalModelSelect.removeEventListener('change', handleModelChange);
+    modalModelSelect.addEventListener('change', handleModelChange);
+
+    // Загружаем capabilities для текущей выбранной модели
+    if (currentSettings.model) {
+        const capabilities = await loadModelCapabilities(currentSettings.model);
+        updateMaxTokensSlider(capabilities.maxTokens);
+    }
+}
+
+// Обработчик изменения выбранной модели
+async function handleModelChange(e) {
+    const modelId = e.target.value;
+    if (modelId) {
+        console.log(`Model changed to: ${modelId}`);
+
+        // Загружаем capabilities для выбранной модели
+        const capabilities = await loadModelCapabilities(modelId);
+
+        // Обновляем слайдер maxTokens
+        updateMaxTokensSlider(capabilities.maxTokens);
+    }
 }
 
 // Открытие модального окна настроек
-function openSettingsModal() {
+async function openSettingsModal() {
     if (isLoading) {
         return;
     }
@@ -959,6 +1033,10 @@ function openSettingsModal() {
     modalMaxTokensSlider.value = currentSettings.maxTokens;
     modalMaxTokensValue.textContent = currentSettings.maxTokens;
     modalFormatSelect.value = currentSettings.format;
+
+    // Загружаем capabilities для текущей модели и обновляем слайдер
+    const capabilities = await loadModelCapabilities(currentSettings.model);
+    updateMaxTokensSlider(capabilities.maxTokens);
 
     settingsModal.classList.add('active');
 }
