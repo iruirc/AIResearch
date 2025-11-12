@@ -106,32 +106,33 @@ class HuggingFaceProvider(
                     "deepseek-ai/DeepSeek-R1:fastest", "deepseek-ai/DeepSeek-R1" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 128000
+                        maxTokens = 32*1024,
+                        contextWindow = 128*1024
                     )
                     "meta-llama/Llama-3.3-70B-Instruct" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 128000
+                        maxTokens = 8*`,
+                        contextWindow = 128*1024
                     )
                     "Qwen/Qwen2.5-72B-Instruct" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 8192,
-                        contextWindow = 32768
+                        maxTokens = 8*1024,
+                        contextWindow = 32*1024
                     )
                     "meta-llama/Llama-3.2-3B-Instruct" -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 2048,
-                        contextWindow = 128000
+                        maxTokens = 2*1024,
+                        contextWindow = 128*1024
                     )
                     else -> ModelCapabilities(
                         supportsVision = false,
                         supportsStreaming = true,
-                        maxTokens = 4096,
-                        contextWindow = 32768
+                        maxTokens = 1*1024,
+                        contextWindow = 8*1024
+                        
                     )
                 }
             )
