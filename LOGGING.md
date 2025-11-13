@@ -1,4 +1,4 @@
-# Логирование в Claude Chat API Server
+# Логирование в ResearchAI Chat API Server
 
 ## Где смотреть логи?
 
