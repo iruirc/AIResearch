@@ -5,6 +5,7 @@ import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ChatSession
 import com.researchai.domain.repository.ConfigRepository
 import com.researchai.domain.repository.SessionRepository
+import com.researchai.services.AgentManager
 import org.slf4j.LoggerFactory
 
 /**
@@ -13,7 +14,8 @@ import org.slf4j.LoggerFactory
 class SendMessageUseCase(
     private val providerFactory: AIProviderFactory,
     private val sessionRepository: SessionRepository,
-    private val configRepository: ConfigRepository
+    private val configRepository: ConfigRepository,
+    private val agentManager: AgentManager
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
 
@@ -65,8 +67,15 @@ class SendMessageUseCase(
 
             // 6. Получаем системный промпт от агента если есть
             val systemPrompt = session.agentId?.let { agentId ->
-                // Здесь можно интегрировать AgentManager
-                null
+                logger.info("Retrieving systemPrompt for agent: $agentId")
+                val agent = agentManager.getAgent(agentId)
+                if (agent != null) {
+                    logger.info("Agent found: ${agent.name}, systemPrompt length: ${agent.systemPrompt.length}")
+                    agent.systemPrompt
+                } else {
+                    logger.warn("Agent not found: $agentId")
+                    null
+                }
             }
 
             // 7. Определяем модель

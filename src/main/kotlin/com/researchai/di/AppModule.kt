@@ -78,7 +78,8 @@ class AppModule(
         SendMessageUseCase(
             providerFactory = providerFactory,
             sessionRepository = sessionRepository,
-            configRepository = configRepository
+            configRepository = configRepository,
+            agentManager = agentManager
         )
     }
 
