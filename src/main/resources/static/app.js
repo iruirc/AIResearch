@@ -1303,12 +1303,10 @@ async function applyCompression() {
 
 // Показать индикатор компрессии
 function showCompressionIndicator() {
-    // Очищаем текущие сообщения
-    messagesContainer.innerHTML = '';
-
-    // Создаем индикатор
+    // НЕ очищаем сообщения здесь! Это будет сделано только если компрессия успешна
+    // Создаем overlay с индикатором поверх текущих сообщений
     const indicator = document.createElement('div');
-    indicator.className = 'compression-indicator';
+    indicator.className = 'compression-indicator compression-overlay';
     indicator.id = 'compressionIndicator';
     indicator.innerHTML = `
         <div class="compression-spinner"></div>
