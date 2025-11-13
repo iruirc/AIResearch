@@ -64,6 +64,9 @@ fun Route.compressionRoutes(
                 )
 
                 result.onSuccess { compressionResult ->
+                    // Помечаем сессию как требующую сохранения
+                    sessionManager.markSessionDirty(session.id)
+
                     call.respond(
                         HttpStatusCode.OK,
                         CompressionResponse(
@@ -75,7 +78,8 @@ fun Route.compressionRoutes(
                             newMessageCount = compressionResult.newMessageCount,
                             compressionRatio = compressionResult.compressionRatio,
                             archivedMessageCount = compressionResult.archivedMessages.size,
-                            totalCompressions = session.compressionCount
+                            totalCompressions = session.compressionCount,
+                            summaryMessage = compressionResult.summaryMessage
                         )
                     )
                 }.onFailure { error ->
@@ -246,7 +250,8 @@ data class CompressionResponse(
     val newMessageCount: Int = 0,
     val compressionRatio: Double = 0.0,
     val archivedMessageCount: Int = 0,
-    val totalCompressions: Int = 0
+    val totalCompressions: Int = 0,
+    val summaryMessage: Message? = null // Сообщение с суммаризацией
 )
 
 @Serializable

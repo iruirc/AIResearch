@@ -91,6 +91,17 @@ class ChatSessionManager(
     }
 
     /**
+     * Помечает сессию как требующую сохранения
+     * @param sessionId ID сессии
+     */
+    fun markSessionDirty(sessionId: String) {
+        val session = sessions[sessionId]
+        if (session != null) {
+            persistenceManager?.markDirty(session)
+        }
+    }
+
+    /**
      * Добавляет сообщение в сессию
      * @param sessionId ID сессии
      * @param role роль отправителя (USER или ASSISTANT)

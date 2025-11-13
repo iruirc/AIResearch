@@ -44,29 +44,17 @@ class FullReplacementCompression : CompressionAlgorithm {
         // Генерируем суммаризацию всех сообщений
         val summary = summarize(messages)
 
-        // Создаем новое системное сообщение с суммаризацией
-        val summaryMessage = Message(
-            role = MessageRole.SYSTEM,
-            content = MessageContent.Text(
-                """
-                |=== СЖАТАЯ ИСТОРИЯ ДИАЛОГА ===
-                |
-                |$summary
-                |
-                |=== КОНЕЦ СЖАТОЙ ИСТОРИИ ===
-                """.trimMargin()
-            )
-        )
-
-        val newMessages = listOf(summaryMessage)
+        // НЕ создаем сообщение здесь - это будет сделано в ChatCompressionService
+        // Возвращаем пустой список, суммаризация будет добавлена отдельно
+        val newMessages = emptyList<Message>()
 
         return CompressionResult(
             newMessages = newMessages,
             archivedMessages = messages,
             summaryGenerated = true,
             originalMessageCount = messages.size,
-            newMessageCount = newMessages.size,
-            compressionRatio = 1.0 - (newMessages.size.toDouble() / messages.size)
+            newMessageCount = 1, // Будет одно сообщение с суммаризацией
+            compressionRatio = 1.0 - (1.0 / messages.size)
         )
     }
 }

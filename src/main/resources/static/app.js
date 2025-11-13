@@ -1327,19 +1327,50 @@ async function applyCompression() {
             // Очищаем текущий чат
             messagesContainer.innerHTML = '';
 
-            // Загружаем сжатый чат
+            // Загружаем сжатый чат (включая сообщение с суммаризацией)
             await loadSessionHistory(currentSessionId);
 
-            // Добавляем информационное сообщение о результате компрессии
-            const compressionRatio = Math.round(result.compressionRatio * 100);
-            addCompressionResultMessage(
-                result.originalMessageCount,
-                result.newMessageCount,
-                compressionRatio,
-                result.archivedMessageCount
-            );
+            // Если есть сообщение с суммаризацией, добавляем его напрямую
+            if (result.summaryMessage) {
+                const msg = result.summaryMessage;
+
+                // Извлекаем текст из content
+                let messageText = '';
+                if (msg.content && typeof msg.content === 'object') {
+                    messageText = msg.content.text || '';
+                } else if (typeof msg.content === 'string') {
+                    messageText = msg.content;
+                }
+
+                // Подготавливаем метаданные если есть
+                let metadata = null;
+                if (msg.metadata) {
+                    metadata = {
+                        time: msg.metadata.responseTime.toFixed(2),
+                        model: msg.metadata.model,
+                        tokens: msg.metadata.tokensUsed,
+                        inputTokens: msg.metadata.inputTokens,
+                        outputTokens: msg.metadata.outputTokens,
+                        totalTokens: msg.metadata.totalTokens,
+                        estimatedInputTokens: msg.metadata.estimatedInputTokens,
+                        estimatedOutputTokens: msg.metadata.estimatedOutputTokens,
+                        estimatedTotalTokens: msg.metadata.estimatedTotalTokens,
+                        contextWindow: currentContextWindow,
+                        sessionTotalTokens: sessionTotalTokens
+                    };
+
+                    // Обновляем счетчик токенов сессии
+                    if (metadata.totalTokens) {
+                        sessionTotalTokens += metadata.totalTokens;
+                    }
+                }
+
+                // Добавляем сообщение с суммаризацией
+                addMessage(messageText, 'assistant', metadata);
+            }
 
             // Показываем уведомление в статусе
+            const compressionRatio = Math.round(result.compressionRatio * 100);
             updateStatus(
                 `Сжатие выполнено: ${result.originalMessageCount} → ${result.newMessageCount} сообщений (${compressionRatio}%)`,
                 'success'

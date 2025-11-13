@@ -49,35 +49,17 @@ class SlidingWindowCompression : CompressionAlgorithm {
         // Генерируем суммаризацию старых сообщений
         val summary = summarize(messagesToCompress)
 
-        // Создаем системное сообщение с контекстом
-        val contextMessage = Message(
-            role = MessageRole.SYSTEM,
-            content = MessageContent.Text(
-                """
-                |=== КОНТЕКСТ ПРЕДЫДУЩЕЙ БЕСЕДЫ ===
-                |
-                |Ниже представлена краткая суммаризация предыдущих ${messagesToCompress.size} сообщений диалога.
-                |Используйте этот контекст для понимания текущей беседы.
-                |
-                |$summary
-                |
-                |=== КОНЕЦ КОНТЕКСТА ===
-                |
-                |Далее следуют последние ${messagesToKeep.size} сообщений диалога в полном виде.
-                """.trimMargin()
-            )
-        )
-
-        // Новый список сообщений: контекст + последние сообщения
-        val newMessages = listOf(contextMessage) + messagesToKeep
+        // Новый список сообщений: только последние сообщения
+        // Суммаризация будет добавлена отдельно в ChatCompressionService
+        val newMessages = messagesToKeep
 
         return CompressionResult(
             newMessages = newMessages,
             archivedMessages = messagesToCompress,
             summaryGenerated = true,
             originalMessageCount = messages.size,
-            newMessageCount = newMessages.size,
-            compressionRatio = 1.0 - (newMessages.size.toDouble() / messages.size)
+            newMessageCount = messagesToKeep.size + 1, // +1 для сообщения суммаризации
+            compressionRatio = 1.0 - ((messagesToKeep.size + 1).toDouble() / messages.size)
         )
     }
 }

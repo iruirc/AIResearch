@@ -57,9 +57,14 @@ class ChatCompressionService(
                     IllegalArgumentException("Unknown compression strategy: ${session.compressionConfig.strategy}")
                 )
 
+            // Переменная для хранения сообщения с суммаризацией
+            var summaryMessage: Message? = null
+
             // Создаем функцию для суммаризации через AI
             val summarizeFn: suspend (List<Message>) -> String = { messages ->
-                summarizeMessages(messages, providerId, model)
+                val (summary, message) = summarizeMessagesWithMetadata(messages, providerId, model)
+                summaryMessage = message
+                summary
             }
 
             // Выполняем сжатие
@@ -69,18 +74,27 @@ class ChatCompressionService(
                 summarize = summarizeFn
             )
 
+            // Создаем новый результат с сообщением суммаризации
+            val resultWithSummary = result.copy(summaryMessage = summaryMessage)
+
             // Применяем результат к сессии
-            session.archiveMessages(result.archivedMessages)
-            session.replaceMessages(result.newMessages)
+            session.archiveMessages(resultWithSummary.archivedMessages)
+            session.replaceMessages(resultWithSummary.newMessages)
+
+            // Добавляем сообщение с суммаризацией в сессию, если оно было создано
+            if (summaryMessage != null) {
+                session.addMessage(summaryMessage)
+            }
+
             session.compressionCount++
 
             logger.info(
                 "Compression completed for session ${session.id}. " +
-                        "Original: ${result.originalMessageCount}, New: ${result.newMessageCount}, " +
-                        "Ratio: ${"%.2f".format(result.compressionRatio * 100)}%"
+                        "Original: ${resultWithSummary.originalMessageCount}, New: ${resultWithSummary.newMessageCount}, " +
+                        "Ratio: ${"%.2f".format(resultWithSummary.compressionRatio * 100)}%"
             )
 
-            Result.success(result)
+            Result.success(resultWithSummary)
         } catch (e: Exception) {
             logger.error("Error during compression for session ${session.id}: ${e.message}", e)
             Result.failure(e)
@@ -88,13 +102,14 @@ class ChatCompressionService(
     }
 
     /**
-     * Генерирует суммаризацию списка сообщений через AI
+     * Генерирует суммаризацию списка сообщений через AI с метаданными
+     * @return Pair(summary text, summary message with metadata)
      */
-    private suspend fun summarizeMessages(
+    private suspend fun summarizeMessagesWithMetadata(
         messages: List<Message>,
         providerId: ProviderType,
         model: String?
-    ): String {
+    ): Pair<String, Message> {
         return try {
             logger.info("Generating summary for ${messages.size} messages using provider $providerId")
 
@@ -143,16 +158,45 @@ class ChatCompressionService(
                 )
             )
 
+            // Засекаем время выполнения
+            val startTime = System.currentTimeMillis()
+
             // Отправляем запрос
             val response = provider.sendMessage(request).getOrThrow()
 
-            logger.info("Summary generated: ${response.content.length} characters")
+            val responseTime = (System.currentTimeMillis() - startTime) / 1000.0
 
-            response.content
+            logger.info("Summary generated: ${response.content.length} characters, " +
+                    "tokens: ${response.usage.totalTokens}, time: ${responseTime}s")
+
+            // Создаем сообщение с метаданными
+            val summaryMessage = Message(
+                role = MessageRole.ASSISTANT,
+                content = MessageContent.Text(response.content),
+                metadata = MessageMetadata(
+                    model = response.model,
+                    tokensUsed = response.usage.totalTokens,
+                    responseTime = responseTime,
+                    inputTokens = response.usage.inputTokens,
+                    outputTokens = response.usage.outputTokens,
+                    totalTokens = response.usage.totalTokens,
+                    estimatedInputTokens = response.estimatedInputTokens,
+                    estimatedOutputTokens = response.estimatedOutputTokens,
+                    estimatedTotalTokens = response.estimatedInputTokens + response.estimatedOutputTokens
+                )
+            )
+
+            response.content to summaryMessage
         } catch (e: Exception) {
             logger.error("Error generating summary: ${e.message}", e)
-            // В случае ошибки возвращаем базовую суммаризацию
-            generateFallbackSummary(messages)
+            // В случае ошибки возвращаем базовую суммаризацию без метаданных
+            val fallbackSummary = generateFallbackSummary(messages)
+            val fallbackMessage = Message(
+                role = MessageRole.ASSISTANT,
+                content = MessageContent.Text(fallbackSummary),
+                metadata = null
+            )
+            fallbackSummary to fallbackMessage
         }
     }
 

@@ -10,6 +10,7 @@ data class CompressionResult(
     val newMessages: List<Message>, // Новый список сообщений (после сжатия)
     val archivedMessages: List<Message>, // Сообщения, которые были сжаты и должны быть архивированы
     val summaryGenerated: Boolean, // Была ли создана суммаризация
+    val summaryMessage: Message? = null, // Сообщение с суммаризацией (если было создано)
     val originalMessageCount: Int, // Исходное количество сообщений
     val newMessageCount: Int, // Новое количество сообщений
     val compressionRatio: Double // Коэффициент сжатия (например, 0.5 = сжато на 50%)
