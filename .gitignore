@@ -38,3 +38,6 @@ out/
 
 ### Environment Variables ###
 .env
+
+### Session Data ###
+data/sessions/
