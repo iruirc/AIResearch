@@ -262,6 +262,34 @@ fun Route.chatRoutes(
                 )
             }
         }
+
+        // Скопировать сессию со всеми сообщениями
+        post("/{sessionId}/copy") {
+            try {
+                val sessionId = call.parameters["sessionId"]
+                if (sessionId == null) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Session ID is required"))
+                    return@post
+                }
+
+                val newSessionId = sessionManager.copySession(sessionId)
+                if (newSessionId != null) {
+                    call.respond(CopySessionResponse(
+                        success = true,
+                        message = "Session copied successfully",
+                        newSessionId = newSessionId
+                    ))
+                } else {
+                    call.respond(HttpStatusCode.NotFound, StatusResponse(success = false, message = "Session not found"))
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to copy session: ${e.message}")
+                )
+                call.application.environment.log.error("Failed to copy session: ${e.message}", e)
+            }
+        }
     }
 
     // Получить список всех доступных агентов

@@ -64,6 +64,16 @@ data class StatusResponse(
 )
 
 /**
+ * Ответ на копирование сессии
+ */
+@Serializable
+data class CopySessionResponse(
+    val success: Boolean,
+    val message: String? = null,
+    val newSessionId: String
+)
+
+/**
  * Информация об агенте для отображения
  */
 @Serializable

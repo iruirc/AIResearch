@@ -112,6 +112,42 @@ class ChatSessionManager {
     }
 
     /**
+     * Копирует существующую сессию со всеми сообщениями
+     * @param sessionId ID исходной сессии
+     * @return ID новой скопированной сессии или null если исходная сессия не найдена
+     */
+    fun copySession(sessionId: String): String? {
+        val originalSession = sessions[sessionId]
+        return if (originalSession != null) {
+            // Создаем новую сессию с копией всех данных
+            val copiedSession = ChatSession(
+                agentId = originalSession.agentId
+            ).apply {
+                // Копируем все сообщения
+                originalSession.messages.forEach { message ->
+                    addMessage(message)
+                }
+
+                // Копируем архивированные сообщения (если были сжатия)
+                originalSession.archivedMessages.forEach { message ->
+                    archiveMessages(listOf(message))
+                }
+
+                // Копируем конфигурацию сжатия
+                compressionConfig = originalSession.compressionConfig.copy()
+                compressionCount = originalSession.compressionCount
+            }
+
+            sessions[copiedSession.id] = copiedSession
+            logger.info("Copied session $sessionId to ${copiedSession.id} (${copiedSession.messages.size} messages, ${copiedSession.archivedMessages.size} archived)")
+            copiedSession.id
+        } else {
+            logger.warn("Session not found for copying: $sessionId")
+            null
+        }
+    }
+
+    /**
      * Возвращает количество активных сессий
      */
     fun getActiveSessionsCount(): Int = sessions.size

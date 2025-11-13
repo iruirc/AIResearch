@@ -577,9 +577,31 @@ function renderSessionsList() {
                 <span class="session-message-count">${session.messageCount} сообщ.</span>
             </div>
             <div class="session-time">${timeAgo}</div>
+            <div class="session-actions">
+                <button class="session-copy-btn" title="Скопировать чат">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+            </div>
         `;
 
-        sessionItem.addEventListener('click', () => loadSessionHistory(session.id));
+        // Обработчик клика на сам элемент сессии (не на кнопку)
+        sessionItem.addEventListener('click', (e) => {
+            // Проверяем, что клик не был на кнопку копирования
+            if (!e.target.closest('.session-copy-btn')) {
+                loadSessionHistory(session.id);
+            }
+        });
+
+        // Обработчик кнопки копирования
+        const copyBtn = sessionItem.querySelector('.session-copy-btn');
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Предотвращаем клик на сессию
+            handleCopySession(session.id);
+        });
+
         sessionsList.appendChild(sessionItem);
     });
 }
@@ -760,6 +782,40 @@ async function handleDeleteSession() {
     } catch (error) {
         console.error('Error deleting session:', error);
         updateStatus('Ошибка удаления сессии', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
+// Копирование сессии
+async function handleCopySession(sessionId) {
+    if (isLoading) {
+        return;
+    }
+
+    try {
+        updateStatus('Копирование чата...');
+
+        const response = await fetch(`${SESSIONS_URL}/${sessionId}/copy`, {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to copy session');
+        }
+
+        const data = await response.json();
+
+        // Обновляем список сессий
+        await loadSessions();
+
+        // Текущая сессия остаётся текущей (не переключаемся на скопированную)
+        updateStatus('Чат скопирован', 'success');
+        setTimeout(() => updateStatus(''), 2000);
+
+        console.log('Session copied successfully:', data.newSessionId);
+    } catch (error) {
+        console.error('Error copying session:', error);
+        updateStatus('Ошибка копирования чата', 'error');
         setTimeout(() => updateStatus(''), 3000);
     }
 }
