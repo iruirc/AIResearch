@@ -2,16 +2,38 @@ package com.researchai.services
 
 import com.researchai.models.ChatSession
 import com.researchai.models.MessageRole
+import com.researchai.persistence.PersistenceManager
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Менеджер для управления сессиями чата.
- * Хранит все активные сессии в памяти до рестарта приложения.
+ * Хранит все активные сессии в памяти с автоматическим сохранением на диск.
  */
-class ChatSessionManager {
+class ChatSessionManager(
+    private val persistenceManager: PersistenceManager? = null
+) {
     private val logger = LoggerFactory.getLogger(ChatSessionManager::class.java)
     private val sessions = ConcurrentHashMap<String, ChatSession>()
+
+    /**
+     * Загружает сессии из хранилища при инициализации
+     */
+    init {
+        if (persistenceManager != null) {
+            runBlocking {
+                persistenceManager.loadAllSessions().onSuccess { loadedSessions ->
+                    loadedSessions.forEach { session ->
+                        sessions[session.id] = session
+                    }
+                    logger.info("Loaded ${loadedSessions.size} sessions from persistence storage")
+                }.onFailure { e ->
+                    logger.error("Failed to load sessions from storage", e)
+                }
+            }
+        }
+    }
 
     /**
      * Создает новую сессию чата
@@ -21,6 +43,10 @@ class ChatSessionManager {
     fun createSession(agentId: String? = null): String {
         val session = ChatSession(agentId = agentId)
         sessions[session.id] = session
+
+        // Помечаем для сохранения
+        persistenceManager?.markDirty(session)
+
         if (agentId != null) {
             logger.info("Created new session with agent: ${session.id}, agentId=$agentId")
         } else {
@@ -38,6 +64,8 @@ class ChatSessionManager {
         val session = sessions[sessionId]
         if (session != null) {
             session.lastAccessedAt = System.currentTimeMillis()
+            // Помечаем для сохранения (обновление lastAccessedAt)
+            persistenceManager?.markDirty(session)
         }
         return session
     }
@@ -51,10 +79,12 @@ class ChatSessionManager {
         return if (sessionId != null && sessions.containsKey(sessionId)) {
             val session = sessions[sessionId]!!
             session.lastAccessedAt = System.currentTimeMillis()
+            persistenceManager?.markDirty(session)
             sessionId to session
         } else {
             val newSession = ChatSession()
             sessions[newSession.id] = newSession
+            persistenceManager?.markDirty(newSession)
             logger.info("Created new session: ${newSession.id}")
             newSession.id to newSession
         }
@@ -71,6 +101,7 @@ class ChatSessionManager {
         val session = sessions[sessionId]
         return if (session != null) {
             session.addMessage(role, content)
+            persistenceManager?.markDirty(session)
             logger.debug("Added message to session $sessionId: role=$role")
             true
         } else {
@@ -88,6 +119,7 @@ class ChatSessionManager {
         val session = sessions[sessionId]
         return if (session != null) {
             session.clear()
+            persistenceManager?.markDirty(session)
             logger.info("Cleared session: $sessionId")
             true
         } else {
@@ -103,6 +135,12 @@ class ChatSessionManager {
      */
     fun deleteSession(sessionId: String): Boolean {
         return if (sessions.remove(sessionId) != null) {
+            // Удаляем из хранилища
+            persistenceManager?.let {
+                runBlocking {
+                    it.deleteSession(sessionId)
+                }
+            }
             logger.info("Deleted session: $sessionId")
             true
         } else {
@@ -139,6 +177,7 @@ class ChatSessionManager {
             }
 
             sessions[copiedSession.id] = copiedSession
+            persistenceManager?.markDirty(copiedSession)
             logger.info("Copied session $sessionId to ${copiedSession.id} (${copiedSession.messages.size} messages, ${copiedSession.archivedMessages.size} archived)")
             copiedSession.id
         } else {
@@ -165,6 +204,15 @@ class ChatSessionManager {
                 agentId = session.agentId
             )
         }
+    }
+
+    /**
+     * Завершает работу менеджера с сохранением всех сессий
+     */
+    suspend fun shutdown() {
+        logger.info("Shutting down ChatSessionManager...")
+        persistenceManager?.shutdown()
+        logger.info("ChatSessionManager shutdown complete")
     }
 }
 

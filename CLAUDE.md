@@ -83,20 +83,56 @@ The codebase uses a **Strategy Pattern** with Clean Architecture principles to s
 
 The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container that initializes:
 - HTTP client with timeouts (5 min request, 10 sec connect)
+- Persistence layer (PersistenceManager, JsonPersistenceStorage)
 - Provider factory
 - Repositories (ConfigRepository, SessionRepository)
 - Use cases (SendMessageUseCase, GetModelsUseCase)
 - Legacy services (ClaudeService, ChatSessionManager, AgentManager)
 
-**Important**: Close the AppModule on application shutdown to clean up HTTP client resources.
+**Important**: Close the AppModule on application shutdown to:
+- Save all pending sessions to disk
+- Clean up HTTP client resources
+- Gracefully shutdown PersistenceManager
 
 ### Session Management
 
-Sessions are managed in-memory by `ChatSessionManager`:
+Sessions are managed by `ChatSessionManager` with automatic persistence:
 - Each session maintains conversation history as `List<Message>`
 - Sessions can be associated with agents (for custom system prompts)
 - Messages store metadata (model, tokens used, response time)
-- No persistence layer - sessions are lost on restart
+- **Automatic persistence**: Sessions are saved to disk and restored on restart
+
+#### Persistence Architecture
+
+The persistence system uses a **Hybrid approach** (JSON + in-memory cache):
+
+1. **PersistenceStorage** interface (`com.researchai.persistence.PersistenceStorage`):
+   - Abstract interface for storage implementations
+   - Supports save, load, delete operations
+
+2. **JsonPersistenceStorage** (`com.researchai.persistence.JsonPersistenceStorage`):
+   - Saves sessions as JSON files in `data/sessions/` directory
+   - Each session is stored as `{sessionId}.json`
+   - Uses atomic file writes to prevent corruption
+   - Automatically creates storage directory on startup
+
+3. **PersistenceManager** (`com.researchai.persistence.PersistenceManager`):
+   - Manages asynchronous background saving
+   - Batches multiple saves to reduce I/O operations
+   - Default settings: 1 second delay, batch size of 10 sessions
+   - Ensures all sessions are saved during graceful shutdown
+   - Sessions marked as "dirty" are queued for saving
+
+4. **ChatSessionManager** integration:
+   - Loads all sessions from storage on initialization
+   - Automatically marks sessions as dirty on any modification
+   - Sessions are persisted asynchronously without blocking API calls
+
+**Important**: Sessions include:
+- Message history
+- Archived messages (from compression)
+- Compression configuration and count
+- Session metadata (created/accessed timestamps, agent ID)
 
 ### API Versioning
 
@@ -252,12 +288,13 @@ Original messages are preserved in `archivedMessages` for audit/review purposes.
 ## Important Notes
 
 - **No tests**: The project currently has no test suite
-- **In-memory sessions**: All session data is lost on restart (including archived messages)
+- **Session persistence**: Sessions are automatically saved to `data/sessions/` directory
 - **Main application class**: Entry point is `com.researchai.ApplicationKt` (Application.kt)
 - **Java version**: Requires Java 17+
 - **Static resources**: Web UI files are in `src/main/resources/static/`
 - **CORS**: Enabled for all origins with `anyHost()`
 - **Request timeout**: HTTP client has 5-minute timeout for long AI responses
+- **Graceful shutdown**: Always use proper shutdown to save all sessions
 
 
 ## Tasks

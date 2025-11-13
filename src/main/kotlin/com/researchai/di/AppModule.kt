@@ -11,6 +11,8 @@ import com.researchai.domain.repository.ConfigRepository
 import com.researchai.domain.repository.SessionRepository
 import com.researchai.domain.usecase.GetModelsUseCase
 import com.researchai.domain.usecase.SendMessageUseCase
+import com.researchai.persistence.JsonPersistenceStorage
+import com.researchai.persistence.PersistenceManager
 import com.researchai.services.AgentManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
@@ -20,6 +22,7 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
 /**
@@ -51,9 +54,19 @@ class AppModule(
         }
     }
 
+    // Persistence
+    val persistenceManager: PersistenceManager by lazy {
+        val storage = JsonPersistenceStorage()
+        PersistenceManager(
+            storage = storage,
+            saveDelayMs = 1000,  // 1 секунда задержка перед сохранением
+            batchSize = 10       // Максимум 10 сессий в batch
+        )
+    }
+
     // Legacy services
     val chatSessionManager: ChatSessionManager by lazy {
-        ChatSessionManager()
+        ChatSessionManager(persistenceManager)
     }
 
     val agentManager: AgentManager by lazy {
@@ -103,6 +116,9 @@ class AppModule(
      * Очистка ресурсов
      */
     fun close() {
+        runBlocking {
+            chatSessionManager.shutdown()
+        }
         httpClient.close()
     }
 }
