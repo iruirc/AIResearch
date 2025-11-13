@@ -444,7 +444,7 @@ currentTokens / contextWindowSize >= tokenBasedThresholdPercent
 │       messages = messages + summaryPrompt,                       │
 │       model = "claude-haiku-4-5-20251001",                       │
 │       parameters = RequestParameters(                            │
-│         maxTokens = 1024,  ← Ограничение длины                  │
+│         maxTokens = 4096,  ← Ограничение длины                  │
 │         temperature = 0.3  ← Низкая для точности                │
 │       )                                                           │
 │     )                                                             │
@@ -818,7 +818,7 @@ AI Суммаризация
 ```kotlin
 val selectedModel = "claude-haiku-4-5-20251001"  // Быстрая модель
 parameters = RequestParameters(
-    maxTokens = 1024,      // Ограничение длины ответа
+    maxTokens = 4096,      // Ограничение длины ответа
     temperature = 0.3      // Низкая для детерминизма
 )
 ```
@@ -849,7 +849,7 @@ call.respond(HttpStatusCode.OK, CompressionResponse(...))
 
 ### Ограничения
 
-1. **Максимальная длина суммаризации:** 1024 токена
+1. **Максимальная длина суммаризации:** 4096 токенов
 2. **Таймаут AI запроса:** 5 минут (300 секунд)
 3. **Минимальные пороги компрессии:**
    - FULL_REPLACEMENT: 10 сообщений

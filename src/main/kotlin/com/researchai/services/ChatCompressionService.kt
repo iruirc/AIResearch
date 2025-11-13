@@ -153,7 +153,7 @@ class ChatCompressionService(
                 messages = messages + summaryPrompt,
                 model = selectedModel,
                 parameters = RequestParameters(
-                    maxTokens = 1024, // Ограничиваем длину суммаризации
+                    maxTokens = 4096, // Ограничиваем длину суммаризации
                     temperature = 0.3  // Низкая температура для более точной суммаризации
                 )
             )
