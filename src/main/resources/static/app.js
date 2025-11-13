@@ -1259,7 +1259,7 @@ async function applyCompression() {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Ошибка компрессии');
+            throw new Error(error.error || 'Ошибка сжатия');
         }
 
         const result = await response.json();
@@ -1285,16 +1285,16 @@ async function applyCompression() {
 
             // Показываем уведомление в статусе
             updateStatus(
-                `Компрессия выполнена: ${result.originalMessageCount} → ${result.newMessageCount} сообщений (${compressionRatio}%)`,
+                `Сжатие выполнено: ${result.originalMessageCount} → ${result.newMessageCount} сообщений (${compressionRatio}%)`,
                 'success'
             );
             setTimeout(() => updateStatus(''), 5000);
         } else {
-            updateStatus(result.message || 'Компрессия не требуется', 'info');
+            updateStatus(result.message || 'Сжатие не требуется', 'info');
             setTimeout(() => updateStatus(''), 3000);
         }
     } catch (error) {
-        console.error('Ошибка компрессии:', error);
+        console.error('Ошибка сжатия:', error);
         hideCompressionIndicator();
         updateStatus(`Ошибка: ${error.message}`, 'error');
         setTimeout(() => updateStatus(''), 3000);
@@ -1310,7 +1310,7 @@ function showCompressionIndicator() {
     indicator.id = 'compressionIndicator';
     indicator.innerHTML = `
         <div class="compression-spinner"></div>
-        <p>Выполняется компрессия диалога...</p>
+        <p>Выполняется сжатие диалога...</p>
         <p class="compression-subtitle">Генерируется суммаризация</p>
     `;
 
@@ -1336,7 +1336,7 @@ function addCompressionResultMessage(originalCount, newCount, compressionRatio, 
                 <path d="M9 11l3 3L22 4" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <h3>Компрессия диалога выполнена</h3>
+            <h3>Сжатие диалога выполнена</h3>
         </div>
         <div class="compression-result-stats">
             <div class="stat-item">
