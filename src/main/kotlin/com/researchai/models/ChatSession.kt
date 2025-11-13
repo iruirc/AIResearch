@@ -1,5 +1,6 @@
 package com.researchai.models
 
+import com.researchai.domain.models.CompressionConfig
 import com.researchai.domain.models.Message
 import com.researchai.domain.models.MessageContent
 import com.researchai.domain.models.MessageMetadata
@@ -15,13 +16,24 @@ data class ChatSession(
     private val _messages: MutableList<Message> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     var lastAccessedAt: Long = System.currentTimeMillis(),
-    val agentId: String? = null // ID агента, если сессия связана с агентом
+    val agentId: String? = null, // ID агента, если сессия связана с агентом
+
+    // Поля для сжатия диалогов
+    private val _archivedMessages: MutableList<Message> = mutableListOf(), // Архив сжатых сообщений
+    var compressionConfig: CompressionConfig = CompressionConfig(), // Настройки сжатия
+    var compressionCount: Int = 0 // Количество выполненных сжатий
 ) {
     /**
      * Возвращает копию списка сообщений
      */
     val messages: List<Message>
         get() = _messages.toList()
+
+    /**
+     * Возвращает копию архивированных сообщений
+     */
+    val archivedMessages: List<Message>
+        get() = _archivedMessages.toList()
 
     /**
      * Добавляет сообщение в историю сессии (legacy метод для обратной совместимости)
@@ -60,5 +72,30 @@ data class ChatSession(
     fun clear() {
         _messages.clear()
         lastAccessedAt = System.currentTimeMillis()
+    }
+
+    /**
+     * Архивирует указанные сообщения
+     */
+    fun archiveMessages(messages: List<Message>) {
+        _archivedMessages.addAll(messages)
+    }
+
+    /**
+     * Заменяет текущие сообщения на новые (используется при сжатии)
+     */
+    fun replaceMessages(newMessages: List<Message>) {
+        _messages.clear()
+        _messages.addAll(newMessages)
+        lastAccessedAt = System.currentTimeMillis()
+    }
+
+    /**
+     * Получить общее количество токенов во всех сообщениях
+     */
+    fun getTotalTokens(): Int {
+        return _messages.sumOf { message ->
+            message.metadata?.totalTokens ?: message.metadata?.estimatedTotalTokens ?: 0
+        }
     }
 }

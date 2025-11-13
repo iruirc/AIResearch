@@ -72,6 +72,9 @@ fun Application.module() {
         json(Json {
             ignoreUnknownKeys = true
             prettyPrint = true
+            encodeDefaults = true
+            isLenient = true
+            coerceInputValues = true
         })
     }
 

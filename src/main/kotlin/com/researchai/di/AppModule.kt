@@ -12,6 +12,7 @@ import com.researchai.domain.repository.SessionRepository
 import com.researchai.domain.usecase.GetModelsUseCase
 import com.researchai.domain.usecase.SendMessageUseCase
 import com.researchai.services.AgentManager
+import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -85,6 +86,14 @@ class AppModule(
 
     val getModelsUseCase: GetModelsUseCase by lazy {
         GetModelsUseCase(
+            providerFactory = providerFactory,
+            configRepository = configRepository
+        )
+    }
+
+    // Compression Service
+    val compressionService: ChatCompressionService by lazy {
+        ChatCompressionService(
             providerFactory = providerFactory,
             configRepository = configRepository
         )

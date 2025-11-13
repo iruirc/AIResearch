@@ -71,6 +71,14 @@
                         </svg>
                         Настройки
                     </button>
+                    <button id="compressionButton" class="compression-button" title="Компрессия диалога">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <polyline points="16 6 12 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Компрессия
+                    </button>
                 </div>
                 <div class="input-wrapper">
                     <textarea
@@ -169,6 +177,61 @@
                 <div class="settings-actions">
                     <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
                     <button id="saveSettingsButton" class="save-button">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для компрессии -->
+    <div id="compressionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Компрессия диалога</h3>
+                <button id="closeCompressionModal" class="close-button">&times;</button>
+            </div>
+            <div class="compression-content">
+                <div class="compression-info">
+                    <p>Выберите алгоритм сжатия диалога. Оригинальные сообщения будут архивированы.</p>
+                    <div class="compression-stats" id="compressionStats">
+                        <div class="stat-item">
+                            <span class="stat-label">Сообщений:</span>
+                            <span class="stat-value" id="currentMessageCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Токенов:</span>
+                            <span class="stat-value" id="currentTokenCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="compression-selector">
+                    <label>Алгоритм сжатия:</label>
+                    <div class="compression-strategies">
+                        <label class="strategy-option">
+                            <input type="radio" name="compressionStrategy" value="FULL_REPLACEMENT" checked>
+                            <div class="strategy-card">
+                                <h4>Полная замена</h4>
+                                <p class="strategy-description">Все сообщения заменяются на одну суммаризацию. Максимальное сжатие.</p>
+                            </div>
+                        </label>
+                        <label class="strategy-option">
+                            <input type="radio" name="compressionStrategy" value="SLIDING_WINDOW">
+                            <div class="strategy-card">
+                                <h4>Скользящее окно</h4>
+                                <p class="strategy-description">Старые сообщения сжимаются, последние N остаются без изменений.</p>
+                            </div>
+                        </label>
+                        <label class="strategy-option">
+                            <input type="radio" name="compressionStrategy" value="TOKEN_BASED">
+                            <div class="strategy-card">
+                                <h4>По токенам</h4>
+                                <p class="strategy-description">Адаптивное сжатие при достижении лимита токенов.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="compression-actions">
+                    <button id="cancelCompressionButton" class="cancel-button">Отменить</button>
+                    <button id="applyCompressionButton" class="apply-button">Применить</button>
                 </div>
             </div>
         </div>

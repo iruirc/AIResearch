@@ -5,6 +5,7 @@ const AGENTS_URL = '/agents';
 const MODELS_URL = '/models';
 const PROVIDERS_URL = '/providers';
 const CONFIG_URL = '/config';
+const COMPRESSION_URL = '/compression';
 const REQUEST_TIMEOUT = 300000; // 300 секунд (5 минут)
 
 // DOM элементы
@@ -32,6 +33,13 @@ const modalTemperatureValue = document.getElementById('modalTemperatureValue');
 const modalMaxTokensSlider = document.getElementById('modalMaxTokensSlider');
 const modalMaxTokensValue = document.getElementById('modalMaxTokensValue');
 const modalFormatSelect = document.getElementById('modalFormatSelect');
+const compressionButton = document.getElementById('compressionButton');
+const compressionModal = document.getElementById('compressionModal');
+const closeCompressionModal = document.getElementById('closeCompressionModal');
+const cancelCompressionButton = document.getElementById('cancelCompressionButton');
+const applyCompressionButton = document.getElementById('applyCompressionButton');
+const currentMessageCount = document.getElementById('currentMessageCount');
+const currentTokenCount = document.getElementById('currentTokenCount');
 
 // Состояние
 let isLoading = false;
@@ -117,6 +125,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки "Отменить"
     if (cancelSettingsButton) {
         cancelSettingsButton.addEventListener('click', closeSettingsModalFunc);
+    }
+
+    // Обработчик кнопки "Компрессия"
+    if (compressionButton) {
+        compressionButton.addEventListener('click', openCompressionModal);
+    }
+
+    // Обработчик закрытия модального окна компрессии
+    if (closeCompressionModal) {
+        closeCompressionModal.addEventListener('click', closeCompressionModalFunc);
+    }
+
+    // Обработчик кнопки "Применить" компрессию
+    if (applyCompressionButton) {
+        applyCompressionButton.addEventListener('click', applyCompression);
+    }
+
+    // Обработчик кнопки "Отменить" компрессию
+    if (cancelCompressionButton) {
+        cancelCompressionButton.addEventListener('click', closeCompressionModalFunc);
+    }
+
+    // Закрытие модального окна компрессии при клике вне его
+    if (compressionModal) {
+        compressionModal.addEventListener('click', (e) => {
+            if (e.target === compressionModal) {
+                closeCompressionModalFunc();
+            }
+        });
     }
 
     // Закрытие модального окна настроек при клике вне его
@@ -1121,4 +1158,211 @@ async function saveSettings() {
     // Показываем уведомление
     updateStatus('Настройки сохранены', 'success');
     setTimeout(() => updateStatus(''), 2000);
+}
+
+// ========================================
+// Функции компрессии
+// ========================================
+
+// Открытие модального окна компрессии
+async function openCompressionModal() {
+    if (!currentSessionId) {
+        updateStatus('Нет активной сессии для сжатия', 'error');
+        return;
+    }
+
+    // Получаем информацию о текущей сессии
+    try {
+        const response = await fetch(`${COMPRESSION_URL}/config/${currentSessionId}`);
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить информацию о сессии');
+        }
+
+        const data = await response.json();
+
+        // Обновляем статистику
+        currentMessageCount.textContent = data.currentMessageCount || 0;
+        currentTokenCount.textContent = data.totalTokens || 0;
+
+        compressionModal.classList.add('active');
+    } catch (error) {
+        console.error('Ошибка загрузки информации о сессии:', error);
+        updateStatus('Ошибка загрузки информации', 'error');
+    }
+}
+
+// Закрытие модального окна компрессии
+function closeCompressionModalFunc() {
+    compressionModal.classList.remove('active');
+}
+
+// Применение компрессии
+async function applyCompression() {
+    if (!currentSessionId) {
+        updateStatus('Нет активной сессии для сжатия', 'error');
+        return;
+    }
+
+    // Получаем выбранную стратегию
+    const selectedStrategy = document.querySelector('input[name="compressionStrategy"]:checked').value;
+
+    // Закрываем модальное окно
+    closeCompressionModalFunc();
+
+    // Показываем индикатор компрессии
+    showCompressionIndicator();
+
+    try {
+        // Получаем текущую конфигурацию
+        const currentConfigResponse = await fetch(`${COMPRESSION_URL}/config/${currentSessionId}`);
+        if (!currentConfigResponse.ok) {
+            throw new Error('Не удалось загрузить текущую конфигурацию');
+        }
+        const currentConfigData = await currentConfigResponse.json();
+
+        // Обновляем только стратегию, сохраняя остальные параметры
+        const updatedConfig = {
+            ...currentConfigData.config,
+            strategy: selectedStrategy
+        };
+
+        // Отправляем обновленную конфигурацию
+        const configResponse = await fetch(`${COMPRESSION_URL}/config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionId: currentSessionId,
+                config: updatedConfig
+            })
+        });
+
+        if (!configResponse.ok) {
+            const configError = await configResponse.json();
+            throw new Error(configError.error || 'Не удалось обновить стратегию сжатия');
+        }
+
+        // Теперь вызываем API компрессии
+        const response = await fetch(`${COMPRESSION_URL}/compress`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sessionId: currentSessionId,
+                providerId: currentProvider || 'CLAUDE',
+                model: currentSettings.model,
+                contextWindowSize: currentContextWindow
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Ошибка компрессии');
+        }
+
+        const result = await response.json();
+
+        // Скрываем индикатор
+        hideCompressionIndicator();
+
+        if (result.success && result.compressionPerformed) {
+            // Очищаем текущий чат
+            messagesContainer.innerHTML = '';
+
+            // Загружаем сжатый чат
+            await loadSessionHistory(currentSessionId);
+
+            // Добавляем информационное сообщение о результате компрессии
+            const compressionRatio = Math.round(result.compressionRatio * 100);
+            addCompressionResultMessage(
+                result.originalMessageCount,
+                result.newMessageCount,
+                compressionRatio,
+                result.archivedMessageCount
+            );
+
+            // Показываем уведомление в статусе
+            updateStatus(
+                `Компрессия выполнена: ${result.originalMessageCount} → ${result.newMessageCount} сообщений (${compressionRatio}%)`,
+                'success'
+            );
+            setTimeout(() => updateStatus(''), 5000);
+        } else {
+            updateStatus(result.message || 'Компрессия не требуется', 'info');
+            setTimeout(() => updateStatus(''), 3000);
+        }
+    } catch (error) {
+        console.error('Ошибка компрессии:', error);
+        hideCompressionIndicator();
+        updateStatus(`Ошибка: ${error.message}`, 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
+// Показать индикатор компрессии
+function showCompressionIndicator() {
+    // Очищаем текущие сообщения
+    messagesContainer.innerHTML = '';
+
+    // Создаем индикатор
+    const indicator = document.createElement('div');
+    indicator.className = 'compression-indicator';
+    indicator.id = 'compressionIndicator';
+    indicator.innerHTML = `
+        <div class="compression-spinner"></div>
+        <p>Выполняется компрессия диалога...</p>
+        <p class="compression-subtitle">Генерируется суммаризация</p>
+    `;
+
+    messagesContainer.appendChild(indicator);
+}
+
+// Скрыть индикатор компрессии
+function hideCompressionIndicator() {
+    const indicator = document.getElementById('compressionIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+// Добавление информационного сообщения о результате компрессии
+function addCompressionResultMessage(originalCount, newCount, compressionRatio, archivedCount) {
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message system-message compression-result';
+
+    messageElement.innerHTML = `
+        <div class="compression-result-header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 11l3 3L22 4" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="#667eea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>Компрессия диалога выполнена</h3>
+        </div>
+        <div class="compression-result-stats">
+            <div class="stat-item">
+                <span class="stat-label">Было сообщений:</span>
+                <span class="stat-value">${originalCount}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Стало сообщений:</span>
+                <span class="stat-value">${newCount}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Сжато:</span>
+                <span class="stat-value">${compressionRatio}%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Архивировано:</span>
+                <span class="stat-value">${archivedCount} сообщений</span>
+            </div>
+        </div>
+        <div class="compression-result-footer">
+            <p>История диалога сжата. Контекст сохранён в виде суммаризации выше. Вы можете продолжить беседу.</p>
+        </div>
+    `;
+
+    messagesContainer.appendChild(messageElement);
+    scrollToBottom();
 }

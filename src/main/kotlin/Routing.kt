@@ -3,6 +3,7 @@ package com.researchai
 import com.researchai.config.ClaudeConfig
 import com.researchai.di.AppModule
 import com.researchai.routes.chatRoutes
+import com.researchai.routes.compressionRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.services.ClaudeService
 import io.ktor.http.*
@@ -27,6 +28,9 @@ fun Application.configureRouting(
 
         // Новые API роуты для работы с провайдерами
         providerRoutes(appModule)
+
+        // API роуты для сжатия диалогов
+        compressionRoutes(appModule.chatSessionManager, appModule.compressionService)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

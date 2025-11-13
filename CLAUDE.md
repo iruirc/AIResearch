@@ -167,10 +167,92 @@ To add a new AI provider:
 5. Add configuration loading in `Application.kt`
 6. Add config getter function (e.g., `get{Provider}Config()`) in config package
 
+## Chat Compression
+
+The application supports **automatic chat compression** to manage long conversations and avoid context window limits.
+
+### Compression Strategies
+
+Three compression strategies are available:
+
+1. **FULL_REPLACEMENT** (default):
+   - Replaces all messages with a single AI-generated summary
+   - Maximum compression, but loses conversation structure
+   - Triggered when message count ≥ 10 (configurable)
+   - Best for: Long conversations where full history isn't needed
+
+2. **SLIDING_WINDOW**:
+   - Keeps last N messages intact, summarizes older messages
+   - Maintains recent context while compressing old history
+   - Triggered when message count ≥ 12 (configurable)
+   - Keeps last 6 messages by default
+   - Best for: Conversations where recent context is important
+
+3. **TOKEN_BASED**:
+   - Adaptive compression based on token count
+   - Compresses when reaching 80% of context window (configurable)
+   - Keeps last 40% of tokens in original form
+   - Best for: Managing context window limits precisely
+
+### Compression API Endpoints
+
+**Compress a session:**
+```http
+POST /compression/compress
+Content-Type: application/json
+
+{
+  "sessionId": "session-id",
+  "providerId": "CLAUDE",  // optional, defaults to CLAUDE
+  "model": "claude-haiku-4-5-20251001",  // optional
+  "contextWindowSize": 200000  // optional, for TOKEN_BASED strategy
+}
+```
+
+**Update compression config:**
+```http
+POST /compression/config
+Content-Type: application/json
+
+{
+  "sessionId": "session-id",
+  "config": {
+    "strategy": "SLIDING_WINDOW",
+    "slidingWindowMessageThreshold": 12,
+    "slidingWindowKeepLast": 6
+  }
+}
+```
+
+**Get compression config:**
+```http
+GET /compression/config/{sessionId}
+```
+
+**Check if compression is needed:**
+```http
+GET /compression/check/{sessionId}?contextWindowSize=200000
+```
+
+**Get archived messages:**
+```http
+GET /compression/archived/{sessionId}
+```
+
+### Compression Architecture
+
+- **CompressionAlgorithm**: Interface for compression algorithms
+- **ChatCompressionService**: Manages compression and AI-based summarization
+- **CompressionStrategy**: Enum defining available strategies
+- **CompressionConfig**: Per-session configuration
+- **ChatSession**: Stores archived messages and compression count
+
+Original messages are preserved in `archivedMessages` for audit/review purposes.
+
 ## Important Notes
 
 - **No tests**: The project currently has no test suite
-- **In-memory sessions**: All session data is lost on restart
+- **In-memory sessions**: All session data is lost on restart (including archived messages)
 - **Main application class**: Entry point is `com.researchai.ApplicationKt` (Application.kt)
 - **Java version**: Requires Java 17+
 - **Static resources**: Web UI files are in `src/main/resources/static/`
