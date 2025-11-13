@@ -189,7 +189,13 @@ fun Route.chatRoutes(
                         MessageMetadataDTO(
                             model = it.model,
                             tokensUsed = it.tokensUsed,
-                            responseTime = it.responseTime
+                            responseTime = it.responseTime,
+                            inputTokens = it.inputTokens,
+                            outputTokens = it.outputTokens,
+                            totalTokens = it.totalTokens,
+                            estimatedInputTokens = it.estimatedInputTokens,
+                            estimatedOutputTokens = it.estimatedOutputTokens,
+                            estimatedTotalTokens = it.estimatedTotalTokens
                         )
                     }
 

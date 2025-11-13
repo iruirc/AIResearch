@@ -51,7 +51,17 @@ data class MessageItem(
 data class MessageMetadataDTO(
     val model: String,
     val tokensUsed: Int,
-    val responseTime: Double
+    val responseTime: Double,
+
+    // Токены от API провайдера (реальные)
+    val inputTokens: Int = 0,
+    val outputTokens: Int = 0,
+    val totalTokens: Int = 0,
+
+    // Токены, подсчитанные локально (оценочные)
+    val estimatedInputTokens: Int = 0,
+    val estimatedOutputTokens: Int = 0,
+    val estimatedTotalTokens: Int = 0
 )
 
 /**
