@@ -346,12 +346,17 @@ async function handleSendMessage() {
 
 // Добавление сообщения в чат
 function addMessage(text, type, metadata = null) {
+    console.log('addMessage called with:', { text: text?.substring(0, 100), type, metadata });
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     contentDiv.textContent = text;
+
+    console.log('Created messageDiv:', messageDiv);
+    console.log('Text set to contentDiv:', contentDiv.textContent?.substring(0, 100));
 
     // Если есть метаданные (для сообщений assistant), добавляем их
     if (metadata && type === 'assistant') {
@@ -1327,46 +1332,61 @@ async function applyCompression() {
             // Очищаем текущий чат
             messagesContainer.innerHTML = '';
 
-            // Загружаем сжатый чат (включая сообщение с суммаризацией)
-            await loadSessionHistory(currentSessionId);
+            // Сбрасываем счетчик токенов
+            sessionTotalTokens = 0;
 
-            // Если есть сообщение с суммаризацией, добавляем его напрямую
-            if (result.summaryMessage) {
-                const msg = result.summaryMessage;
+            console.log('Compression result:', result);
+            console.log('New messages count:', result.newMessages?.length);
+            console.log('Summary message:', result.summaryMessage);
 
-                // Извлекаем текст из content
-                let messageText = '';
-                if (msg.content && typeof msg.content === 'object') {
-                    messageText = msg.content.text || '';
-                } else if (typeof msg.content === 'string') {
-                    messageText = msg.content;
-                }
+            // Отображаем новые сообщения из ответа API
+            if (result.newMessages && result.newMessages.length > 0) {
+                console.log('Displaying', result.newMessages.length, 'messages');
+                result.newMessages.forEach((msg, index) => {
+                    console.log('Processing message', index, ':', msg);
 
-                // Подготавливаем метаданные если есть
-                let metadata = null;
-                if (msg.metadata) {
-                    metadata = {
-                        time: msg.metadata.responseTime.toFixed(2),
-                        model: msg.metadata.model,
-                        tokens: msg.metadata.tokensUsed,
-                        inputTokens: msg.metadata.inputTokens,
-                        outputTokens: msg.metadata.outputTokens,
-                        totalTokens: msg.metadata.totalTokens,
-                        estimatedInputTokens: msg.metadata.estimatedInputTokens,
-                        estimatedOutputTokens: msg.metadata.estimatedOutputTokens,
-                        estimatedTotalTokens: msg.metadata.estimatedTotalTokens,
-                        contextWindow: currentContextWindow,
-                        sessionTotalTokens: sessionTotalTokens
-                    };
-
-                    // Обновляем счетчик токенов сессии
-                    if (metadata.totalTokens) {
-                        sessionTotalTokens += metadata.totalTokens;
+                    // Извлекаем текст из content
+                    let messageText = '';
+                    if (msg.content && typeof msg.content === 'object') {
+                        messageText = msg.content.text || '';
+                    } else if (typeof msg.content === 'string') {
+                        messageText = msg.content;
                     }
-                }
 
-                // Добавляем сообщение с суммаризацией
-                addMessage(messageText, 'assistant', metadata);
+                    console.log('Message text:', messageText.substring(0, 100));
+
+                    // Определяем тип сообщения
+                    const messageType = msg.role === 'USER' ? 'user' : 'assistant';
+
+                    // Подготавливаем метаданные если есть
+                    let metadata = null;
+                    if (msg.metadata) {
+                        // Суммируем токены
+                        if (msg.metadata.totalTokens) {
+                            sessionTotalTokens += msg.metadata.totalTokens;
+                        }
+
+                        metadata = {
+                            time: msg.metadata.responseTime.toFixed(2),
+                            model: msg.metadata.model,
+                            tokens: msg.metadata.tokensUsed,
+                            inputTokens: msg.metadata.inputTokens,
+                            outputTokens: msg.metadata.outputTokens,
+                            totalTokens: msg.metadata.totalTokens,
+                            estimatedInputTokens: msg.metadata.estimatedInputTokens,
+                            estimatedOutputTokens: msg.metadata.estimatedOutputTokens,
+                            estimatedTotalTokens: msg.metadata.estimatedTotalTokens,
+                            contextWindow: currentContextWindow,
+                            sessionTotalTokens: sessionTotalTokens // Используем обновленное значение
+                        };
+                    }
+
+                    // Добавляем сообщение
+                    console.log('Adding message, type:', messageType, 'metadata:', metadata);
+                    addMessage(messageText, messageType, metadata);
+                });
+            } else {
+                console.log('No new messages to display!');
             }
 
             // Показываем уведомление в статусе

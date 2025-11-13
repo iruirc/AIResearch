@@ -79,7 +79,8 @@ fun Route.compressionRoutes(
                             compressionRatio = compressionResult.compressionRatio,
                             archivedMessageCount = compressionResult.archivedMessages.size,
                             totalCompressions = session.compressionCount,
-                            summaryMessage = compressionResult.summaryMessage
+                            summaryMessage = compressionResult.summaryMessage,
+                            newMessages = session.messages // Актуальные сообщения после сжатия
                         )
                     )
                 }.onFailure { error ->
@@ -251,7 +252,8 @@ data class CompressionResponse(
     val compressionRatio: Double = 0.0,
     val archivedMessageCount: Int = 0,
     val totalCompressions: Int = 0,
-    val summaryMessage: Message? = null // Сообщение с суммаризацией
+    val summaryMessage: Message? = null, // Сообщение с суммаризацией
+    val newMessages: List<Message> = emptyList() // Новые сообщения после сжатия (включая summaryMessage)
 )
 
 @Serializable
