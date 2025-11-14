@@ -13,7 +13,8 @@
       "Bash(pkill:*)",
       "Bash(chmod:*)",
       "Bash(python3:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
