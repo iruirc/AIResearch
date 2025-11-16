@@ -74,25 +74,23 @@ body {
     gap: 8px;
     width: 100%;
     background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: inherit;
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
 }
 
 .new-chat-button:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    background: #e9ecef;
+    transform: translateX(2px);
 }
 
 .new-chat-button:active {
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    background: #e9ecef;
 }
 
 .new-chat-button svg {
@@ -751,25 +749,23 @@ body {
     gap: 8px;
     width: 100%;
     background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: inherit;
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
 }
 
 .agents-button-sidebar:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    background: #e9ecef;
+    transform: translateX(2px);
 }
 
 .agents-button-sidebar:active {
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    background: #e9ecef;
 }
 
 .agents-button-sidebar svg {
@@ -784,25 +780,23 @@ body {
     gap: 8px;
     width: 100%;
     background: white;
-    color: #667eea;
-    border: 2px solid #667eea;
+    color: inherit;
+    border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
 }
 
 .settings-button:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    background: #e9ecef;
+    transform: translateX(2px);
 }
 
 .settings-button:active {
-    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    background: #e9ecef;
 }
 
 .settings-button svg {
