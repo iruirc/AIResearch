@@ -42,6 +42,11 @@ dependencies {
     // CORS support
     implementation(libs.ktor.server.cors)
 
+    // Authentication & Sessions
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.sessions)
+
     // JTokkit - tokenizer for counting tokens
     implementation("com.knuddels:jtokkit:1.1.0")
 

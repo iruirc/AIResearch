@@ -1,5 +1,6 @@
 package com.researchai
 
+import com.researchai.auth.routes.authRoutes
 import com.researchai.config.ClaudeConfig
 import com.researchai.di.AppModule
 import com.researchai.routes.chatRoutes
@@ -21,6 +22,11 @@ fun Application.configureRouting(
         // Главная страница - перенаправление на index.html
         get("/") {
             call.respondRedirect("/index.html")
+        }
+
+        // Authentication routes
+        if (appModule.googleAuthProvider != null) {
+            authRoutes(appModule.googleAuthProvider!!, appModule.authService)
         }
 
         // API роуты для чата (legacy + новая архитектура)

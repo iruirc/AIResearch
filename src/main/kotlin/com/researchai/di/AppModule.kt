@@ -1,5 +1,12 @@
 package com.researchai.di
 
+import com.researchai.auth.data.provider.GoogleAuthProvider
+import com.researchai.auth.data.provider.GoogleOAuthConfig
+import com.researchai.auth.data.repository.UserRepositoryImpl
+import com.researchai.auth.domain.models.JWTConfig
+import com.researchai.auth.domain.repository.UserRepository
+import com.researchai.auth.service.AuthService
+import com.researchai.auth.service.JWTService
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
@@ -31,7 +38,9 @@ import kotlinx.serialization.json.Json
 class AppModule(
     private val claudeConfig: ClaudeConfig,
     private val openAIConfig: OpenAIConfig? = null,
-    private val huggingFaceConfig: HuggingFaceConfig? = null
+    private val huggingFaceConfig: HuggingFaceConfig? = null,
+    private val jwtConfig: JWTConfig,
+    private val googleOAuthConfig: GoogleOAuthConfig? = null
 ) {
     // HTTP Client
     val httpClient: HttpClient by lazy {
@@ -110,6 +119,25 @@ class AppModule(
             providerFactory = providerFactory,
             configRepository = configRepository
         )
+    }
+
+    // Authentication
+    val userRepository: UserRepository by lazy {
+        UserRepositoryImpl()
+    }
+
+    val jwtService: JWTService by lazy {
+        JWTService(jwtConfig)
+    }
+
+    val authService: AuthService by lazy {
+        AuthService(userRepository, jwtService)
+    }
+
+    val googleAuthProvider: GoogleAuthProvider? by lazy {
+        googleOAuthConfig?.let {
+            GoogleAuthProvider(it, httpClient)
+        }
     }
 
     /**
