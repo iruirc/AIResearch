@@ -24,11 +24,22 @@ body {
 /* Боковая панель со списком сессий */
 .sidebar {
     width: 300px;
+    min-width: 300px;
     background: #f8f9fa;
     border-right: 1px solid #dee2e6;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    transition: min-width 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+/* Скрытая боковая панель */
+.sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    border-right: none;
+    opacity: 0;
 }
 
 .sidebar-header {
@@ -768,6 +779,35 @@ body {
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+/* Кнопка переключения боковой панели */
+.toggle-sidebar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 8px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-sidebar-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.toggle-sidebar-button:active {
+    transform: translateY(0);
+}
+
+.toggle-sidebar-button svg {
+    flex-shrink: 0;
 }
 
 /* Кнопка агентов */

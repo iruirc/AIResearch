@@ -40,6 +40,8 @@ const cancelCompressionButton = document.getElementById('cancelCompressionButton
 const applyCompressionButton = document.getElementById('applyCompressionButton');
 const currentMessageCount = document.getElementById('currentMessageCount');
 const currentTokenCount = document.getElementById('currentTokenCount');
+const toggleSidebarButton = document.getElementById('toggleSidebarButton');
+const sidebar = document.querySelector('.sidebar');
 
 // Состояние
 let isLoading = false;
@@ -53,6 +55,7 @@ let requestStartTime = null; // Время начала запроса
 let timerInterval = null; // Интервал для обновления таймера
 let sessionTotalTokens = 0; // Суммарное количество токенов в текущей сессии
 let currentContextWindow = 200000; // Размер контекстного окна текущей модели (по умолчанию)
+let isSidebarCollapsed = false; // Состояние боковой панели
 
 // Настройки (текущие активные значения)
 // Дефолтные значения будут заменены на значения из конфигурации бэкенда при загрузке
@@ -199,10 +202,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Обработчик кнопки переключения боковой панели
+    if (toggleSidebarButton) {
+        toggleSidebarButton.addEventListener('click', toggleSidebar);
+    }
+
     // Загружаем конфигурацию, список сессий, провайдеров и моделей
     loadConfig();
     loadSessions();
     loadProviders();
+
+    // Восстанавливаем состояние боковой панели из localStorage
+    const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+    if (savedSidebarState === 'true') {
+        toggleSidebar();
+    }
 });
 
 // Основная функция отправки сообщения
@@ -1470,4 +1484,20 @@ function addCompressionResultMessage(originalCount, newCount, compressionRatio, 
 
     messagesContainer.appendChild(messageElement);
     scrollToBottom();
+}
+
+// ========================================
+// Функция переключения боковой панели
+// ========================================
+function toggleSidebar() {
+    isSidebarCollapsed = !isSidebarCollapsed;
+
+    if (isSidebarCollapsed) {
+        sidebar.classList.add('collapsed');
+    } else {
+        sidebar.classList.remove('collapsed');
+    }
+
+    // Сохраняем состояние в localStorage
+    localStorage.setItem('sidebarCollapsed', isSidebarCollapsed);
 }
