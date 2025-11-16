@@ -15,7 +15,6 @@ const sendButton = document.getElementById('sendButton');
 const statusElement = document.getElementById('status');
 const sessionsList = document.getElementById('sessionsList');
 const newChatButton = document.getElementById('newChatButtonSidebar');
-const clearChatButton = document.getElementById('clearChatButton');
 const agentsButton = document.getElementById('agentsButton');
 const agentModal = document.getElementById('agentModal');
 const closeModal = document.getElementById('closeModal');
@@ -170,11 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки "Новый чат"
     if (newChatButton) {
         newChatButton.addEventListener('click', startNewChat);
-    }
-
-    // Обработчик кнопки "Очистить чат"
-    if (clearChatButton) {
-        clearChatButton.addEventListener('click', handleClearChat);
     }
 
     // Обработчик кнопки "Агенты"

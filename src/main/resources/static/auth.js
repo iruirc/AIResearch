@@ -200,6 +200,12 @@ function displayUserInfo() {
                 </button>
             </div>
             <div id="userMenu" class="user-menu">
+                <button id="clearChatMenuButton" class="user-menu-item clear-menu-item">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h18M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2m3 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Очистить
+                </button>
                 <button id="logoutButton" class="user-menu-item logout-menu-item">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -217,6 +223,16 @@ function displayUserInfo() {
             e.stopPropagation();
             const menu = document.getElementById('userMenu');
             menu.classList.toggle('active');
+        });
+
+        // Добавляем обработчик на кнопку "Очистить"
+        document.getElementById('clearChatMenuButton').addEventListener('click', () => {
+            const menu = document.getElementById('userMenu');
+            menu.classList.remove('active');
+            // Вызываем функцию handleClearChat из app.js
+            if (typeof handleClearChat === 'function') {
+                handleClearChat();
+            }
         });
 
         // Добавляем обработчик на кнопку выхода
