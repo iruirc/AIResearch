@@ -129,24 +129,40 @@ body {
 }
 
 .session-item {
+    position: relative;
     padding: 12px 16px;
     margin-bottom: 8px;
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1;
 }
 
 .session-item:hover {
     background: #e9ecef;
     transform: translateX(2px);
+    z-index: 10;
 }
 
 .session-item.active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-color: #667eea;
+    z-index: 10;
+}
+
+.session-item.menu-open {
+    z-index: 100;
+}
+
+.session-item-content {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
 }
 
 .session-item-header {
@@ -171,49 +187,81 @@ body {
     opacity: 0.6;
 }
 
-.session-actions {
-    display: flex;
-    gap: 4px;
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.session-item:hover .session-actions {
-    opacity: 1;
-}
-
-.session-item.active .session-actions {
-    opacity: 1;
-}
-
-.session-copy-btn {
-    padding: 4px 8px;
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+/* Three-dot menu button */
+.session-menu-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
-    color: #667eea;
+    color: #6c757d;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0;
 }
 
-.session-copy-btn:hover {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.5);
+.session-item:hover .session-menu-btn {
+    opacity: 1;
 }
 
-.session-item.active .session-copy-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+.session-menu-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+
+.session-item.active .session-menu-btn {
     color: white;
+    opacity: 1;
 }
 
-.session-item.active .session-copy-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
+.session-item.active .session-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Context menu */
+.session-context-menu {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    min-width: 150px;
+    overflow: hidden;
+}
+
+.context-menu-item {
+    width: 100%;
+    padding: 10px 16px;
+    background: white;
+    border: none;
+    cursor: pointer;
+    color: #495057;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+}
+
+.context-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.context-menu-item.delete-item {
+    color: #dc3545;
+}
+
+.context-menu-item.delete-item:hover {
+    background: #ffe5e8;
 }
 
 /* Футер боковой панели с информацией о пользователе */

@@ -16,7 +16,6 @@ const statusElement = document.getElementById('status');
 const sessionsList = document.getElementById('sessionsList');
 const newChatButton = document.getElementById('newChatButtonSidebar');
 const clearChatButton = document.getElementById('clearChatButton');
-const deleteSessionButton = document.getElementById('deleteSessionButton');
 const agentsButton = document.getElementById('agentsButton');
 const agentModal = document.getElementById('agentModal');
 const closeModal = document.getElementById('closeModal');
@@ -176,11 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки "Очистить чат"
     if (clearChatButton) {
         clearChatButton.addEventListener('click', handleClearChat);
-    }
-
-    // Обработчик кнопки "Удалить сессию"
-    if (deleteSessionButton) {
-        deleteSessionButton.addEventListener('click', handleDeleteSession);
     }
 
     // Обработчик кнопки "Агенты"
@@ -591,37 +585,98 @@ function renderSessionsList() {
         const timeAgo = getTimeAgo(session.lastAccessedAt);
 
         sessionItem.innerHTML = `
-            <div class="session-item-header">
-                <span class="session-title">${title}</span>
-                <span class="session-message-count">${session.messageCount} сообщ.</span>
+            <div class="session-item-content">
+                <div class="session-item-header">
+                    <span class="session-title">${title}</span>
+                    <span class="session-message-count">${session.messageCount} сообщ.</span>
+                </div>
+                <div class="session-time">${timeAgo}</div>
             </div>
-            <div class="session-time">${timeAgo}</div>
-            <div class="session-actions">
-                <button class="session-copy-btn" title="Скопировать чат">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="session-menu-btn" title="Меню">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
+                </svg>
+            </button>
+            <div class="session-context-menu" style="display: none;">
+                <button class="context-menu-item copy-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                     </svg>
+                    Копировать
+                </button>
+                <button class="context-menu-item delete-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <path d="M10 11v6M14 11v6"></path>
+                    </svg>
+                    Удалить
                 </button>
             </div>
         `;
 
-        // Обработчик клика на сам элемент сессии (не на кнопку)
-        sessionItem.addEventListener('click', (e) => {
-            // Проверяем, что клик не был на кнопку копирования
-            if (!e.target.closest('.session-copy-btn')) {
-                loadSessionHistory(session.id);
+        // Обработчик клика на сам элемент сессии (не на кнопку меню)
+        const sessionContent = sessionItem.querySelector('.session-item-content');
+        sessionContent.addEventListener('click', (e) => {
+            loadSessionHistory(session.id);
+        });
+
+        // Обработчик кнопки меню (три точки)
+        const menuBtn = sessionItem.querySelector('.session-menu-btn');
+        const contextMenu = sessionItem.querySelector('.session-context-menu');
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Предотвращаем клик на сессию
+
+            // Закрываем все другие открытые меню и убираем класс menu-open
+            document.querySelectorAll('.session-context-menu').forEach(menu => {
+                if (menu !== contextMenu) {
+                    menu.style.display = 'none';
+                    menu.closest('.session-item').classList.remove('menu-open');
+                }
+            });
+
+            // Переключаем видимость текущего меню
+            if (contextMenu.style.display === 'none' || contextMenu.style.display === '') {
+                contextMenu.style.display = 'block';
+                sessionItem.classList.add('menu-open');
+            } else {
+                contextMenu.style.display = 'none';
+                sessionItem.classList.remove('menu-open');
             }
         });
 
-        // Обработчик кнопки копирования
-        const copyBtn = sessionItem.querySelector('.session-copy-btn');
-        copyBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Предотвращаем клик на сессию
+        // Обработчик для кнопки "Копировать" в контекстном меню
+        const copyItem = sessionItem.querySelector('.copy-item');
+        copyItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            contextMenu.style.display = 'none';
+            sessionItem.classList.remove('menu-open');
             handleCopySession(session.id);
         });
 
+        // Обработчик для кнопки "Удалить" в контекстном меню
+        const deleteItem = sessionItem.querySelector('.delete-item');
+        deleteItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            contextMenu.style.display = 'none';
+            sessionItem.classList.remove('menu-open');
+            handleDeleteSession(session.id);
+        });
+
         sessionsList.appendChild(sessionItem);
+    });
+
+    // Закрываем контекстное меню при клике вне его
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.session-item')) {
+            document.querySelectorAll('.session-context-menu').forEach(menu => {
+                menu.style.display = 'none';
+                menu.closest('.session-item')?.classList.remove('menu-open');
+            });
+        }
     });
 }
 
@@ -765,9 +820,9 @@ async function handleClearChat() {
     }
 }
 
-// Удаление текущей сессии
-async function handleDeleteSession() {
-    if (isLoading || !currentSessionId) {
+// Удаление сессии
+async function handleDeleteSession(sessionId) {
+    if (isLoading || !sessionId) {
         return;
     }
 
@@ -778,7 +833,7 @@ async function handleDeleteSession() {
     try {
         updateStatus('Удаление сессии...');
 
-        const response = await fetch(`${SESSIONS_URL}/${currentSessionId}`, {
+        const response = await fetch(`${SESSIONS_URL}/${sessionId}`, {
             method: 'DELETE',
         });
 
@@ -786,12 +841,12 @@ async function handleDeleteSession() {
             throw new Error('Failed to delete session');
         }
 
-        // Сбрасываем текущую сессию
-        currentSessionId = null;
-
-        // Очищаем сообщения
-        messagesContainer.innerHTML = '';
-        showWelcomeMessage();
+        // Если удаляем текущую сессию, сбрасываем её и очищаем сообщения
+        if (sessionId === currentSessionId) {
+            currentSessionId = null;
+            messagesContainer.innerHTML = '';
+            showWelcomeMessage();
+        }
 
         // Обновляем список сессий
         await loadSessions();
