@@ -173,19 +173,37 @@ function displayUserInfo() {
     const user = window.authManager.getUser();
     if (!user) return;
 
-    // Добавляем информацию о пользователе в шапку
-    const header = document.querySelector('.chat-header .header-left');
-    if (header) {
+    // Добавляем информацию о пользователе в футер боковой панели
+    const sidebarFooter = document.getElementById('sidebarFooter');
+    if (sidebarFooter) {
+        // Получаем инициалы пользователя для аватара
+        const initials = user.name
+            .split(' ')
+            .map(part => part.charAt(0))
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
+
         const userInfo = document.createElement('div');
         userInfo.className = 'user-info';
-        userInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-left: 16px;';
         userInfo.innerHTML = `
-            <span style="font-size: 14px; color: #666;">${user.name}</span>
-            <button id="logoutButton" style="padding: 6px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            <div class="user-info-header">
+                <div class="user-info-avatar">${initials}</div>
+                <div class="user-info-details">
+                    <div class="user-info-name">${user.name}</div>
+                    <div class="user-info-email">${user.email || ''}</div>
+                </div>
+            </div>
+            <button id="logoutButton" class="logout-button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
                 Выйти
             </button>
         `;
-        header.appendChild(userInfo);
+        sidebarFooter.appendChild(userInfo);
 
         // Добавляем обработчик на кнопку выхода
         document.getElementById('logoutButton').addEventListener('click', () => {
