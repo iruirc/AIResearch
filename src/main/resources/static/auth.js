@@ -187,28 +187,51 @@ function displayUserInfo() {
         const userInfo = document.createElement('div');
         userInfo.className = 'user-info';
         userInfo.innerHTML = `
-            <div class="user-info-header">
+            <div class="user-info-header" id="userInfoHeader">
                 <div class="user-info-avatar">${initials}</div>
                 <div class="user-info-details">
                     <div class="user-info-name">${user.name}</div>
                     <div class="user-info-email">${user.email || ''}</div>
                 </div>
+                <button id="userMenuToggle" class="user-menu-toggle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
-            <button id="logoutButton" class="logout-button">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Выйти
-            </button>
+            <div id="userMenu" class="user-menu">
+                <button id="logoutButton" class="user-menu-item logout-menu-item">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="16 17 21 12 16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Выйти
+                </button>
+            </div>
         `;
         sidebarFooter.appendChild(userInfo);
+
+        // Добавляем обработчик на кнопку переключения меню
+        document.getElementById('userMenuToggle').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const menu = document.getElementById('userMenu');
+            menu.classList.toggle('active');
+        });
 
         // Добавляем обработчик на кнопку выхода
         document.getElementById('logoutButton').addEventListener('click', () => {
             if (confirm('Вы уверены, что хотите выйти?')) {
                 window.authManager.logout();
+            }
+        });
+
+        // Закрываем меню при клике вне его
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('userMenu');
+            const toggle = document.getElementById('userMenuToggle');
+            if (menu && !menu.contains(e.target) && !toggle.contains(e.target)) {
+                menu.classList.remove('active');
             }
         });
     }
