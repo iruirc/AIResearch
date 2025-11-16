@@ -57,9 +57,10 @@ body {
     justify-content: center;
     align-items: center;
     padding: 15px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    background: #f8f9fa;
+    color: #495057;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
 }
 
 .sidebar-header h2 {
