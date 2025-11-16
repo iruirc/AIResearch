@@ -31,7 +31,6 @@ const modalTemperatureValue = document.getElementById('modalTemperatureValue');
 const modalMaxTokensSlider = document.getElementById('modalMaxTokensSlider');
 const modalMaxTokensValue = document.getElementById('modalMaxTokensValue');
 const modalFormatSelect = document.getElementById('modalFormatSelect');
-const compressionButton = document.getElementById('compressionButton');
 const compressionModal = document.getElementById('compressionModal');
 const closeCompressionModal = document.getElementById('closeCompressionModal');
 const cancelCompressionButton = document.getElementById('cancelCompressionButton');
@@ -126,11 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки "Отменить"
     if (cancelSettingsButton) {
         cancelSettingsButton.addEventListener('click', closeSettingsModalFunc);
-    }
-
-    // Обработчик кнопки "Компрессия"
-    if (compressionButton) {
-        compressionButton.addEventListener('click', openCompressionModal);
     }
 
     // Обработчик закрытия модального окна компрессии
@@ -601,6 +595,14 @@ function renderSessionsList() {
                     </svg>
                     Копировать
                 </button>
+                <button class="context-menu-item compression-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="16 6 12 2 8 6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="12" y1="2" x2="12" y2="15" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Сжатие
+                </button>
                 <button class="context-menu-item delete-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -649,6 +651,15 @@ function renderSessionsList() {
             contextMenu.style.display = 'none';
             sessionItem.classList.remove('menu-open');
             handleCopySession(session.id);
+        });
+
+        // Обработчик для кнопки "Сжатие" в контекстном меню
+        const compressionItem = sessionItem.querySelector('.compression-item');
+        compressionItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            contextMenu.style.display = 'none';
+            sessionItem.classList.remove('menu-open');
+            handleCompressionForSession(session.id);
         });
 
         // Обработчик для кнопки "Удалить" в контекстном меню
@@ -884,6 +895,27 @@ async function handleCopySession(sessionId) {
     } catch (error) {
         console.error('Error copying session:', error);
         updateStatus('Ошибка копирования чата', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
+}
+
+// Обработчик сжатия для конкретной сессии из контекстного меню
+async function handleCompressionForSession(sessionId) {
+    if (isLoading) {
+        return;
+    }
+
+    try {
+        // Если это не текущая сессия, загружаем её историю
+        if (currentSessionId !== sessionId) {
+            await loadSessionHistory(sessionId);
+        }
+
+        // Открываем модальное окно компрессии
+        await openCompressionModal();
+    } catch (error) {
+        console.error('Error opening compression modal for session:', error);
+        updateStatus('Ошибка открытия окна сжатия', 'error');
         setTimeout(() => updateStatus(''), 3000);
     }
 }

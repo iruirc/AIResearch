@@ -256,6 +256,14 @@ body {
     background: #f8f9fa;
 }
 
+.context-menu-item.compression-item {
+    color: #667eea;
+}
+
+.context-menu-item.compression-item:hover {
+    background: #f0f2ff;
+}
+
 .context-menu-item.delete-item {
     color: #dc3545;
 }
@@ -1270,35 +1278,6 @@ body {
     align-items: center;
 }
 
-/* Кнопка компрессии */
-.compression-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.compression-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.compression-button:active {
-    transform: translateY(0);
-}
-
-.compression-button svg {
-    flex-shrink: 0;
-}
-
 /* Контент модального окна компрессии */
 .compression-content {
     padding: 20px;
@@ -1593,16 +1572,6 @@ body {
     .settings-button-wrapper {
         flex-wrap: wrap;
         gap: 8px;
-    }
-
-    .compression-button {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-
-    .compression-button svg {
-        width: 16px;
-        height: 16px;
     }
 
     .compression-content {
