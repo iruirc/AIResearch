@@ -98,11 +98,21 @@ fun Route.authRoutes(
                 // Аутентифицируем пользователя (создаем или обновляем)
                 val authResult = authService.authenticateWithOAuth(oauthUserInfo)
                 if (authResult.isFailure) {
-                    call.application.environment.log.error(
-                        "Failed to authenticate user",
-                        authResult.exceptionOrNull()
-                    )
-                    call.respondRedirect("/?error=authentication_failed")
+                    val exception = authResult.exceptionOrNull()
+
+                    // Проверяем, это ошибка whitelist или другая ошибка
+                    if (exception is SecurityException) {
+                        call.application.environment.log.warn(
+                            "User not in whitelist: ${oauthUserInfo.email}"
+                        )
+                        call.respondRedirect("/login.html?error=not_whitelisted")
+                    } else {
+                        call.application.environment.log.error(
+                            "Failed to authenticate user",
+                            exception
+                        )
+                        call.respondRedirect("/login.html?error=authentication_failed")
+                    }
                     return@get
                 }
 

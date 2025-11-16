@@ -7,6 +7,7 @@ import com.researchai.auth.domain.models.JWTConfig
 import com.researchai.auth.domain.repository.UserRepository
 import com.researchai.auth.service.AuthService
 import com.researchai.auth.service.JWTService
+import com.researchai.auth.service.WhitelistService
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
@@ -40,7 +41,8 @@ class AppModule(
     private val openAIConfig: OpenAIConfig? = null,
     private val huggingFaceConfig: HuggingFaceConfig? = null,
     private val jwtConfig: JWTConfig,
-    private val googleOAuthConfig: GoogleOAuthConfig? = null
+    private val googleOAuthConfig: GoogleOAuthConfig? = null,
+    private val allowedEmails: String? = null
 ) {
     // HTTP Client
     val httpClient: HttpClient by lazy {
@@ -130,8 +132,12 @@ class AppModule(
         JWTService(jwtConfig)
     }
 
+    val whitelistService: WhitelistService by lazy {
+        WhitelistService.fromCommaSeparatedString(allowedEmails)
+    }
+
     val authService: AuthService by lazy {
-        AuthService(userRepository, jwtService)
+        AuthService(userRepository, jwtService, whitelistService)
     }
 
     val googleAuthProvider: GoogleAuthProvider? by lazy {

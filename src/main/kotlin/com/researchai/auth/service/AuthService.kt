@@ -10,7 +10,8 @@ import java.util.*
  */
 class AuthService(
     private val userRepository: UserRepository,
-    private val jwtService: JWTService
+    private val jwtService: JWTService,
+    private val whitelistService: WhitelistService
 ) {
 
     /**
@@ -20,6 +21,13 @@ class AuthService(
      */
     suspend fun authenticateWithOAuth(userInfo: OAuthUserInfo): Result<Pair<User, String>> {
         return try {
+            // Проверяем whitelist
+            if (!whitelistService.isEmailAllowed(userInfo.email)) {
+                return Result.failure(
+                    SecurityException("Email ${userInfo.email} не разрешен для доступа к системе")
+                )
+            }
+
             // Проверяем, существует ли пользователь с таким провайдером
             val existingUser = userRepository.getUserByProvider(userInfo.provider, userInfo.providerId)
 

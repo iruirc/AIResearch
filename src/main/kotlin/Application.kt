@@ -57,6 +57,9 @@ fun Application.module() {
         )
     } else null
 
+    // Email whitelist конфигурация
+    val allowedEmails = getEnv("ALLOWED_EMAILS")
+
     // Вывод информации о доступных провайдерах
     println("✅ Claude API: Configured")
     if (openAIConfig != null) {
@@ -78,9 +81,15 @@ fun Application.module() {
     } else {
         println("⚠️  Google OAuth: Not configured (add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env)")
     }
+    if (allowedEmails != null) {
+        val emailCount = allowedEmails.split(',').filter { it.isNotBlank() }.size
+        println("✅ Email Whitelist: Enabled ($emailCount allowed emails)")
+    } else {
+        println("⚠️  Email Whitelist: Disabled (all emails allowed)")
+    }
 
     // Инициализация DI контейнера
-    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, jwtConfig, googleOAuthConfig)
+    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, jwtConfig, googleOAuthConfig, allowedEmails)
 
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)
