@@ -13,6 +13,7 @@ import java.util.*
  */
 data class ChatSession(
     val id: String = UUID.randomUUID().toString(),
+    var title: String? = null, // Название чата (генерируется из первого сообщения)
     private val _messages: MutableList<Message> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     var lastAccessedAt: Long = System.currentTimeMillis(),

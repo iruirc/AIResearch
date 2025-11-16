@@ -569,7 +569,7 @@ function renderSessionsList() {
             sessionItem.classList.add('active');
         }
 
-        const title = `Чат ${sessions.indexOf(session) + 1}`;
+        const title = session.title || 'Новый чат';
         const timeAgo = getTimeAgo(session.lastAccessedAt);
 
         sessionItem.innerHTML = `
@@ -588,6 +588,13 @@ function renderSessionsList() {
                 </svg>
             </button>
             <div class="session-context-menu" style="display: none;">
+                <button class="context-menu-item rename-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Переименовать
+                </button>
                 <button class="context-menu-item copy-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -642,6 +649,15 @@ function renderSessionsList() {
                 contextMenu.style.display = 'none';
                 sessionItem.classList.remove('menu-open');
             }
+        });
+
+        // Обработчик для кнопки "Переименовать" в контекстном меню
+        const renameItem = sessionItem.querySelector('.rename-item');
+        renameItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            contextMenu.style.display = 'none';
+            sessionItem.classList.remove('menu-open');
+            handleRenameSession(session.id, session.title || 'Новый чат');
         });
 
         // Обработчик для кнопки "Копировать" в контекстном меню
@@ -1565,6 +1581,52 @@ function addCompressionResultMessage(originalCount, newCount, compressionRatio, 
 
     messagesContainer.appendChild(messageElement);
     scrollToBottom();
+}
+
+// Переименование сессии
+async function handleRenameSession(sessionId, currentTitle) {
+    if (isLoading) {
+        return;
+    }
+
+    const newTitle = prompt('Введите новое название чата:', currentTitle);
+
+    if (newTitle === null) {
+        // Пользователь нажал Отмена
+        return;
+    }
+
+    if (newTitle.trim() === '') {
+        updateStatus('Название не может быть пустым', 'error');
+        setTimeout(() => updateStatus(''), 2000);
+        return;
+    }
+
+    try {
+        updateStatus('Переименование чата...');
+
+        const response = await fetch(`${SESSIONS_URL}/${sessionId}/title`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title: newTitle.trim() }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to rename session');
+        }
+
+        // Обновляем список сессий
+        await loadSessions();
+
+        updateStatus('Чат переименован', 'success');
+        setTimeout(() => updateStatus(''), 2000);
+    } catch (error) {
+        console.error('Error renaming session:', error);
+        updateStatus('Ошибка переименования чата', 'error');
+        setTimeout(() => updateStatus(''), 3000);
+    }
 }
 
 // ========================================

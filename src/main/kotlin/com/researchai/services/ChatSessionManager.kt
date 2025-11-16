@@ -102,6 +102,25 @@ class ChatSessionManager(
     }
 
     /**
+     * Обновляет название сессии
+     * @param sessionId ID сессии
+     * @param newTitle новое название
+     * @return true если название обновлено, false если сессия не найдена
+     */
+    fun updateSessionTitle(sessionId: String, newTitle: String): Boolean {
+        val session = sessions[sessionId]
+        return if (session != null) {
+            session.title = newTitle.trim().ifEmpty { null }
+            persistenceManager?.markDirty(session)
+            logger.info("Updated title for session $sessionId: $newTitle")
+            true
+        } else {
+            logger.warn("Session not found: $sessionId")
+            false
+        }
+    }
+
+    /**
      * Добавляет сообщение в сессию
      * @param sessionId ID сессии
      * @param role роль отправителя (USER или ASSISTANT)
@@ -112,12 +131,34 @@ class ChatSessionManager(
         val session = sessions[sessionId]
         return if (session != null) {
             session.addMessage(role, content)
+
+            // Генерируем title из первого сообщения пользователя
+            if (session.title == null && role == MessageRole.USER && session.messages.size == 1) {
+                session.title = generateTitle(content)
+                logger.debug("Generated title for session $sessionId: ${session.title}")
+            }
+
             persistenceManager?.markDirty(session)
             logger.debug("Added message to session $sessionId: role=$role")
             true
         } else {
             logger.warn("Session not found: $sessionId")
             false
+        }
+    }
+
+    /**
+     * Генерирует название чата из содержимого первого сообщения
+     * @param content текст сообщения
+     * @return название чата (максимум 50 символов)
+     */
+    private fun generateTitle(content: String): String {
+        val maxLength = 50
+        val cleaned = content.trim().replace("\n", " ").replace(Regex("\\s+"), " ")
+        return if (cleaned.length <= maxLength) {
+            cleaned
+        } else {
+            cleaned.take(maxLength - 3) + "..."
         }
     }
 
@@ -170,6 +211,7 @@ class ChatSessionManager(
         return if (originalSession != null) {
             // Создаем новую сессию с копией всех данных
             val copiedSession = ChatSession(
+                title = originalSession.title?.let { "$it (копия)" },
                 agentId = originalSession.agentId
             ).apply {
                 // Копируем все сообщения
@@ -209,6 +251,7 @@ class ChatSessionManager(
         return sessions.mapValues { (_, session) ->
             SessionInfo(
                 id = session.id,
+                title = session.title,
                 messageCount = session.messages.size,
                 createdAt = session.createdAt,
                 lastAccessedAt = session.lastAccessedAt,
@@ -232,6 +275,7 @@ class ChatSessionManager(
  */
 data class SessionInfo(
     val id: String,
+    val title: String? = null,
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,

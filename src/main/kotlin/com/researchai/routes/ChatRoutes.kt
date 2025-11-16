@@ -146,6 +146,7 @@ fun Route.chatRoutes(
                 val sessionList = sessionsInfo.map { (id, info) ->
                     SessionListItem(
                         id = id,
+                        title = info.title,
                         messageCount = info.messageCount,
                         createdAt = info.createdAt,
                         lastAccessedAt = info.lastAccessedAt,
@@ -265,6 +266,30 @@ fun Route.chatRoutes(
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf("error" to "Failed to clear session: ${e.message}")
+                )
+            }
+        }
+
+        // Обновить название сессии
+        patch("/{sessionId}/title") {
+            try {
+                val sessionId = call.parameters["sessionId"]
+                if (sessionId == null) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Session ID is required"))
+                    return@patch
+                }
+
+                val request = call.receive<UpdateTitleRequest>()
+                val success = sessionManager.updateSessionTitle(sessionId, request.title)
+                if (success) {
+                    call.respond(StatusResponse(success = true, message = "Title updated successfully"))
+                } else {
+                    call.respond(HttpStatusCode.NotFound, StatusResponse(success = false, message = "Session not found"))
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to update title: ${e.message}")
                 )
             }
         }

@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SessionListItem(
     val id: String,
+    val title: String? = null,
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,
@@ -147,4 +148,12 @@ data class ModelCapabilitiesDTO(
     val contextWindow: Int,
     val supportsVision: Boolean,
     val supportsStreaming: Boolean
+)
+
+/**
+ * Запрос на обновление названия сессии
+ */
+@Serializable
+data class UpdateTitleRequest(
+    val title: String
 )
