@@ -1,0 +1,312 @@
+/* ========================================
+   Sessions Component
+   ======================================== */
+
+.sessions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    z-index: var(--z-base);
+}
+
+.sessions-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sessions-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sessions-list::-webkit-scrollbar-thumb {
+    background: var(--border-medium);
+    border-radius: var(--radius-sm);
+}
+
+.sessions-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+.sessions-empty {
+    text-align: center;
+    padding: 40px var(--spacing-xl);
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.session-item {
+    position: relative;
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    z-index: var(--z-base);
+}
+
+.session-item:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+    z-index: var(--z-dropdown);
+}
+
+.session-item.active {
+    background: var(--gradient-primary);
+    color: var(--bg-white);
+    border-color: var(--color-primary);
+    z-index: var(--z-dropdown);
+}
+
+.session-item.menu-open {
+    z-index: 100;
+}
+
+.session-item-content {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.session-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.session-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.session-message-count {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.session-time {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* Session menu button */
+.session-menu-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+
+.session-item:hover .session-menu-btn {
+    opacity: 1;
+}
+
+.session-menu-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--color-primary);
+}
+
+.session-item.active .session-menu-btn {
+    color: var(--bg-white);
+    opacity: 1;
+}
+
+.session-item.active .session-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Context menu */
+.session-context-menu {
+    position: absolute;
+    top: 40px;
+    right: var(--spacing-md);
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-overlay);
+    min-width: 150px;
+    overflow: hidden;
+}
+
+.context-menu-item {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-white);
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    text-align: left;
+}
+
+.context-menu-item:hover {
+    background: var(--bg-light);
+}
+
+.context-menu-item.compression-item {
+    color: var(--color-primary);
+}
+
+.context-menu-item.compression-item:hover {
+    background: #f0f2ff;
+}
+
+.context-menu-item.delete-item {
+    color: var(--color-error);
+}
+
+.context-menu-item.delete-item:hover {
+    background: #ffe5e8;
+}
+
+/* ========================================
+   User Info Footer
+   ======================================== */
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+}
+
+.user-info-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast);
+}
+
+.user-info-header:hover {
+    background: var(--bg-light);
+}
+
+.user-info-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-round);
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bg-white);
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.user-info-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-info-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-info-email {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-menu-toggle {
+    background: transparent;
+    border: none;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-sm);
+}
+
+.user-menu-toggle:hover {
+    background: var(--bg-gray);
+    color: var(--text-secondary);
+}
+
+.user-menu-toggle svg {
+    transition: transform var(--transition-fast);
+}
+
+.user-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: var(--spacing-sm);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all var(--transition-fast);
+    z-index: var(--z-modal);
+    overflow: hidden;
+}
+
+.user-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-menu-item {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-white);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--text-secondary);
+}
+
+.user-menu-item:hover {
+    background: var(--bg-light);
+}
+
+.logout-menu-item {
+    color: var(--color-error);
+}
+
+.logout-menu-item:hover {
+    background: #fff5f5;
+    color: #c82333;
+}

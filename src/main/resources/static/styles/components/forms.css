@@ -1,0 +1,176 @@
+/* ========================================
+   Form Components
+   ======================================== */
+
+/* Message input */
+#messageInput {
+    flex: 1;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    font-size: 16px;
+    font-family: var(--font-family);
+    resize: none;
+    outline: none;
+    transition: border-color var(--transition-medium);
+    max-height: 120px;
+}
+
+#messageInput:focus {
+    border-color: var(--color-primary);
+}
+
+#messageInput::placeholder {
+    color: var(--border-medium);
+}
+
+/* Format selector */
+.format-selector {
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.format-selector label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.format-select {
+    padding: 6px var(--spacing-md);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-family: var(--font-family);
+    background: var(--bg-white);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition-medium);
+}
+
+.format-select:focus {
+    border-color: var(--color-primary);
+}
+
+.format-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Temperature slider */
+.temperature-slider {
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.temperature-slider label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#temperatureValue,
+#modalTemperatureValue {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.temperature-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: -4px;
+}
+
+/* Max tokens input */
+.max-tokens-input {
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.max-tokens-input label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#modalMaxTokensValue {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.max-tokens-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: -4px;
+}
+
+/* Slider */
+.slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #4299e1 0%, #667eea 50%, #764ba2 100%);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-round);
+    background: var(--bg-white);
+    border: 2px solid var(--color-primary);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-round);
+    background: var(--bg-white);
+    border: 2px solid var(--color-primary);
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-fast);
+}
+
+.slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+    #messageInput {
+        font-size: 14px;
+    }
+}

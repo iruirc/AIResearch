@@ -1,0 +1,277 @@
+/* ========================================
+   Compression Feature Styles
+   ======================================== */
+
+/* Compression modal content */
+.compression-content {
+    padding: var(--spacing-xl);
+}
+
+.compression-info {
+    margin-bottom: 25px;
+    padding: var(--spacing-lg);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+}
+
+.compression-info p {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.compression-stats {
+    display: flex;
+    gap: var(--spacing-xl);
+    margin-top: var(--spacing-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Compression strategy selector */
+.compression-selector {
+    margin-bottom: 25px;
+}
+
+.compression-selector label {
+    display: block;
+    margin-bottom: var(--spacing-lg);
+    font-weight: 600;
+    color: #333;
+}
+
+.compression-strategies {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.strategy-option {
+    cursor: pointer;
+    display: block;
+}
+
+.strategy-option input[type="radio"] {
+    display: none;
+}
+
+.strategy-card {
+    padding: var(--spacing-lg);
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-medium) ease;
+    background: var(--bg-white);
+}
+
+.strategy-option input[type="radio"]:checked + .strategy-card {
+    border-color: var(--color-primary);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.strategy-card:hover {
+    border-color: #b0b0b0;
+}
+
+.strategy-option input[type="radio"]:checked + .strategy-card:hover {
+    border-color: var(--color-primary);
+}
+
+.strategy-card h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.strategy-description {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* Compression actions */
+.compression-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+}
+
+/* Compression indicator */
+.compression-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px var(--spacing-xl);
+    text-align: center;
+}
+
+.compression-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.98);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-xl);
+    padding: 40px 60px;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    z-index: var(--z-modal);
+    backdrop-filter: blur(5px);
+}
+
+.compression-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--color-primary);
+    border-radius: var(--radius-round);
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--spacing-xl);
+}
+
+.compression-indicator p {
+    margin: var(--spacing-md) 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.compression-subtitle {
+    font-size: 14px !important;
+    color: #888 !important;
+    font-weight: 400 !important;
+}
+
+/* Compression result message */
+.compression-result {
+    background: var(--gradient-light);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+    margin: var(--spacing-xl) 0;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.compression-result-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--color-primary);
+}
+
+.compression-result-header svg {
+    flex-shrink: 0;
+}
+
+.compression-result-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.compression-result-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.compression-result-stats .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+
+.compression-result-stats .stat-label {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.compression-result-stats .stat-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.compression-result-footer {
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid #ddd;
+}
+
+.compression-result-footer p {
+    margin: 0;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+    .compression-content {
+        padding: var(--spacing-lg);
+    }
+
+    .compression-stats {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .compression-result {
+        padding: var(--spacing-lg);
+    }
+
+    .compression-result-stats {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .compression-result-header h3 {
+        font-size: 16px;
+    }
+
+    .compression-result-stats .stat-item {
+        padding: var(--spacing-md) var(--spacing-md);
+    }
+
+    .compression-result-stats .stat-label {
+        font-size: 13px;
+    }
+
+    .compression-result-stats .stat-value {
+        font-size: 15px;
+    }
+
+    .compression-result-footer p {
+        font-size: 13px;
+    }
+}

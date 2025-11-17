@@ -1,0 +1,325 @@
+/* ========================================
+   Button Components
+   ======================================== */
+
+/* Base button styles */
+button {
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-weight: 500;
+    border: none;
+    transition: all var(--transition-fast);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* New chat button */
+.new-chat-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    background: var(--bg-white);
+    color: inherit;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.new-chat-button:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+}
+
+.new-chat-button:active {
+    background: var(--bg-gray);
+}
+
+.new-chat-button svg {
+    flex-shrink: 0;
+}
+
+/* Agents button (sidebar) */
+.agents-button-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    background: var(--bg-white);
+    color: inherit;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.agents-button-sidebar:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+}
+
+.agents-button-sidebar:active {
+    background: var(--bg-gray);
+}
+
+.agents-button-sidebar svg {
+    flex-shrink: 0;
+}
+
+/* MCP Servers button (sidebar) */
+.mcp-servers-button-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    background: var(--bg-white);
+    color: inherit;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mcp-servers-button-sidebar:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+}
+
+.mcp-servers-button-sidebar:active {
+    background: var(--bg-gray);
+}
+
+.mcp-servers-button-sidebar svg {
+    flex-shrink: 0;
+}
+
+/* Settings button */
+.settings-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    background: var(--bg-white);
+    color: inherit;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-button:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+}
+
+.settings-button:active {
+    background: var(--bg-gray);
+}
+
+.settings-button svg {
+    flex-shrink: 0;
+}
+
+/* Action buttons (header) */
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--bg-white);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.action-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.action-button:active {
+    transform: translateY(0);
+}
+
+.action-button.delete:hover {
+    background: rgba(220, 53, 69, 0.8);
+    border-color: rgba(220, 53, 69, 0.9);
+}
+
+.action-button:disabled {
+    transform: none;
+}
+
+.action-button svg {
+    flex-shrink: 0;
+}
+
+/* Toggle sidebar button */
+.toggle-sidebar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--bg-white);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+    width: 36px;
+    height: 36px;
+}
+
+.toggle-sidebar-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.toggle-sidebar-button:active {
+    transform: translateY(0);
+}
+
+.toggle-sidebar-button svg {
+    flex-shrink: 0;
+}
+
+/* Agents button (header) */
+.agents-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--bg-white);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.agents-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.agents-button:active {
+    transform: translateY(0);
+}
+
+.agents-button svg {
+    flex-shrink: 0;
+}
+
+/* Send button */
+.send-button {
+    background: var(--gradient-primary);
+    color: var(--bg-white);
+    border: none;
+    border-radius: var(--radius-lg);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.send-button:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-primary);
+}
+
+.send-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* Save button */
+.save-button {
+    padding: 10px var(--spacing-xl);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--gradient-primary);
+    color: var(--bg-white);
+}
+
+.save-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-primary);
+}
+
+.save-button:active {
+    transform: translateY(0);
+}
+
+/* Cancel button */
+.cancel-button {
+    padding: 10px var(--spacing-xl);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--bg-light);
+    color: var(--text-secondary);
+}
+
+.cancel-button:hover {
+    background: var(--bg-gray);
+}
+
+.cancel-button:active {
+    background: var(--bg-dark);
+}
+
+/* Apply button */
+.apply-button {
+    padding: 10px 24px;
+    background: var(--gradient-primary);
+    color: var(--bg-white);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.apply-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-primary);
+}
+
+.apply-button:active {
+    transform: translateY(0);
+}
+
+/* Close button */
+.close-button {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text-muted);
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+}
+
+.close-button:hover {
+    background: var(--bg-light);
+    color: var(--text-secondary);
+}
