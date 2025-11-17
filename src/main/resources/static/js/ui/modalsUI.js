@@ -74,7 +74,11 @@ export const modalsUI = {
         const providerSelect = document.getElementById('modalProviderSelect');
         if (!providerSelect) return;
 
-        providerSelect.innerHTML = '';
+        // Remove all existing event listeners by cloning and replacing the element
+        const newProviderSelect = providerSelect.cloneNode(false);
+        providerSelect.parentNode.replaceChild(newProviderSelect, providerSelect);
+
+        // Populate options
         providers.forEach(provider => {
             const option = document.createElement('option');
             option.value = provider.id;
@@ -82,11 +86,12 @@ export const modalsUI = {
             if (provider.id === currentProvider) {
                 option.selected = true;
             }
-            providerSelect.appendChild(option);
+            newProviderSelect.appendChild(option);
         });
 
+        // Add new event listener
         if (onProviderChange) {
-            providerSelect.addEventListener('change', (e) => onProviderChange(e.target.value));
+            newProviderSelect.addEventListener('change', (e) => onProviderChange(e.target.value));
         }
     },
 
@@ -103,7 +108,7 @@ export const modalsUI = {
         models.forEach(model => {
             const option = document.createElement('option');
             option.value = model.id;
-            option.textContent = model.name;
+            option.textContent = model.displayName || model.name || model.id;
             if (model.id === currentModel) {
                 option.selected = true;
             }

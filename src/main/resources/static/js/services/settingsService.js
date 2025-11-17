@@ -18,17 +18,18 @@ export const settingsService = {
         try {
             const config = await settingsApi.loadConfig();
 
+            // Detect and set provider
+            const provider = detectProviderFromModel(config.model);
+            appState.currentProvider = provider;
+
             // Update application state with config
             appState.setCurrentSettings({
                 model: config.model,
                 temperature: config.temperature,
                 maxTokens: config.maxTokens,
-                format: config.format
+                format: config.format,
+                providerId: provider // Add providerId to settings
             });
-
-            // Detect and set provider
-            const provider = detectProviderFromModel(config.model);
-            appState.currentProvider = provider;
 
             // Load context window for the current model
             await this.updateContextWindow(config.model);

@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
     maxTokens: 4096,
     format: 'PLAIN_TEXT',
     contextWindow: 200000,
+    providerId: 'claude', // Default provider (lowercase to match backend API)
 };
 
 // UI Configuration
