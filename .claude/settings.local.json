@@ -22,7 +22,8 @@
       "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/api/*.js)",
       "Bash(done)",
       "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/services/*.js)",
-      "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/ui/*.js)"
+      "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/ui/*.js)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
