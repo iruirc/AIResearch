@@ -6,6 +6,7 @@ const MODELS_URL = '/models';
 const PROVIDERS_URL = '/providers';
 const CONFIG_URL = '/config';
 const COMPRESSION_URL = '/compression';
+const MCP_SERVERS_URL = '/mcp/servers';
 const REQUEST_TIMEOUT = 300000; // 300 секунд (5 минут)
 
 // DOM элементы
@@ -39,6 +40,10 @@ const currentMessageCount = document.getElementById('currentMessageCount');
 const currentTokenCount = document.getElementById('currentTokenCount');
 const toggleSidebarButton = document.getElementById('toggleSidebarButton');
 const sidebar = document.querySelector('.sidebar');
+const mcpServersButton = document.getElementById('mcpServersButton');
+const mcpServersModal = document.getElementById('mcpServersModal');
+const closeMcpServersModal = document.getElementById('closeMcpServersModal');
+const mcpServersListElement = document.getElementById('mcpServersList');
 
 // Состояние
 let isLoading = false;
@@ -47,6 +52,7 @@ let sessions = []; // Список всех сессий
 let agents = []; // Список всех агентов
 let providers = []; // Список всех провайдеров
 let models = []; // Список всех доступных моделей
+let mcpServers = []; // Список всех MCP серверов
 let currentProvider = null; // Текущий выбранный провайдер
 let requestStartTime = null; // Время начала запроса
 let timerInterval = null; // Интервал для обновления таймера
@@ -187,6 +193,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // Обработчик кнопки переключения боковой панели
     if (toggleSidebarButton) {
         toggleSidebarButton.addEventListener('click', toggleSidebar);
+    }
+
+    // Обработчик кнопки "MCP Сервера"
+    if (mcpServersButton) {
+        mcpServersButton.addEventListener('click', openMcpServersModal);
+    }
+
+    // Обработчик закрытия модального окна MCP серверов
+    if (closeMcpServersModal) {
+        closeMcpServersModal.addEventListener('click', closeMcpServersModalFunc);
+    }
+
+    // Закрытие модального окна MCP серверов при клике вне его
+    if (mcpServersModal) {
+        mcpServersModal.addEventListener('click', (e) => {
+            if (e.target === mcpServersModal) {
+                closeMcpServersModalFunc();
+            }
+        });
     }
 
     // Загружаем конфигурацию, список сессий, провайдеров и моделей
@@ -1643,4 +1668,77 @@ function toggleSidebar() {
 
     // Сохраняем состояние в localStorage
     localStorage.setItem('sidebarCollapsed', isSidebarCollapsed);
+}
+
+// ========================================
+// Функции для работы с MCP серверами
+// ========================================
+
+// Открытие модального окна MCP серверов
+async function openMcpServersModal() {
+    if (isLoading) {
+        return;
+    }
+
+    mcpServersModal.classList.add('active');
+
+    // Загружаем список MCP серверов
+    await loadMcpServers();
+}
+
+// Закрытие модального окна MCP серверов
+function closeMcpServersModalFunc() {
+    mcpServersModal.classList.remove('active');
+}
+
+// Загрузка списка MCP серверов
+async function loadMcpServers() {
+    try {
+        mcpServersListElement.innerHTML = '<div class="mcp-servers-loading">Загрузка MCP серверов...</div>';
+
+        const response = await fetch(MCP_SERVERS_URL);
+        if (!response.ok) {
+            throw new Error('Failed to load MCP servers');
+        }
+
+        const data = await response.json();
+        mcpServers = data.servers || [];
+
+        renderMcpServersList();
+    } catch (error) {
+        console.error('Error loading MCP servers:', error);
+        mcpServersListElement.innerHTML = '<div class="mcp-servers-error">Ошибка загрузки MCP серверов</div>';
+    }
+}
+
+// Отрисовка списка MCP серверов
+function renderMcpServersList() {
+    if (mcpServers.length === 0) {
+        mcpServersListElement.innerHTML = '<div class="mcp-servers-empty">Нет подключенных MCP серверов</div>';
+        return;
+    }
+
+    mcpServersListElement.innerHTML = '';
+    mcpServers.forEach(server => {
+        const serverItem = document.createElement('div');
+        serverItem.className = 'mcp-server-item';
+
+        // Определяем статус сервера
+        const statusClass = server.connected ? 'connected' : 'disconnected';
+        const statusText = server.connected ? 'Подключен' : 'Отключен';
+
+        serverItem.innerHTML = `
+            <div class="mcp-server-header">
+                <div class="mcp-server-name">${server.name}</div>
+                <span class="mcp-server-status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="mcp-server-details">
+                ${server.description ? `<div class="mcp-server-description">${server.description}</div>` : ''}
+                ${server.version ? `<div class="mcp-server-version">Версия: ${server.version}</div>` : ''}
+                ${server.capabilities ? `<div class="mcp-server-capabilities">Возможности: ${server.capabilities.join(', ')}</div>` : ''}
+            </div>
+        `;
+
+        mcpServersListElement.appendChild(serverItem);
+    });
 }

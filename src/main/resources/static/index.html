@@ -23,6 +23,17 @@
                     </svg>
                     Агенты
                 </button>
+                <button id="mcpServersButton" class="mcp-servers-button-sidebar" title="MCP Сервера">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="3" width="20" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+                        <rect x="2" y="10" width="20" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+                        <rect x="2" y="17" width="20" height="4" rx="1" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="6" cy="5" r="0.5" fill="currentColor"/>
+                        <circle cx="6" cy="12" r="0.5" fill="currentColor"/>
+                        <circle cx="6" cy="19" r="0.5" fill="currentColor"/>
+                    </svg>
+                    MCP-сервера
+                </button>
                 <button id="settingsButton" class="settings-button" title="Настройки">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -218,6 +229,19 @@
                     <button id="cancelCompressionButton" class="cancel-button">Отменить</button>
                     <button id="applyCompressionButton" class="apply-button">Применить</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для MCP серверов -->
+    <div id="mcpServersModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>MCP Сервера</h3>
+                <button id="closeMcpServersModal" class="close-button">&times;</button>
+            </div>
+            <div id="mcpServersList" class="mcp-servers-list">
+                <div class="mcp-servers-loading">Загрузка MCP серверов...</div>
             </div>
         </div>
     </div>

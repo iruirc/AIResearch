@@ -773,6 +773,37 @@ body {
     flex-shrink: 0;
 }
 
+/* MCP Servers button in sidebar */
+.mcp-servers-button-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: white;
+    color: inherit;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mcp-servers-button-sidebar:hover {
+    background: #e9ecef;
+    transform: translateX(2px);
+}
+
+.mcp-servers-button-sidebar:active {
+    background: #e9ecef;
+}
+
+.mcp-servers-button-sidebar svg {
+    flex-shrink: 0;
+}
+
 /* Settings button in sidebar */
 .settings-button {
     display: flex;
@@ -1597,5 +1628,130 @@ body {
     .compression-stats {
         flex-direction: column;
         gap: 10px;
+    }
+}
+
+/* ========================================
+   Стили для MCP Серверов
+   ======================================== */
+
+/* Список MCP серверов */
+.mcp-servers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Загрузка MCP серверов */
+.mcp-servers-loading,
+.mcp-servers-empty,
+.mcp-servers-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.mcp-servers-error {
+    color: #dc3545;
+}
+
+/* Элемент MCP сервера */
+.mcp-server-item {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s;
+    cursor: default;
+}
+
+.mcp-server-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+/* Заголовок MCP сервера */
+.mcp-server-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.mcp-server-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+}
+
+/* Статус MCP сервера */
+.mcp-server-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.mcp-server-status.connected {
+    background: #d4edda;
+    color: #155724;
+}
+
+.mcp-server-status.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Детали MCP сервера */
+.mcp-server-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mcp-server-description {
+    font-size: 14px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.mcp-server-version {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.mcp-server-capabilities {
+    font-size: 13px;
+    color: #495057;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+/* Адаптив для MCP серверов */
+@media (max-width: 768px) {
+    .mcp-servers-list {
+        padding: 15px;
+        max-height: 400px;
+    }
+
+    .mcp-server-item {
+        padding: 12px;
+    }
+
+    .mcp-server-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .mcp-server-name {
+        font-size: 15px;
     }
 }
