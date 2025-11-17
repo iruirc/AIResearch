@@ -20,7 +20,8 @@
       "WebFetch(domain:mvnrepository.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/api/*.js)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/services/*.js)"
     ],
     "deny": [],
     "ask": []
