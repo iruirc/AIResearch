@@ -21,7 +21,8 @@ data class MCPServerInfo(
     val transport: String,
     val toolsCount: Int = 0,
     val resourcesCount: Int = 0,
-    val promptsCount: Int = 0
+    val promptsCount: Int = 0,
+    val tools: List<MCPTool> = emptyList()
 )
 
 /**
@@ -48,15 +49,15 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                     .map { config ->
                         val connected = connectionStatus[config.id] ?: false
 
-                        // Get counts only if connected
-                        val (toolsCount, resourcesCount, promptsCount) = if (connected) {
+                        // Get tools, resources, and prompts lists if connected
+                        val (tools, resources, prompts) = if (connected) {
                             Triple(
-                                mcpServerManager.listTools(config.id).size,
-                                mcpServerManager.listResources(config.id).size,
-                                mcpServerManager.listPrompts(config.id).size
+                                mcpServerManager.listTools(config.id),
+                                mcpServerManager.listResources(config.id),
+                                mcpServerManager.listPrompts(config.id)
                             )
                         } else {
-                            Triple(0, 0, 0)
+                            Triple(emptyList(), emptyList(), emptyList())
                         }
 
                         MCPServerInfo(
@@ -65,9 +66,10 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                             description = config.description,
                             connected = connected,
                             transport = config.transport,
-                            toolsCount = toolsCount,
-                            resourcesCount = resourcesCount,
-                            promptsCount = promptsCount
+                            toolsCount = tools.size,
+                            resourcesCount = resources.size,
+                            promptsCount = prompts.size,
+                            tools = tools
                         )
                     }
 
@@ -96,6 +98,17 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                 val client = mcpServerManager.getClient(serverId)
                 val connected = client?.isConnected() ?: false
 
+                // Get tools, resources, and prompts lists if connected
+                val (tools, resources, prompts) = if (connected) {
+                    Triple(
+                        mcpServerManager.listTools(serverId),
+                        mcpServerManager.listResources(serverId),
+                        mcpServerManager.listPrompts(serverId)
+                    )
+                } else {
+                    Triple(emptyList(), emptyList(), emptyList())
+                }
+
                 call.respond(
                     HttpStatusCode.OK,
                     MCPServerInfo(
@@ -104,9 +117,10 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                         description = config.description,
                         connected = connected,
                         transport = config.transport,
-                        toolsCount = if (connected) mcpServerManager.listTools(serverId).size else 0,
-                        resourcesCount = if (connected) mcpServerManager.listResources(serverId).size else 0,
-                        promptsCount = if (connected) mcpServerManager.listPrompts(serverId).size else 0
+                        toolsCount = tools.size,
+                        resourcesCount = resources.size,
+                        promptsCount = prompts.size,
+                        tools = tools
                     )
                 )
             } catch (e: Exception) {

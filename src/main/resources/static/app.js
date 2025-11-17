@@ -1732,6 +1732,26 @@ function renderMcpServersList() {
         const statusClass = server.connected ? 'connected' : 'disconnected';
         const statusText = server.connected ? 'Подключен' : 'Отключен';
 
+        // Формируем список инструментов
+        let toolsHtml = '';
+        if (server.tools && server.tools.length > 0) {
+            toolsHtml = `
+                <div class="mcp-server-tools">
+                    <div class="mcp-tools-header">Инструменты (${server.tools.length}):</div>
+                    <ul class="mcp-tools-list">
+                        ${server.tools.map(tool => `
+                            <li class="mcp-tool-item">
+                                <div class="mcp-tool-name">${tool.name}</div>
+                                ${tool.description ? `<div class="mcp-tool-description">${tool.description}</div>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        } else if (server.connected) {
+            toolsHtml = '<div class="mcp-server-no-tools">Нет доступных инструментов</div>';
+        }
+
         serverItem.innerHTML = `
             <div class="mcp-server-header">
                 <div class="mcp-server-name">${server.name}</div>
@@ -1741,6 +1761,7 @@ function renderMcpServersList() {
                 ${server.description ? `<div class="mcp-server-description">${server.description}</div>` : ''}
                 ${server.version ? `<div class="mcp-server-version">Версия: ${server.version}</div>` : ''}
                 ${server.capabilities ? `<div class="mcp-server-capabilities">Возможности: ${server.capabilities.join(', ')}</div>` : ''}
+                ${toolsHtml}
             </div>
         `;
 
