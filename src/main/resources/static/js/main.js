@@ -195,7 +195,7 @@ async function handleSendMessage() {
         const response = await chatService.sendMessage(message);
 
         // Add assistant message to UI with metadata
-        messagesUI.addMessage(response.text, 'assistant', response.metadata);
+        messagesUI.addMessage(response.response, 'assistant', response.metadata);
     } catch (error) {
         console.error('Error sending message:', error);
         messagesUI.addMessage(
