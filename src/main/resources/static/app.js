@@ -1707,7 +1707,12 @@ async function loadMcpServers() {
         renderMcpServersList();
     } catch (error) {
         console.error('Error loading MCP servers:', error);
-        mcpServersListElement.innerHTML = '<div class="mcp-servers-empty">Нет подключенных MCP серверов</div>';
+        mcpServersListElement.innerHTML = `
+            <div class="mcp-servers-empty">
+                <p>MCP сервера не настроены</p>
+                <p style="font-size: 12px; color: #6c757d; margin-top: 8px;">Функционал MCP серверов еще не сконфигурирован на бэкенде</p>
+            </div>
+        `;
     }
 }
 
