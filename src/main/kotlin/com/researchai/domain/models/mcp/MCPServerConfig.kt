@@ -24,6 +24,7 @@ data class MCPServerConfig(
     val args: List<String>? = null, // For STDIO: command arguments
     val env: Map<String, String>? = null, // Environment variables for STDIO
     val url: String? = null, // For SSE/WebSocket: connection URL
+    val headers: Map<String, String>? = null, // For SSE/WebSocket: HTTP headers
     val enabled: Boolean = true
 ) {
     fun getTransportType(): MCPTransportType {

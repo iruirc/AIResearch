@@ -1,0 +1,24 @@
+{
+  "servers": [
+    {
+      "id": "github",
+      "name": "GitHub MCP Server",
+      "description": "Access to GitHub API via Model Context Protocol",
+      "transport": "sse",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      },
+      "enabled": true
+    },
+    {
+      "id": "filesystem",
+      "name": "Filesystem Server",
+      "description": "Access to local filesystem",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "enabled": false
+    }
+  ]
+}

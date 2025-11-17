@@ -40,7 +40,8 @@ object MCPConfigLoader {
                     command = server.command?.let { substituteEnvVars(it) },
                     args = server.args?.map { substituteEnvVars(it) },
                     env = server.env?.mapValues { substituteEnvVars(it.value) },
-                    url = server.url?.let { substituteEnvVars(it) }
+                    url = server.url?.let { substituteEnvVars(it) },
+                    headers = server.headers?.mapValues { substituteEnvVars(it.value) }
                 )
             }
         } catch (e: Exception) {
