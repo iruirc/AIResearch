@@ -12,6 +12,7 @@ import com.researchai.config.getHuggingFaceConfig
 import com.researchai.di.AppModule
 import com.researchai.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.launch
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
