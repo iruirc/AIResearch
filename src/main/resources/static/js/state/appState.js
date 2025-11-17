@@ -32,8 +32,24 @@ class AppState {
 
     // Notify listeners
     notify(key) {
+        // Map notification key to actual property name
+        const propertyMap = {
+            'loading': 'isLoading',
+            'sessions': 'sessions',
+            'agents': 'agents',
+            'providers': 'providers',
+            'models': 'models',
+            'mcpServers': 'mcpServers',
+            'currentSessionId': 'currentSessionId',
+            'currentSettings': 'currentSettings',
+            'sessionTotalTokens': 'sessionTotalTokens'
+        };
+
+        const propertyName = propertyMap[key] || key;
+        const value = this[propertyName];
+
         if (this.listeners[key]) {
-            this.listeners[key].forEach(callback => callback(this[key]));
+            this.listeners[key].forEach(callback => callback(value));
         }
     }
 
@@ -68,7 +84,7 @@ class AppState {
     // Setters with notifications
     setLoading(value) {
         this.isLoading = value;
-        this.notify('isLoading');
+        this.notify('loading');
     }
 
     setCurrentSessionId(value) {

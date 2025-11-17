@@ -59,17 +59,15 @@ export const messagesUI = {
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
+        contentDiv.innerHTML = `
+            <div class="loading-indicator-wrapper">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="loading-text">Генерирую ответ... <span class="loading-timer">0.0с</span></span>
+            </div>
+        `;
 
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-
-        const timerDiv = document.createElement('div');
-        timerDiv.className = 'message-timer';
-        timerDiv.innerHTML = '<span class="timer-icon">⏱</span> <span class="timer-text">Время ожидания: <span class="timer-value">0.0</span>с</span>';
-
-        contentDiv.appendChild(typingIndicator);
-        contentDiv.appendChild(timerDiv);
         messageDiv.appendChild(contentDiv);
         messagesContainer.appendChild(messageDiv);
 
@@ -229,9 +227,9 @@ export const messagesUI = {
 
         timerInterval = setInterval(() => {
             const elapsed = ((Date.now() - requestStartTime) / 1000).toFixed(1);
-            const timerElement = document.querySelector(`#${loadingId} .timer-value`);
+            const timerElement = document.querySelector(`#${loadingId} .loading-timer`);
             if (timerElement) {
-                timerElement.textContent = elapsed;
+                timerElement.textContent = `${elapsed}с`;
             }
         }, UI_CONFIG.TIMER_UPDATE_INTERVAL);
     }

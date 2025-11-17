@@ -157,6 +157,7 @@
     font-size: 14px;
     color: var(--text-muted);
     min-height: 20px;
+    display: none;
 }
 
 .status.error {
@@ -165,6 +166,46 @@
 
 .status.success {
     color: var(--color-success);
+}
+
+/* Status loading indicator */
+.status-loading {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+}
+
+.status-loading .typing-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.status-loading .typing-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    animation: typing 1.4s infinite;
+}
+
+.status-loading .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.status-loading .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.status-text {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.status-timer {
+    font-weight: 600;
+    color: var(--color-primary);
 }
 
 /* ========================================

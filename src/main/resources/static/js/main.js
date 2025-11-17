@@ -141,12 +141,15 @@ function subscribeToStateChanges() {
         messageInput.disabled = isLoading;
 
         if (isLoading) {
+            // Add loading indicator as a message in chat
             const loadingId = messagesUI.addLoadingMessage();
             appState.setState({ loadingMessageId: loadingId });
         } else {
+            // Remove loading indicator
             const state = appState.getState();
             if (state.loadingMessageId) {
                 messagesUI.removeLoadingMessage(state.loadingMessageId);
+                appState.setState({ loadingMessageId: null });
             }
         }
     });
