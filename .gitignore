@@ -40,4 +40,4 @@ out/
 .env
 
 ### Session Data ###
-data/
+/data/
