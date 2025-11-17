@@ -44,9 +44,9 @@ fun Route.mcpRoutes() {
                         MCPServerInfo(
                             name = config.name,
                             description = config.description,
-                            connected = false, // TODO: Implement actual connection status check
-                            version = null, // TODO: Get version from server
-                            capabilities = emptyList() // TODO: Get capabilities from server
+                            connected = config.enabled, // Show as connected if enabled in config
+                            version = null, // TODO: Get version from actual MCP server
+                            capabilities = emptyList() // TODO: Get capabilities from actual MCP server
                         )
                     }
 
