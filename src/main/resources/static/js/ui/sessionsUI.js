@@ -1,0 +1,173 @@
+// Sessions UI module - manages sessions list display and interactions
+import { getTimeAgo } from '../utils/helpers.js';
+import { appState } from '../state/appState.js';
+
+// DOM element references
+let sessionsListElement = null;
+
+/**
+ * Initialize sessions UI with DOM element
+ * @param {HTMLElement} element - Sessions list element
+ */
+export function initSessionsUI(element) {
+    sessionsListElement = element;
+}
+
+/**
+ * Sessions UI module
+ */
+export const sessionsUI = {
+    /**
+     * Render sessions list
+     * @param {Array} sessions - Array of session objects
+     * @param {string} currentSessionId - ID of currently active session
+     * @param {Object} callbacks - Callback functions for session interactions
+     */
+    renderSessionsList(sessions, currentSessionId, callbacks = {}) {
+        if (!sessions || sessions.length === 0) {
+            sessionsListElement.innerHTML = '<div class="sessions-empty">Нет активных чатов</div>';
+            return;
+        }
+
+        sessionsListElement.innerHTML = '';
+        sessions.forEach(session => {
+            const sessionItem = this._createSessionItem(session, currentSessionId, callbacks);
+            sessionsListElement.appendChild(sessionItem);
+        });
+    },
+
+    /**
+     * Show context menu for a session
+     * @param {string} sessionId - Session ID
+     * @param {HTMLElement} menuElement - Context menu element
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     */
+    showContextMenu(sessionId, menuElement, x, y) {
+        // Hide all other context menus
+        this.hideAllContextMenus();
+
+        // Position and show menu
+        menuElement.style.left = `${x}px`;
+        menuElement.style.top = `${y}px`;
+        menuElement.style.display = 'block';
+    },
+
+    /**
+     * Hide all context menus
+     */
+    hideAllContextMenus() {
+        const menus = document.querySelectorAll('.session-context-menu');
+        menus.forEach(menu => {
+            menu.style.display = 'none';
+        });
+    },
+
+    /**
+     * Create session item element
+     * @private
+     * @param {Object} session - Session object
+     * @param {string} currentSessionId - Current session ID
+     * @param {Object} callbacks - Callback functions
+     * @returns {HTMLElement} Session item element
+     */
+    _createSessionItem(session, currentSessionId, callbacks) {
+        const sessionItem = document.createElement('div');
+        sessionItem.className = 'session-item';
+        if (session.id === currentSessionId) {
+            sessionItem.classList.add('active');
+        }
+
+        const title = session.title || 'Новый чат';
+        const timeAgo = getTimeAgo(session.lastAccessedAt);
+
+        sessionItem.innerHTML = `
+            <div class="session-item-content">
+                <div class="session-item-header">
+                    <span class="session-title">${title}</span>
+                    <span class="session-message-count">${session.messageCount} сообщ.</span>
+                </div>
+                <div class="session-time">${timeAgo}</div>
+            </div>
+            <button class="session-menu-btn" title="Меню">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
+                </svg>
+            </button>
+            <div class="session-context-menu" style="display: none;">
+                <div class="context-menu-item" data-action="rename">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Переименовать
+                </div>
+                <div class="context-menu-item" data-action="copy">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Скопировать
+                </div>
+                <div class="context-menu-item" data-action="compress">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="4 14 10 14 10 20"></polyline>
+                        <polyline points="20 10 14 10 14 4"></polyline>
+                        <line x1="14" y1="10" x2="21" y2="3"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                    </svg>
+                    Сжать историю
+                </div>
+                <div class="context-menu-divider"></div>
+                <div class="context-menu-item context-menu-item-danger" data-action="delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Удалить
+                </div>
+            </div>
+        `;
+
+        // Add click handler for session selection
+        const sessionContent = sessionItem.querySelector('.session-item-content');
+        sessionContent.addEventListener('click', () => {
+            if (callbacks.onSessionClick) {
+                callbacks.onSessionClick(session.id);
+            }
+        });
+
+        // Add click handler for menu button
+        const menuBtn = sessionItem.querySelector('.session-menu-btn');
+        const contextMenu = sessionItem.querySelector('.session-context-menu');
+
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = menuBtn.getBoundingClientRect();
+            this.showContextMenu(session.id, contextMenu, rect.left, rect.bottom + 5);
+        });
+
+        // Add click handlers for menu items
+        const menuItems = contextMenu.querySelectorAll('.context-menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = item.dataset.action;
+                this.hideAllContextMenus();
+
+                if (callbacks[`on${action.charAt(0).toUpperCase() + action.slice(1)}`]) {
+                    callbacks[`on${action.charAt(0).toUpperCase() + action.slice(1)}`](session.id, title);
+                }
+            });
+        });
+
+        return sessionItem;
+    }
+};
+
+// Hide context menus when clicking outside
+document.addEventListener('click', () => {
+    sessionsUI.hideAllContextMenus();
+});
