@@ -18,7 +18,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:modelcontextprotocol.github.io)",
       "WebFetch(domain:mvnrepository.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/api/*.js)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
