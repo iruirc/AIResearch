@@ -1707,7 +1707,7 @@ async function loadMcpServers() {
         renderMcpServersList();
     } catch (error) {
         console.error('Error loading MCP servers:', error);
-        mcpServersListElement.innerHTML = '<div class="mcp-servers-error">Ошибка загрузки MCP серверов</div>';
+        mcpServersListElement.innerHTML = '<div class="mcp-servers-empty">Нет подключенных MCP серверов</div>';
     }
 }
 
