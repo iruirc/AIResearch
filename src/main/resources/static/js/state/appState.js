@@ -37,6 +37,34 @@ class AppState {
         }
     }
 
+    // Get current state
+    getState() {
+        return {
+            loading: this.isLoading,
+            currentSessionId: this.currentSessionId,
+            sessions: this.sessions,
+            agents: this.agents,
+            providers: this.providers,
+            models: this.models,
+            mcpServers: this.mcpServers,
+            currentProvider: this.currentProvider,
+            sessionTotalTokens: this.sessionTotalTokens,
+            currentContextWindow: this.currentContextWindow,
+            isSidebarCollapsed: this.isSidebarCollapsed,
+            settings: this.currentSettings,
+            loadingMessageId: this.loadingMessageId
+        };
+    }
+
+    // Set state (for partial updates)
+    setState(updates) {
+        Object.keys(updates).forEach(key => {
+            if (this.hasOwnProperty(key)) {
+                this[key] = updates[key];
+            }
+        });
+    }
+
     // Setters with notifications
     setLoading(value) {
         this.isLoading = value;
@@ -51,6 +79,26 @@ class AppState {
     setSessions(value) {
         this.sessions = value;
         this.notify('sessions');
+    }
+
+    setAgents(value) {
+        this.agents = value;
+        this.notify('agents');
+    }
+
+    setProviders(value) {
+        this.providers = value;
+        this.notify('providers');
+    }
+
+    setModels(value) {
+        this.models = value;
+        this.notify('models');
+    }
+
+    setMcpServers(value) {
+        this.mcpServers = value;
+        this.notify('mcpServers');
     }
 
     setCurrentSettings(value) {

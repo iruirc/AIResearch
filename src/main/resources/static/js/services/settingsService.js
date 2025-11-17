@@ -64,7 +64,7 @@ export const settingsService = {
     async loadProviders() {
         try {
             const providers = await settingsApi.loadProviders();
-            appState.providers = providers;
+            appState.setProviders(providers);
             return providers;
         } catch (error) {
             console.error('Error loading providers:', error);
@@ -80,7 +80,7 @@ export const settingsService = {
     async loadModels(providerId) {
         try {
             const models = await settingsApi.loadModels(providerId);
-            appState.models = models;
+            appState.setModels(models);
             return models;
         } catch (error) {
             console.error('Error loading models:', error);
@@ -134,7 +134,7 @@ export const settingsService = {
     async loadAgents() {
         try {
             const agents = await agentsApi.loadAgents();
-            appState.agents = agents;
+            appState.setAgents(agents);
             return agents;
         } catch (error) {
             console.error('Error loading agents:', error);
@@ -149,12 +149,12 @@ export const settingsService = {
     async loadMcpServers() {
         try {
             const servers = await mcpApi.loadServers();
-            appState.mcpServers = servers;
+            appState.setMcpServers(servers);
             return servers;
         } catch (error) {
             console.error('Error loading MCP servers:', error);
             // Don't throw - MCP servers might not be configured
-            appState.mcpServers = [];
+            appState.setMcpServers([]);
             return [];
         }
     }
