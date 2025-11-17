@@ -1,0 +1,275 @@
+# JavaScript Refactoring Plan
+
+## Current Status
+- Created directory structure: `js/api`, `js/services`, `js/ui`, `js/state`, `js/utils`
+- Created base modules: `config.js`, `appState.js`, `helpers.js`, `chatApi.js`
+
+## Completed Modules
+
+### 1. Configuration (`js/config.js`)
+- API endpoints
+- Default settings
+- UI configuration
+- Compression strategies
+
+### 2. State Management (`js/state/appState.js`)
+- Centralized application state
+- Event-based state updates
+- Subscriber pattern for reactive UI
+
+### 3. Utilities (`js/utils/helpers.js`)
+- fetchWithTimeout
+- getTimeAgo
+- detectProviderFromModel
+- scrollToBottom
+- debounce
+
+### 4. API Layer - COMPLETED ✅
+- **`js/api/chatApi.js`** (38 lines) - Chat API wrapper
+- **`js/api/sessionsApi.js`** (139 lines) - Session CRUD operations
+- **`js/api/agentsApi.js`** (54 lines) - Agent operations
+- **`js/api/settingsApi.js`** (92 lines) - Settings, providers, models
+- **`js/api/compressionApi.js`** (115 lines) - Compression operations
+- **`js/api/mcpApi.js`** (29 lines) - MCP servers operations
+- **Total: 467 lines** - Complete API abstraction layer
+
+## Full Refactoring Plan
+
+### API Modules (`js/api/`)
+
+**sessionsApi.js**
+```javascript
+export const sessionsApi = {
+    loadSessions: async () => { /* ... */ },
+    getSession: async (sessionId) => { /* ... */ },
+    deleteSession: async (sessionId) => { /* ... */ },
+    copySession: async (sessionId) => { /* ... */ },
+    renameSession: async (sessionId, title) => { /* ... */ },
+    clearSession: async (sessionId) => { /* ... */ }
+};
+```
+
+**agentsApi.js**
+```javascript
+export const agentsApi = {
+    loadAgents: async () => { /* ... */ },
+    startAgentSession: async (agentId) => { /* ... */ }
+};
+```
+
+**settingsApi.js**
+```javascript
+export const settingsApi = {
+    loadConfig: async () => { /* ... */ },
+    loadProviders: async () => { /* ... */ },
+    loadModels: async (providerId) => { /* ... */ },
+    loadModelCapabilities: async (modelId) => { /* ... */ }
+};
+```
+
+**compressionApi.js**
+```javascript
+export const compressionApi = {
+    getConfig: async (sessionId) => { /* ... */ },
+    updateConfig: async (sessionId, config) => { /* ... */ },
+    compress: async (sessionId, options) => { /* ... */ },
+    getArchivedMessages: async (sessionId) => { /* ... */ }
+};
+```
+
+**mcpApi.js**
+```javascript
+export const mcpApi = {
+    loadServers: async () => { /* ... */ }
+};
+```
+
+### Service Layer (`js/services/`)
+
+**sessionService.js**
+- Orchestrates session operations
+- Manages session list UI updates
+- Handles session switching
+
+**chatService.js**
+- Manages message sending
+- Handles loading states
+- Updates message UI
+
+**compressionService.js**
+- Compression workflow
+- Strategy selection
+- Result presentation
+
+**settingsService.js**
+- Settings CRUD operations
+- Provider/model management
+- Context window calculations
+
+### UI Modules (`js/ui/`)
+
+**messagesUI.js**
+```javascript
+export const messagesUI = {
+    addMessage: (text, type, metadata) => { /* ... */ },
+    addLoadingMessage: () => { /* ... */ },
+    removeLoadingMessage: (id) => { /* ... */ },
+    showWelcomeMessage: () => { /* ... */ },
+    clearMessages: () => { /* ... */ }
+};
+```
+
+**sessionsUI.js**
+```javascript
+export const sessionsUI = {
+    renderSessionsList: (sessions, currentSessionId) => { /* ... */ },
+    showContextMenu: (sessionId, position) => { /* ... */ },
+    hideContextMenu: () => { /* ... */ }
+};
+```
+
+**modalsUI.js**
+```javascript
+export const modalsUI = {
+    openModal: (modalId) => { /* ... */ },
+    closeModal: (modalId) => { /* ... */ },
+    // Specific modals
+    agentModal: { /* ... */ },
+    settingsModal: { /* ... */ },
+    compressionModal: { /* ... */ },
+    mcpServersModal: { /* ... */ }
+};
+```
+
+**sidebarUI.js**
+```javascript
+export const sidebarUI = {
+    toggle: () => { /* ... */ },
+    updateUserInfo: (user) => { /* ... */ }
+};
+```
+
+### Main Entry Point (`js/main.js`)
+
+```javascript
+import { appState } from './state/appState.js';
+import { chatService } from './services/chatService.js';
+import { sessionService } from './services/sessionService.js';
+// ... other imports
+
+// Initialize application
+async function initApp() {
+    // Load initial data
+    await settingsService.loadConfig();
+    await sessionService.loadSessions();
+
+    // Setup event listeners
+    setupEventListeners();
+
+    // Restore sidebar state
+    restoreSidebarState();
+}
+
+function setupEventListeners() {
+    // Message input
+    document.getElementById('sendButton').addEventListener('click', handleSendMessage);
+    document.getElementById('messageInput').addEventListener('keydown', handleMessageInput);
+
+    // Sidebar
+    document.getElementById('newChatButtonSidebar').addEventListener('click', handleNewChat);
+    document.getElementById('toggleSidebarButton').addEventListener('click', toggleSidebar);
+
+    // Modals
+    document.getElementById('agentsButton').addEventListener('click', openAgentsModal);
+    document.getElementById('settingsButton').addEventListener('click', openSettingsModal);
+    // ... more listeners
+}
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', initApp);
+```
+
+## Migration Strategy
+
+### Phase 1: Foundation (COMPLETED)
+- ✅ Create directory structure
+- ✅ Extract configuration
+- ✅ Create state management
+- ✅ Create utilities
+
+### Phase 2: API Layer ✅ COMPLETED
+1. ✅ Created all API modules (sessionsApi, agentsApi, settingsApi, compressionApi, mcpApi)
+2. ⏳ Replace direct fetch calls in app.js with API calls (pending Phase 5)
+3. ⏳ Test each API module independently (pending Phase 5)
+
+### Phase 3: Service Layer
+1. Create service modules
+2. Move business logic from app.js to services
+3. Services use API modules and update state
+
+### Phase 4: UI Layer
+1. Extract all UI manipulation code
+2. Create UI modules
+3. UI modules read from state and call services
+
+### Phase 5: Integration
+1. Create main.js entry point
+2. Wire up all modules
+3. Test complete workflow
+4. Backup app.js as app.js.backup
+5. Update index.html to use new module system
+
+### Phase 6: Cleanup
+1. Remove unused code
+2. Add JSDoc comments
+3. Optimize bundle size
+
+## Benefits of This Architecture
+
+1. **Separation of Concerns**: API, Business Logic, UI clearly separated
+2. **Testability**: Each module can be tested independently
+3. **Maintainability**: Easy to find and modify specific functionality
+4. **Scalability**: Easy to add new features without touching existing code
+5. **Reusability**: Modules can be reused across different parts of the app
+6. **Type Safety**: Can add TypeScript later without major refactoring
+
+## Next Steps
+
+To continue refactoring:
+1. Implement API modules one by one
+2. Create corresponding service modules
+3. Extract UI code into UI modules
+4. Create main.js and wire everything together
+5. Test thoroughly before removing old app.js
+
+## File Structure After Complete Refactoring
+
+```
+static/
+├── js/
+│   ├── config.js
+│   ├── main.js
+│   ├── api/
+│   │   ├── chatApi.js
+│   │   ├── sessionsApi.js
+│   │   ├── agentsApi.js
+│   │   ├── settingsApi.js
+│   │   ├── compressionApi.js
+│   │   └── mcpApi.js
+│   ├── services/
+│   │   ├── chatService.js
+│   │   ├── sessionService.js
+│   │   ├── compressionService.js
+│   │   └── settingsService.js
+│   ├── ui/
+│   │   ├── messagesUI.js
+│   │   ├── sessionsUI.js
+│   │   ├── modalsUI.js
+│   │   └── sidebarUI.js
+│   ├── state/
+│   │   └── appState.js
+│   └── utils/
+│       └── helpers.js
+├── app.js.backup (original file)
+└── auth.js (unchanged)
+```
