@@ -63,27 +63,31 @@
 .message.loading .message-content {
     background: var(--bg-white);
     border: 1px solid var(--bg-gray);
-    padding: var(--spacing-md) var(--spacing-xl);
+    padding: 2px 8px !important;
+    line-height: 1 !important;
 }
 
 .loading-indicator-wrapper {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: 6px;
+    line-height: 1;
 }
 
 .typing-indicator {
     display: flex;
     gap: 4px;
     align-items: center;
+    line-height: 1;
 }
 
 .typing-indicator span {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--color-primary);
     animation: typing 1.4s infinite;
+    display: block;
 }
 
 .typing-indicator span:nth-child(2) {
@@ -96,7 +100,9 @@
 
 .loading-text {
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1;
+    display: inline-block;
 }
 
 .loading-timer {
