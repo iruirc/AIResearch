@@ -137,19 +137,25 @@ function setupEventListeners() {
 function subscribeToStateChanges() {
     // Subscribe to loading state changes
     appState.subscribe('loading', (isLoading) => {
+        console.log('🔄 Loading state changed:', isLoading);
         sendButton.disabled = isLoading;
         messageInput.disabled = isLoading;
 
         if (isLoading) {
             // Add loading indicator as a message in chat
             const loadingId = messagesUI.addLoadingMessage();
+            console.log('➕ Added loading message with ID:', loadingId);
             appState.setState({ loadingMessageId: loadingId });
         } else {
             // Remove loading indicator
             const state = appState.getState();
+            console.log('➖ Attempting to remove loading message. Current ID:', state.loadingMessageId);
             if (state.loadingMessageId) {
                 messagesUI.removeLoadingMessage(state.loadingMessageId);
+                console.log('✅ Loading message removed');
                 appState.setState({ loadingMessageId: null });
+            } else {
+                console.warn('⚠️ No loading message ID found in state');
             }
         }
     });

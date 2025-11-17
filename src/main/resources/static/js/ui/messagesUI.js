@@ -85,15 +85,22 @@ export const messagesUI = {
      * @param {string} loadingId - Loading message ID
      */
     removeLoadingMessage(loadingId) {
+        console.log('🗑️ removeLoadingMessage called with ID:', loadingId);
+
         // Stop timer
         if (timerInterval) {
+            console.log('⏹️ Clearing timer interval');
             clearInterval(timerInterval);
             timerInterval = null;
         }
 
         const loadingMessage = document.getElementById(loadingId);
+        console.log('📍 Found loading message element:', loadingMessage);
         if (loadingMessage) {
             loadingMessage.remove();
+            console.log('✅ Loading message removed from DOM');
+        } else {
+            console.warn('⚠️ Loading message element not found in DOM');
         }
     },
 

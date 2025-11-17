@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS } from '../config.js';
 class AppState {
     constructor() {
         this.isLoading = false;
+        this.loadingMessageId = null;
         this.currentSessionId = null;
         this.sessions = [];
         this.agents = [];
