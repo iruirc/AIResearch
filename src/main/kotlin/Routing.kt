@@ -40,7 +40,7 @@ fun Application.configureRouting(
         compressionRoutes(appModule.chatSessionManager, appModule.compressionService)
 
         // API роуты для MCP серверов
-        mcpRoutes()
+        mcpRoutes(appModule.mcpServerManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

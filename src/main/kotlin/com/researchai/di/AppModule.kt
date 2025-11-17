@@ -11,6 +11,8 @@ import com.researchai.auth.service.WhitelistService
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
+import com.researchai.config.getMCPServers
+import com.researchai.data.mcp.MCPServerManager
 import com.researchai.data.provider.AIProviderFactoryImpl
 import com.researchai.data.repository.ConfigRepositoryImpl
 import com.researchai.data.repository.SessionRepositoryImpl
@@ -146,12 +148,26 @@ class AppModule(
         }
     }
 
+    // MCP Server Manager
+    val mcpServerManager: MCPServerManager by lazy {
+        val configs = getMCPServers()
+        MCPServerManager(configs)
+    }
+
+    /**
+     * Initialize MCP servers asynchronously
+     */
+    suspend fun initializeMCP() {
+        mcpServerManager.initialize()
+    }
+
     /**
      * Очистка ресурсов
      */
     fun close() {
         runBlocking {
             chatSessionManager.shutdown()
+            mcpServerManager.shutdown()
         }
         httpClient.close()
     }

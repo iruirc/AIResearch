@@ -50,8 +50,11 @@ dependencies {
     // JTokkit - tokenizer for counting tokens
     implementation("com.knuddels:jtokkit:1.1.0")
 
-    // MCP SDK - Model Context Protocol (temporarily disabled due to unstable API)
-    // implementation("io.modelcontextprotocol:kotlin-sdk:0.6.0")
+    // MCP SDK - Model Context Protocol
+    implementation("io.modelcontextprotocol:kotlin-sdk:0.7.7")
+
+    // Kotlinx-IO for MCP STDIO transport
+    implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.6.0")
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)

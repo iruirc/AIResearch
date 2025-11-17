@@ -95,6 +95,16 @@ fun Application.module() {
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)
 
+    // Инициализация MCP серверов в фоне
+    launch {
+        try {
+            appModule.initializeMCP()
+            println("✅ MCP Servers: Initialized")
+        } catch (e: Exception) {
+            println("⚠️  MCP Servers: Failed to initialize - ${e.message}")
+        }
+    }
+
     // Закрытие ресурсов при остановке приложения
     monitor.subscribe(ApplicationStopped) {
         claudeService.close()

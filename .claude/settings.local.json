@@ -16,7 +16,9 @@
       "WebSearch",
       "Bash(cat:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:modelcontextprotocol.github.io)"
+      "WebFetch(domain:modelcontextprotocol.github.io)",
+      "WebFetch(domain:mvnrepository.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []

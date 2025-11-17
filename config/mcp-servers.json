@@ -4,10 +4,11 @@
       "id": "github",
       "name": "GitHub MCP Server",
       "description": "Access to GitHub API via Model Context Protocol",
-      "transport": "sse",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       },
       "enabled": true
     },
