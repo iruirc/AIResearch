@@ -9,6 +9,9 @@ import { chatService } from './services/chatService.js';
 import { settingsService } from './services/settingsService.js';
 import { compressionService } from './services/compressionService.js';
 
+// Import API modules
+import { sessionsApi } from './api/sessionsApi.js';
+
 // Import UI modules
 import { messagesUI, initMessagesUI } from './ui/messagesUI.js';
 import { sessionsUI, initSessionsUI } from './ui/sessionsUI.js';
@@ -177,6 +180,18 @@ function subscribeToStateChanges() {
     appState.subscribe('currentSessionId', (sessionId) => {
         if (sessionId) {
             messagesUI.removeWelcomeMessage();
+        }
+
+        // Re-render sessions list to update active session highlighting
+        const state = appState.getState();
+        if (state.sessions && state.sessions.length > 0) {
+            sessionsUI.renderSessionsList(state.sessions, sessionId, {
+                onSessionClick: handleSessionClick,
+                onRename: handleSessionRename,
+                onCopy: handleSessionCopy,
+                onCompress: handleSessionCompress,
+                onDelete: handleSessionDelete
+            });
         }
     });
 }
@@ -387,8 +402,22 @@ async function handleOpenAgentsModal() {
 async function handleAgentSelect(agentId) {
     try {
         modalsUI.closeModal('agentModal');
-        await sessionService.startAgentSession(agentId);
+
+        // Clear messages immediately to show new empty chat
         messagesUI.clearMessages();
+
+        // Start agent session (creates session, sets as current, and reloads sessions list)
+        // This will trigger loading state and show loading indicator in the cleared chat
+        const sessionId = await sessionService.startAgentSession(agentId);
+
+        // Load session data directly from API to get any initial messages
+        const sessionData = await sessionsApi.getSession(sessionId);
+
+        // Render messages from the session if any exist
+        if (sessionData && sessionData.messages && sessionData.messages.length > 0) {
+            messagesUI.renderMessages(sessionData.messages);
+        }
+
         messageInput.focus();
     } catch (error) {
         console.error('Error starting agent session:', error);
