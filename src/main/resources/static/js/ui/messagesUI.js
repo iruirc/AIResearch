@@ -130,6 +130,23 @@ export const messagesUI = {
     },
 
     /**
+     * Render a list of messages
+     * @param {Array} messages - Array of message objects with content, role, and metadata
+     */
+    renderMessages(messages) {
+        this.clearMessages();
+
+        if (!messages || messages.length === 0) {
+            return;
+        }
+
+        messages.forEach(message => {
+            // Backend returns 'content' field, not 'text'
+            this.addMessage(message.content, message.role, message.metadata);
+        });
+    },
+
+    /**
      * Remove welcome message if present
      */
     removeWelcomeMessage() {

@@ -287,7 +287,15 @@ function handleToggleSidebar() {
  */
 async function handleSessionClick(sessionId) {
     try {
-        await sessionService.switchSession(sessionId);
+        const sessionData = await sessionService.switchSession(sessionId);
+
+        // Render messages from the session
+        if (sessionData && sessionData.messages) {
+            messagesUI.renderMessages(sessionData.messages);
+        } else {
+            messagesUI.clearMessages();
+        }
+
         messageInput.focus();
     } catch (error) {
         console.error('Error switching session:', error);
