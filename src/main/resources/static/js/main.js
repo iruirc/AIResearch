@@ -454,6 +454,61 @@ async function handleApplyCompression() {
     }
 }
 
+/**
+ * Handle clear all chats (called from auth.js)
+ * Deletes ALL sessions
+ */
+async function handleClearChat() {
+    const state = appState.getState();
+
+    if (state.loading) {
+        return;
+    }
+
+    const sessions = state.sessions || [];
+    if (sessions.length === 0) {
+        alert('Нет чатов для удаления.');
+        return;
+    }
+
+    if (!confirm(`Вы уверены, что хотите удалить ВСЕ чаты (${sessions.length} шт.)? Это действие нельзя отменить!`)) {
+        return;
+    }
+
+    try {
+        console.log(`Deleting all ${sessions.length} sessions...`);
+
+        // Delete all sessions
+        const deletePromises = sessions.map(session =>
+            fetch(`/sessions/${session.id}`, {
+                method: 'DELETE',
+                headers: window.authManager.getAuthHeaders()
+            })
+        );
+
+        await Promise.all(deletePromises);
+        console.log('All sessions deleted from server');
+
+        // Reset UI
+        appState.resetSession();
+        messagesUI.clearMessages();
+        messagesUI.showWelcomeMessage();
+
+        // Reload sessions list
+        console.log('Reloading sessions list...');
+        await sessionService.loadSessions();
+        console.log('Sessions list reloaded');
+
+        console.log('All chats cleared successfully');
+    } catch (error) {
+        console.error('Error clearing all chats:', error);
+        alert('Ошибка при удалении чатов');
+    }
+}
+
+// Make handleClearChat globally available for auth.js
+window.handleClearChat = handleClearChat;
+
 // ============================================================================
 // Initialize on DOM ready
 // ============================================================================

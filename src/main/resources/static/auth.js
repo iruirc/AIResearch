@@ -226,13 +226,29 @@ function displayUserInfo() {
         });
 
         // Добавляем обработчик на кнопку "Очистить"
-        document.getElementById('clearChatMenuButton').addEventListener('click', () => {
+        document.getElementById('clearChatMenuButton').addEventListener('click', async () => {
             const menu = document.getElementById('userMenu');
             menu.classList.remove('active');
-            // Вызываем функцию handleClearChat из app.js
-            if (typeof handleClearChat === 'function') {
-                handleClearChat();
-            }
+
+            // Пытаемся вызвать функцию handleClearChat с retry механизмом
+            const callHandleClearChat = async () => {
+                // Пробуем подождать загрузки main.js, если функция еще не доступна
+                let retries = 0;
+                while (typeof window.handleClearChat !== 'function' && retries < 10) {
+                    console.log('Waiting for handleClearChat to load...', retries);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    retries++;
+                }
+
+                if (typeof window.handleClearChat === 'function') {
+                    window.handleClearChat();
+                } else {
+                    console.error('handleClearChat function not found after retries. Make sure main.js is loaded.');
+                    alert('Ошибка: функция очистки чата не загружена. Попробуйте обновить страницу.');
+                }
+            };
+
+            callHandleClearChat();
         });
 
         // Добавляем обработчик на кнопку выхода
