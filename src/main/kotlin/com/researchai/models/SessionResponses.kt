@@ -75,6 +75,14 @@ data class StatusResponse(
 )
 
 /**
+ * Ответ на создание новой сессии
+ */
+@Serializable
+data class CreateSessionResponse(
+    val sessionId: String
+)
+
+/**
  * Ответ на копирование сессии
  */
 @Serializable

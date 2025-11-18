@@ -18,6 +18,7 @@ export const chatService = {
         }
 
         const startTime = Date.now();
+        const wasNewChat = !appState.currentSessionId;
 
         try {
             appState.setLoading(true);
@@ -29,11 +30,17 @@ export const chatService = {
             // Send message via API
             const data = await chatApi.sendMessage(message, sessionId, settings);
 
+            // Update session ID IMMEDIATELY if this was a new chat
+            // This triggers the state change listener to reload sessions
+            if (wasNewChat && data.sessionId) {
+                appState.setCurrentSessionId(data.sessionId);
+            }
+
             // Calculate elapsed time
             const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
-            // Update session ID if returned
-            if (data.sessionId) {
+            // Update session ID if returned (for existing sessions)
+            if (!wasNewChat && data.sessionId) {
                 appState.setCurrentSessionId(data.sessionId);
             }
 
@@ -66,7 +73,8 @@ export const chatService = {
             return {
                 response: data.response,
                 sessionId: data.sessionId,
-                metadata
+                metadata,
+                wasNewChat
             };
 
         } catch (error) {

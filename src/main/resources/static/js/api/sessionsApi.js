@@ -7,6 +7,31 @@ import { fetchWithTimeout } from '../utils/helpers.js';
  */
 export const sessionsApi = {
     /**
+     * Create a new empty session
+     * @returns {Promise<Object>} Object with sessionId
+     */
+    async createSession() {
+        const response = await fetchWithTimeout(
+            API_CONFIG.SESSIONS,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Create session error:', errorText);
+            throw new Error(`Failed to create session: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
      * Load all sessions
      * @returns {Promise<Array>} Array of session objects
      */

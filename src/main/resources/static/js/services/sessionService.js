@@ -59,7 +59,27 @@ export const sessionService = {
     },
 
     /**
-     * Create a new chat session
+     * Create a new empty session on the server
+     * @returns {Promise<Object>} Created session data with sessionId
+     */
+    async createSession() {
+        try {
+            const result = await sessionsApi.createSession();
+
+            // Update current session ID in state
+            if (result.sessionId) {
+                appState.setCurrentSessionId(result.sessionId);
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Error creating session:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Create a new chat session (client-side only, clears state)
      * @returns {Promise<void>}
      */
     async createNewSession() {

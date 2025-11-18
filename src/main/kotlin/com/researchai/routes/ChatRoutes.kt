@@ -163,6 +163,22 @@ fun Route.chatRoutes(
             }
         }
 
+        // Создать новую пустую сессию
+        post {
+            try {
+                val (sessionId, _) = sessionManager.getOrCreateSession(null)
+                call.respond(
+                    HttpStatusCode.Created,
+                    CreateSessionResponse(sessionId = sessionId)
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to create session: ${e.message}")
+                )
+            }
+        }
+
         // Получить детальную информацию о сессии с историей
         get("/{sessionId}") {
             try {

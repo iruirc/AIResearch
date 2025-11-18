@@ -199,12 +199,40 @@ async function handleSendMessage() {
     // Add user message to UI
     messagesUI.addMessage(message, 'user');
 
+    // Check if this is a new chat
+    const wasNewChat = !appState.getState().currentSessionId;
+
+    // If new chat, create session first, then reload sessions list
+    if (wasNewChat) {
+        try {
+            console.log('Creating new session...');
+            const result = await sessionService.createSession();
+            console.log('Session created:', result.sessionId);
+
+            // Small delay to ensure session is persisted on backend
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Session created - reload sessions list immediately
+            await sessionService.loadSessions();
+            console.log('Sessions list reloaded');
+        } catch (error) {
+            console.error('Failed to create session:', error);
+        }
+    }
+
     try {
         // Send message via chat service
         const response = await chatService.sendMessage(message);
+        console.log('Message sent, response sessionId:', response.sessionId);
 
         // Add assistant message to UI with metadata
         messagesUI.addMessage(response.response, 'assistant', response.metadata);
+
+        // If session ID changed after sending (shouldn't happen now), reload sessions
+        if (wasNewChat && response.sessionId !== appState.getState().currentSessionId) {
+            console.warn('Session ID mismatch! Created:', appState.getState().currentSessionId, 'Returned:', response.sessionId);
+            await sessionService.loadSessions();
+        }
     } catch (error) {
         console.error('Error sending message:', error);
         messagesUI.addMessage(
