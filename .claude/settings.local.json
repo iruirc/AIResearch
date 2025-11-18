@@ -24,7 +24,8 @@
       "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/services/*.js)",
       "Bash(for file in /Volumes/Data/Projects/MobileDeveloper/Projects/ResearchAI/ResearchAI/src/main/resources/static/js/ui/*.js)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
