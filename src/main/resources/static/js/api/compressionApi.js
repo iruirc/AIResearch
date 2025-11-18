@@ -1,15 +1,26 @@
-// Compression API module
+/**
+ * @fileoverview Compression API module
+ * Handles communication with chat compression API endpoints
+ * @module api/compressionApi
+ */
+
 import { API_CONFIG } from '../config.js';
 import { fetchWithTimeout } from '../utils/helpers.js';
 
 /**
  * API module for chat compression operations
+ * @namespace
  */
 export const compressionApi = {
     /**
-     * Get compression configuration for a session
-     * @param {string} sessionId - Session identifier
-     * @returns {Promise<Object>} Compression config with currentMessageCount, totalTokens, config
+     * Get compression configuration and statistics for a session
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @returns {Promise<Object>} Compression config with currentMessageCount, totalTokens, and config object
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const config = await compressionApi.getConfig('session-123');
+     * console.log(config.currentMessageCount); // 15
      */
     async getConfig(sessionId) {
         const response = await fetchWithTimeout(
@@ -28,10 +39,17 @@ export const compressionApi = {
     },
 
     /**
-     * Update compression configuration
-     * @param {string} sessionId - Session identifier
-     * @param {Object} config - Compression configuration object
-     * @returns {Promise<Object>} Updated config response
+     * Update compression configuration for a session
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @param {Object} config - Compression configuration object with strategy and parameters
+     * @returns {Promise<Object>} Updated configuration response
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await compressionApi.updateConfig('session-123', {
+     *   strategy: 'SLIDING_WINDOW',
+     *   slidingWindowMessageThreshold: 12
+     * });
      */
     async updateConfig(sessionId, config) {
         const response = await fetchWithTimeout(
@@ -57,13 +75,21 @@ export const compressionApi = {
     },
 
     /**
-     * Compress session messages
-     * @param {string} sessionId - Session identifier
-     * @param {Object} options - Compression options
-     * @param {string} options.providerId - Provider ID (default: 'CLAUDE')
-     * @param {string} options.model - Model to use for compression
-     * @param {number} options.contextWindowSize - Context window size
-     * @returns {Promise<Object>} Compression result with success, compressionPerformed, newMessages
+     * Compress chat history for a session using AI summarization
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @param {Object} [options={}] - Compression options
+     * @param {string} [options.providerId='CLAUDE'] - AI provider ID for compression
+     * @param {string} [options.model] - Specific model to use for compression
+     * @param {number} [options.contextWindowSize] - Context window size for token-based compression
+     * @returns {Promise<Object>} Compression result with success flag, compressionPerformed, and newMessages array
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const result = await compressionApi.compress('session-123', {
+     *   providerId: 'CLAUDE',
+     *   model: 'claude-haiku-4-5-20251001',
+     *   contextWindowSize: 200000
+     * });
      */
     async compress(sessionId, options = {}) {
         const requestBody = {
@@ -93,9 +119,13 @@ export const compressionApi = {
     },
 
     /**
-     * Get archived messages for a session
-     * @param {string} sessionId - Session identifier
-     * @returns {Promise<Object>} Archived messages data
+     * Get archived (compressed) messages for a session
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @returns {Promise<Object>} Archived messages data containing old message history
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const archived = await compressionApi.getArchivedMessages('session-123');
      */
     async getArchivedMessages(sessionId) {
         const response = await fetchWithTimeout(

@@ -1,7 +1,26 @@
-// Utility helper functions
+/**
+ * @fileoverview Utility helper functions
+ * Provides common utilities for fetch operations, time formatting, provider detection,
+ * DOM manipulation, and function debouncing
+ * @module utils/helpers
+ */
 
 /**
- * Fetch with timeout
+ * Executes a fetch request with a timeout
+ * @param {string} url - The URL to fetch from
+ * @param {RequestInit} options - Fetch options (method, headers, body, etc.)
+ * @param {number} timeout - Timeout duration in milliseconds
+ * @returns {Promise<Response>} The fetch response
+ * @throws {Error} Throws 'AbortError' if the request times out
+ * @example
+ * try {
+ *   const response = await fetchWithTimeout('/api/data', { method: 'GET' }, 5000);
+ *   const data = await response.json();
+ * } catch (error) {
+ *   if (error.message === 'AbortError') {
+ *     console.error('Request timed out');
+ *   }
+ * }
  */
 export function fetchWithTimeout(url, options, timeout) {
     return Promise.race([
@@ -13,7 +32,12 @@ export function fetchWithTimeout(url, options, timeout) {
 }
 
 /**
- * Format time ago string
+ * Formats a timestamp into a human-readable "time ago" string (in Russian)
+ * @param {number} timestamp - Unix timestamp in milliseconds
+ * @returns {string} Formatted time ago string (e.g., "5 мин. назад", "2 ч. назад")
+ * @example
+ * const timestamp = Date.now() - 3600000; // 1 hour ago
+ * console.log(getTimeAgo(timestamp)); // "1 ч. назад"
  */
 export function getTimeAgo(timestamp) {
     const now = Date.now();
@@ -30,7 +54,13 @@ export function getTimeAgo(timestamp) {
 }
 
 /**
- * Detect provider from model ID
+ * Detects the AI provider based on model ID naming patterns
+ * @param {string} modelId - The model identifier
+ * @returns {string} Provider identifier ('claude', 'openai', or 'huggingface')
+ * @example
+ * detectProviderFromModel('claude-3-opus-20240229'); // returns 'claude'
+ * detectProviderFromModel('gpt-4-turbo'); // returns 'openai'
+ * detectProviderFromModel('deepseek-ai/DeepSeek-R1'); // returns 'huggingface'
  */
 export function detectProviderFromModel(modelId) {
     if (modelId.startsWith('claude-')) {
@@ -44,14 +74,29 @@ export function detectProviderFromModel(modelId) {
 }
 
 /**
- * Scroll to bottom of element
+ * Scrolls an element to its bottom
+ * @param {HTMLElement} element - The DOM element to scroll
+ * @example
+ * const chatContainer = document.getElementById('chat');
+ * scrollToBottom(chatContainer);
  */
 export function scrollToBottom(element) {
     element.scrollTop = element.scrollHeight;
 }
 
 /**
- * Debounce function
+ * Creates a debounced version of a function that delays execution
+ * until after wait milliseconds have elapsed since the last call
+ * @param {Function} func - The function to debounce
+ * @param {number} wait - The number of milliseconds to delay
+ * @returns {Function} The debounced function
+ * @example
+ * const debouncedSearch = debounce((query) => {
+ *   console.log('Searching for:', query);
+ * }, 300);
+ *
+ * // Will only execute once after user stops typing for 300ms
+ * input.addEventListener('input', (e) => debouncedSearch(e.target.value));
  */
 export function debounce(func, wait) {
     let timeout;

@@ -1,16 +1,32 @@
-// Chat Service - manages message sending and chat workflow
+/**
+ * @fileoverview Chat Service
+ * Manages message sending workflow, response processing, and state updates
+ * @module services/chatService
+ */
+
 import { chatApi } from '../api/chatApi.js';
 import { appState } from '../state/appState.js';
 
 /**
  * Service for managing chat operations
- * Handles message sending, response processing, and state updates
+ * Orchestrates message sending, processes responses, updates state, and handles errors
+ * @namespace
  */
 export const chatService = {
     /**
-     * Send a message to the chat
-     * @param {string} message - User message text
-     * @returns {Promise<Object>} Response data with response text, sessionId, tokens info
+     * Send a message to the chat and process the response
+     * @async
+     * @param {string} message - User's message text
+     * @returns {Promise<Object|null>} Response data with response text, sessionId, metadata, and wasNewChat flag
+     * @throws {Error} Throws user-friendly error messages for different failure scenarios
+     * @example
+     * try {
+     *   const response = await chatService.sendMessage('Hello, AI!');
+     *   console.log(response.response); // AI's response text
+     *   console.log(response.metadata); // Token usage, timing, etc.
+     * } catch (error) {
+     *   console.error(error.message); // User-friendly error message
+     * }
      */
     async sendMessage(message) {
         if (!message || appState.isLoading) {
@@ -99,9 +115,12 @@ export const chatService = {
     },
 
     /**
-     * Get error message for user display
-     * @param {Error} error - Error object
-     * @returns {string} User-friendly error message
+     * Convert an error object into a user-friendly error message (in Russian)
+     * @param {Error} error - The error object to process
+     * @returns {string} Localized, user-friendly error message
+     * @example
+     * const message = chatService.getErrorMessage(new Error('Failed to fetch'));
+     * console.log(message); // 'Ошибка сети. Проверьте подключение'
      */
     getErrorMessage(error) {
         if (error.message === 'AbortError') {

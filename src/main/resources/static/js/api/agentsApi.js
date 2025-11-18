@@ -1,14 +1,25 @@
-// Agents API module
+/**
+ * @fileoverview Agents API module
+ * Handles communication with the agents management API endpoints
+ * @module api/agentsApi
+ */
+
 import { API_CONFIG } from '../config.js';
 import { fetchWithTimeout } from '../utils/helpers.js';
 
 /**
  * API module for agents management operations
+ * @namespace
  */
 export const agentsApi = {
     /**
-     * Load all available agents
-     * @returns {Promise<Array>} Array of agent objects
+     * Load all available agents from the API
+     * @async
+     * @returns {Promise<Array>} Array of agent objects with id, name, and description
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const agents = await agentsApi.loadAgents();
+     * console.log(agents); // [{ id: 'agent1', name: 'Assistant', description: '...' }]
      */
     async loadAgents() {
         const response = await fetchWithTimeout(
@@ -28,9 +39,14 @@ export const agentsApi = {
     },
 
     /**
-     * Start a new session with an agent
-     * @param {string} agentId - Agent identifier
-     * @returns {Promise<Object>} New session data with sessionId
+     * Start a new chat session with a specific agent
+     * @async
+     * @param {string} agentId - The agent identifier
+     * @returns {Promise<Object>} New session data containing sessionId
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const session = await agentsApi.startAgentSession('research-agent');
+     * console.log(session.sessionId); // 'new-session-id'
      */
     async startAgentSession(agentId) {
         const response = await fetchWithTimeout(

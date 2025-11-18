@@ -1,14 +1,25 @@
-// Settings API module
+/**
+ * @fileoverview Settings API module
+ * Handles communication with settings and configuration API endpoints
+ * @module api/settingsApi
+ */
+
 import { API_CONFIG } from '../config.js';
 import { fetchWithTimeout } from '../utils/helpers.js';
 
 /**
  * API module for settings and configuration operations
+ * @namespace
  */
 export const settingsApi = {
     /**
-     * Load application configuration
-     * @returns {Promise<Object>} Configuration object with model, temperature, maxTokens, format
+     * Load application configuration from the server
+     * @async
+     * @returns {Promise<Object>} Configuration object with model, temperature, maxTokens, and format
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const config = await settingsApi.loadConfig();
+     * console.log(config.model); // 'claude-haiku-4-5-20251001'
      */
     async loadConfig() {
         const response = await fetchWithTimeout(
@@ -27,8 +38,12 @@ export const settingsApi = {
     },
 
     /**
-     * Load all available providers
-     * @returns {Promise<Array>} Array of provider objects
+     * Load all available AI providers
+     * @async
+     * @returns {Promise<Array>} Array of provider objects with id and name
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const providers = await settingsApi.loadProviders();
      */
     async loadProviders() {
         const response = await fetchWithTimeout(
@@ -48,9 +63,13 @@ export const settingsApi = {
     },
 
     /**
-     * Load models for a specific provider
-     * @param {string} providerId - Provider identifier
-     * @returns {Promise<Array>} Array of model objects
+     * Load all models available for a specific provider
+     * @async
+     * @param {string} providerId - The provider identifier (e.g., 'claude', 'openai')
+     * @returns {Promise<Array>} Array of model objects with id, name, and displayName
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const models = await settingsApi.loadModels('claude');
      */
     async loadModels(providerId) {
         const response = await fetchWithTimeout(
@@ -70,9 +89,14 @@ export const settingsApi = {
     },
 
     /**
-     * Load capabilities for a specific model
-     * @param {string} modelId - Model identifier
-     * @returns {Promise<Object>} Model capabilities (maxTokens, contextWindow, etc.)
+     * Load capabilities and limits for a specific model
+     * @async
+     * @param {string} modelId - The model identifier
+     * @returns {Promise<Object>} Model capabilities including maxTokens, contextWindow, supportsVision, etc.
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const caps = await settingsApi.loadModelCapabilities('claude-3-opus-20240229');
+     * console.log(caps.contextWindow); // 200000
      */
     async loadModelCapabilities(modelId) {
         const response = await fetchWithTimeout(

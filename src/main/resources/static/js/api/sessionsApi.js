@@ -1,14 +1,24 @@
-// Sessions API module
+/**
+ * @fileoverview Sessions API module
+ * Handles communication with session management API endpoints
+ * @module api/sessionsApi
+ */
+
 import { API_CONFIG } from '../config.js';
 import { fetchWithTimeout } from '../utils/helpers.js';
 
 /**
  * API module for session management operations
+ * @namespace
  */
 export const sessionsApi = {
     /**
-     * Create a new empty session
-     * @returns {Promise<Object>} Object with sessionId
+     * Create a new empty chat session
+     * @async
+     * @returns {Promise<Object>} Object containing the new sessionId
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const { sessionId } = await sessionsApi.createSession();
      */
     async createSession() {
         const response = await fetchWithTimeout(
@@ -32,8 +42,12 @@ export const sessionsApi = {
     },
 
     /**
-     * Load all sessions
-     * @returns {Promise<Array>} Array of session objects
+     * Load all chat sessions from the server
+     * @async
+     * @returns {Promise<Array>} Array of session objects with id, title, messageCount, etc.
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const sessions = await sessionsApi.loadSessions();
      */
     async loadSessions() {
         const response = await fetchWithTimeout(
@@ -53,9 +67,14 @@ export const sessionsApi = {
     },
 
     /**
-     * Get session history by ID
-     * @param {string} sessionId - Session identifier
-     * @returns {Promise<Object>} Session data with messages
+     * Get a specific session's details and message history
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @returns {Promise<Object>} Session data with messages array
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const session = await sessionsApi.getSession('session-123');
+     * console.log(session.messages);
      */
     async getSession(sessionId) {
         const response = await fetchWithTimeout(
@@ -74,9 +93,13 @@ export const sessionsApi = {
     },
 
     /**
-     * Delete a session
-     * @param {string} sessionId - Session identifier
-     * @returns {Promise<void>}
+     * Delete a session permanently
+     * @async
+     * @param {string} sessionId - The session identifier to delete
+     * @returns {Promise<Object>} Deletion confirmation response
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await sessionsApi.deleteSession('session-123');
      */
     async deleteSession(sessionId) {
         const response = await fetchWithTimeout(
@@ -95,9 +118,14 @@ export const sessionsApi = {
     },
 
     /**
-     * Copy a session
-     * @param {string} sessionId - Session identifier to copy
-     * @returns {Promise<Object>} New session data
+     * Copy an existing session to create a duplicate
+     * @async
+     * @param {string} sessionId - The session identifier to copy
+     * @returns {Promise<Object>} New session data with new sessionId
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const newSession = await sessionsApi.copySession('session-123');
+     * console.log(newSession.sessionId);
      */
     async copySession(sessionId) {
         const response = await fetchWithTimeout(
@@ -116,10 +144,14 @@ export const sessionsApi = {
     },
 
     /**
-     * Rename a session
-     * @param {string} sessionId - Session identifier
-     * @param {string} title - New title for the session
+     * Rename a session with a new title
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @param {string} title - The new title for the session
      * @returns {Promise<Object>} Updated session data
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await sessionsApi.renameSession('session-123', 'My Research Chat');
      */
     async renameSession(sessionId, title) {
         const response = await fetchWithTimeout(
@@ -142,9 +174,13 @@ export const sessionsApi = {
     },
 
     /**
-     * Clear session messages
-     * @param {string} sessionId - Session identifier
-     * @returns {Promise<void>}
+     * Clear all messages from a session
+     * @async
+     * @param {string} sessionId - The session identifier
+     * @returns {Promise<Object>} Confirmation response
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await sessionsApi.clearSession('session-123');
      */
     async clearSession(sessionId) {
         const response = await fetchWithTimeout(
