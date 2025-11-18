@@ -38,19 +38,20 @@ export const sessionsUI = {
 
     /**
      * Show context menu for a session
-     * @param {string} sessionId - Session ID
+     * @param {HTMLElement} sessionItem - Session item element
      * @param {HTMLElement} menuElement - Context menu element
-     * @param {number} x - X position
-     * @param {number} y - Y position
      */
-    showContextMenu(sessionId, menuElement, x, y) {
+    showContextMenu(sessionItem, menuElement) {
         // Hide all other context menus
         this.hideAllContextMenus();
 
-        // Position and show menu
-        menuElement.style.left = `${x}px`;
-        menuElement.style.top = `${y}px`;
-        menuElement.style.display = 'block';
+        // Add menu-active class to session item for higher z-index
+        sessionItem.classList.add('menu-active');
+
+        // Show menu with transition
+        requestAnimationFrame(() => {
+            menuElement.classList.add('show');
+        });
     },
 
     /**
@@ -59,7 +60,13 @@ export const sessionsUI = {
     hideAllContextMenus() {
         const menus = document.querySelectorAll('.session-context-menu');
         menus.forEach(menu => {
-            menu.style.display = 'none';
+            menu.classList.remove('show');
+        });
+
+        // Remove menu-active class from all session items
+        const sessionItems = document.querySelectorAll('.session-item.menu-active');
+        sessionItems.forEach(item => {
+            item.classList.remove('menu-active');
         });
     },
 
@@ -96,7 +103,7 @@ export const sessionsUI = {
                     <circle cx="12" cy="19" r="1"></circle>
                 </svg>
             </button>
-            <div class="session-context-menu" style="display: none;">
+            <div class="session-context-menu">
                 <div class="context-menu-item" data-action="rename">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -145,8 +152,7 @@ export const sessionsUI = {
 
         menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const rect = menuBtn.getBoundingClientRect();
-            this.showContextMenu(session.id, contextMenu, rect.left, rect.bottom + 5);
+            this.showContextMenu(sessionItem, contextMenu);
         });
 
         // Add click handlers for menu items
