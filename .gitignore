@@ -41,3 +41,6 @@ out/
 
 ### Session Data ###
 /data/
+
+### Claude Code ###
+.claude/
