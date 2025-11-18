@@ -8,10 +8,12 @@ import io.modelcontextprotocol.kotlin.sdk.shared.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.io.asSource
 import kotlinx.io.asSink
 import kotlinx.io.buffered
@@ -159,11 +161,40 @@ class MCPClientWrapper(
             val tools = currentClient.listTools()
 
             tools.tools.map { tool ->
-                // TODO: Properly serialize Tool.Input to JsonElement
-                // The SDK's Tool.Input type is not directly convertible to JsonElement
-                // For now, we return an empty JSON object as a placeholder
-                // This allows the system to work but tools won't have schema validation
-                val inputSchema = buildJsonObject {}
+                // Convert Tool.inputSchema to JsonElement
+                // The MCP SDK Tool.inputSchema type can vary, so we need to convert it
+                logger.debug("Tool ${tool.name}: inputSchema type = ${tool.inputSchema?.javaClass?.name}")
+
+                val inputSchema: JsonElement = when (val schema = tool.inputSchema) {
+                    null -> {
+                        logger.warn("Tool ${tool.name} has null inputSchema")
+                        buildJsonObject {
+                            put("type", "object")
+                            put("properties", buildJsonObject {})
+                        }
+                    }
+                    is JsonElement -> {
+                        logger.debug("Tool ${tool.name}: inputSchema is already JsonElement")
+                        schema
+                    }
+                    is Map<*, *> -> {
+                        logger.debug("Tool ${tool.name}: inputSchema is Map, converting to JsonElement")
+                        Json.encodeToJsonElement(schema)
+                    }
+                    else -> {
+                        logger.warn("Tool ${tool.name}: unexpected inputSchema type ${schema.javaClass.name}, attempting JSON serialization")
+                        try {
+                            // Try to serialize using kotlinx.serialization
+                            Json.encodeToJsonElement(schema)
+                        } catch (e: Exception) {
+                            logger.error("Failed to serialize inputSchema for ${tool.name}: ${e.message}")
+                            buildJsonObject {
+                                put("type", "object")
+                                put("properties", buildJsonObject {})
+                            }
+                        }
+                    }
+                }
 
                 MCPTool(
                     name = tool.name,
