@@ -20,6 +20,15 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
       "enabled": false
+    },
+    {
+      "id": "weather",
+      "name": "Weather Server",
+      "description": "Access to weather API",
+      "transport": "stdio",
+      "command": "/Volumes/Data/Projects/MobileDeveloper/Projects/mcpServers/testMcp/weather/run-mcp-server.sh",
+      "args": [],
+      "enabled": true
     }
   ]
 }
