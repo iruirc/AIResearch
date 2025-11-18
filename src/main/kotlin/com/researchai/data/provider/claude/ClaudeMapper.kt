@@ -27,19 +27,36 @@ class ClaudeMapper {
                     MessageRole.ASSISTANT -> "assistant"
                     MessageRole.SYSTEM -> "user" // Claude doesn't have system role in messages
                 },
-                content = content
+                content = ClaudeApiMessageContent.Text(content)
             )
         }.toMutableList()
 
         // Применяем форматирование для последнего пользовательского сообщения
         if (messages.isNotEmpty() && messages.last().role == "user") {
             val lastMessage = messages.last()
+            val lastContent = when (val content = lastMessage.content) {
+                is ClaudeApiMessageContent.Text -> content.value
+                is ClaudeApiMessageContent.Structured -> ""
+            }
             val enhancedContent = formatter.enhanceMessage(
-                lastMessage.content,
+                lastContent,
                 request.parameters.responseFormat
             )
-            messages[messages.lastIndex] = lastMessage.copy(content = enhancedContent)
+            messages[messages.lastIndex] = lastMessage.copy(
+                content = ClaudeApiMessageContent.Text(enhancedContent)
+            )
         }
+
+        // Конвертируем MCP tools в Claude API формат
+        val claudeTools = if (request.tools.isNotEmpty()) {
+            request.tools.map { tool ->
+                ClaudeApiTool(
+                    name = tool.name,
+                    description = tool.description,
+                    inputSchema = tool.input_schema
+                )
+            }
+        } else null
 
         return ClaudeApiRequest(
             model = request.model,
@@ -49,7 +66,8 @@ class ClaudeMapper {
             topP = request.parameters.topP,
             topK = request.parameters.topK,
             stopSequences = request.parameters.stopSequences.takeIf { it.isNotEmpty() },
-            system = request.systemPrompt
+            system = request.systemPrompt,
+            tools = claudeTools
         )
     }
 
@@ -62,6 +80,9 @@ class ClaudeMapper {
 
         // Применяем пост-обработку форматирования
         content = formatter.processResponseByFormat(content, format)
+
+        // Extract tool uses
+        val toolUses = extractToolUses(response)
 
         return AIResponse(
             id = response.id,
@@ -76,7 +97,8 @@ class ClaudeMapper {
             metadata = mapOf(
                 "type" to response.type,
                 "stop_sequence" to (response.stopSequence ?: "")
-            )
+            ),
+            toolUses = toolUses
         )
     }
 
@@ -85,7 +107,25 @@ class ClaudeMapper {
             "end_turn" -> FinishReason.STOP
             "max_tokens" -> FinishReason.MAX_TOKENS
             "stop_sequence" -> FinishReason.STOP
+            "tool_use" -> FinishReason.TOOL_USE
             else -> FinishReason.STOP
         }
+    }
+
+    /**
+     * Extract tool uses from Claude API response
+     */
+    fun extractToolUses(response: ClaudeApiResponse): List<ToolUse> {
+        return response.content
+            .filter { it.type == "tool_use" }
+            .mapNotNull { content ->
+                if (content.id != null && content.name != null && content.input != null) {
+                    ToolUse(
+                        id = content.id,
+                        name = content.name,
+                        input = content.input
+                    )
+                } else null
+            }
     }
 }

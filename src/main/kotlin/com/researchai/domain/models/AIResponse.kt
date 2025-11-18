@@ -16,7 +16,8 @@ data class AIResponse(
     val metadata: Map<String, String> = emptyMap(),
     val timestamp: Long = System.currentTimeMillis(),
     val estimatedInputTokens: Int = 0, // Локально подсчитанные входные токены
-    val estimatedOutputTokens: Int = 0 // Локально подсчитанные выходные токены
+    val estimatedOutputTokens: Int = 0, // Локально подсчитанные выходные токены
+    val toolUses: List<ToolUse> = emptyList() // Tool uses requested by the AI (if any)
 )
 
 @Serializable
@@ -28,5 +29,15 @@ data class TokenUsage(
 
 @Serializable
 enum class FinishReason {
-    STOP, MAX_TOKENS, CONTENT_FILTER, ERROR, CANCELLED
+    STOP, MAX_TOKENS, CONTENT_FILTER, ERROR, CANCELLED, TOOL_USE
 }
+
+/**
+ * Represents a tool use request from the AI model
+ */
+@Serializable
+data class ToolUse(
+    val id: String,
+    val name: String,
+    val input: kotlinx.serialization.json.JsonElement
+)

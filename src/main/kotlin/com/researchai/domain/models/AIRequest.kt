@@ -1,5 +1,6 @@
 package com.researchai.domain.models
 
+import com.researchai.domain.mcp.ClaudeTool
 import kotlinx.serialization.Serializable
 
 /**
@@ -12,7 +13,8 @@ data class AIRequest(
     val parameters: RequestParameters = RequestParameters(),
     val systemPrompt: String? = null,
     val sessionId: String? = null,
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
+    val tools: List<ClaudeTool> = emptyList() // MCP tools available for this request
 )
 
 @Serializable

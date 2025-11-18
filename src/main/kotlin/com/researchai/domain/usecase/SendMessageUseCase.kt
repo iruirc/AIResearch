@@ -1,11 +1,15 @@
 package com.researchai.domain.usecase
 
+import com.researchai.domain.mcp.MCPOrchestrationService
 import com.researchai.domain.models.*
 import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ChatSession
 import com.researchai.domain.repository.ConfigRepository
 import com.researchai.domain.repository.SessionRepository
 import com.researchai.services.AgentManager
+import com.researchai.data.provider.claude.ClaudeMapper
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 /**
@@ -15,9 +19,15 @@ class SendMessageUseCase(
     private val providerFactory: AIProviderFactory,
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigRepository,
-    private val agentManager: AgentManager
+    private val agentManager: AgentManager,
+    private val mcpOrchestrationService: MCPOrchestrationService? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
+    private val claudeMapper = ClaudeMapper()
+
+    companion object {
+        private const val MAX_TOOL_ITERATIONS = 5 // Prevent infinite loops
+    }
 
     suspend operator fun invoke(
         message: String,
@@ -87,26 +97,48 @@ class SendMessageUseCase(
                 is ProviderConfig.CustomConfig -> "default"
             }
 
-            // 8. Создаем запрос
+            // 8. Получаем доступные MCP tools если включена оркестрация
+            val mcpTools = if (mcpOrchestrationService != null && providerId == ProviderType.CLAUDE) {
+                val tools = mcpOrchestrationService.getAvailableTools()
+                if (tools.isNotEmpty()) {
+                    logger.info("MCP orchestration enabled: ${tools.size} tools available")
+                    mcpOrchestrationService.convertToClaudeTools(tools)
+                } else {
+                    logger.info("No MCP tools available")
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+
+            // 9. Создаем запрос
             val request = AIRequest(
                 messages = messages,
                 model = selectedModel,
                 parameters = parameters,
                 systemPrompt = systemPrompt,
-                sessionId = session.id
+                sessionId = session.id,
+                tools = mcpTools
             )
 
-            logger.info("Sending request to provider: $providerId, model: $selectedModel")
+            logger.info("Sending request to provider: $providerId, model: $selectedModel, tools: ${mcpTools.size}")
 
-            // 9. Отправляем запрос
-            val response = provider.sendMessage(request).getOrThrow()
+            // 10. Отправляем запрос и обрабатываем возможные tool calls
+            val (finalResponse, toolResults) = handleToolUseLoop(provider, request, mcpTools)
 
-            logger.info("Response received from provider: ${response.usage.totalTokens} tokens")
+            logger.info("Response received from provider: ${finalResponse.usage.totalTokens} tokens")
 
-            // 10. Сохраняем ответ в историю
+            // 11. Сохраняем ответ в историю (включая информацию о tool uses если были)
+            val responseContent = if (toolResults.isNotEmpty()) {
+                val toolInfo = toolResults.joinToString("\n") { "[Tool: ${it.toolName}]" }
+                "${finalResponse.content}\n\n$toolInfo"
+            } else {
+                finalResponse.content
+            }
+
             val assistantMessage = Message(
                 role = MessageRole.ASSISTANT,
-                content = MessageContent.Text(response.content)
+                content = MessageContent.Text(responseContent)
             )
             sessionRepository.addMessage(session.id, assistantMessage).getOrThrow()
 
@@ -119,13 +151,13 @@ class SendMessageUseCase(
 
             Result.success(
                 MessageResult(
-                    response = response.content,
+                    response = finalResponse.content,
                     sessionId = session.id,
-                    usage = response.usage,
-                    model = response.model,
+                    usage = finalResponse.usage,
+                    model = finalResponse.model,
                     providerId = providerId,
-                    estimatedInputTokens = response.estimatedInputTokens,
-                    estimatedOutputTokens = response.estimatedOutputTokens
+                    estimatedInputTokens = finalResponse.estimatedInputTokens,
+                    estimatedOutputTokens = finalResponse.estimatedOutputTokens
                 )
             )
         } catch (e: Exception) {
@@ -133,7 +165,95 @@ class SendMessageUseCase(
             Result.failure(AIError.fromException(e as? Exception ?: Exception(e.message)))
         }
     }
+
+    /**
+     * Handle the tool use loop: send request, check for tool uses, execute tools, send results back
+     */
+    private suspend fun handleToolUseLoop(
+        provider: com.researchai.domain.provider.AIProvider,
+        initialRequest: AIRequest,
+        mcpTools: List<com.researchai.domain.mcp.ClaudeTool>
+    ): Pair<AIResponse, List<ToolExecutionResult>> {
+        var currentRequest = initialRequest
+        val toolExecutionResults = mutableListOf<ToolExecutionResult>()
+        var iteration = 0
+
+        while (iteration < MAX_TOOL_ITERATIONS) {
+            iteration++
+
+            // Send request to AI provider
+            val response = provider.sendMessage(currentRequest).getOrThrow()
+
+            // Check if the response contains tool uses
+            if (response.finishReason != FinishReason.TOOL_USE || mcpOrchestrationService == null || response.toolUses.isEmpty()) {
+                // No tool use, return the final response
+                return Pair(response, toolExecutionResults)
+            }
+
+            logger.info("Detected ${response.toolUses.size} tool use(s) in AI response")
+
+            // Execute each tool
+            val toolResults = mutableListOf<Pair<String, String>>() // (toolUseId, result)
+            for (toolUse in response.toolUses) {
+                logger.info("Executing tool: ${toolUse.name}")
+
+                val result = mcpOrchestrationService.executeToolCall(
+                    toolName = toolUse.name,
+                    arguments = toolUse.input
+                )
+
+                val resultText = if (result.success) {
+                    result.content.joinToString("\n") { it.text ?: "" }
+                } else {
+                    "Error: ${result.error}"
+                }
+
+                toolResults.add(Pair(toolUse.id, resultText))
+                toolExecutionResults.add(
+                    ToolExecutionResult(
+                        toolName = toolUse.name,
+                        success = result.success,
+                        result = resultText
+                    )
+                )
+
+                logger.info("Tool ${toolUse.name} executed: success=${result.success}")
+            }
+
+            // Prepare next request with tool results
+            // Add assistant message with tool uses and user message with tool results
+            val updatedMessages = currentRequest.messages.toMutableList()
+
+            // For simplicity, we'll just add a user message with the tool results
+            // In a full implementation, you'd need to properly format this according to Claude's spec
+            val toolResultsText = toolResults.joinToString("\n\n") { (id, result) ->
+                "Tool result for $id:\n$result"
+            }
+
+            updatedMessages.add(
+                Message(
+                    role = MessageRole.USER,
+                    content = MessageContent.Text(toolResultsText)
+                )
+            )
+
+            currentRequest = currentRequest.copy(messages = updatedMessages)
+        }
+
+        // Max iterations reached
+        logger.warn("Max tool use iterations ($MAX_TOOL_ITERATIONS) reached")
+        throw AIError.ConfigurationException("Tool use loop exceeded maximum iterations")
+    }
 }
+
+/**
+ * Result of a tool execution
+ */
+data class ToolExecutionResult(
+    val toolName: String,
+    val success: Boolean,
+    val result: String
+)
 
 /**
  * Результат отправки сообщения

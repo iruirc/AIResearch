@@ -13,6 +13,7 @@ import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
 import com.researchai.config.getMCPServers
 import com.researchai.data.mcp.MCPServerManager
+import com.researchai.domain.mcp.MCPOrchestrationService
 import com.researchai.data.provider.AIProviderFactoryImpl
 import com.researchai.data.repository.ConfigRepositoryImpl
 import com.researchai.data.repository.SessionRepositoryImpl
@@ -100,13 +101,25 @@ class AppModule(
         AIProviderFactoryImpl(httpClient)
     }
 
+    // MCP Server Manager
+    val mcpServerManager: MCPServerManager by lazy {
+        val configs = getMCPServers()
+        MCPServerManager(configs)
+    }
+
+    // MCP Orchestration Service
+    val mcpOrchestrationService: MCPOrchestrationService by lazy {
+        MCPOrchestrationService(mcpServerManager)
+    }
+
     // Use Cases
     val sendMessageUseCase: SendMessageUseCase by lazy {
         SendMessageUseCase(
             providerFactory = providerFactory,
             sessionRepository = sessionRepository,
             configRepository = configRepository,
-            agentManager = agentManager
+            agentManager = agentManager,
+            mcpOrchestrationService = mcpOrchestrationService
         )
     }
 
@@ -146,12 +159,6 @@ class AppModule(
         googleOAuthConfig?.let {
             GoogleAuthProvider(it, httpClient)
         }
-    }
-
-    // MCP Server Manager
-    val mcpServerManager: MCPServerManager by lazy {
-        val configs = getMCPServers()
-        MCPServerManager(configs)
     }
 
     /**
