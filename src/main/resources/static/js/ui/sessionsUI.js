@@ -93,8 +93,19 @@ export const sessionsUI = {
 
         const title = session.title || 'Новый чат';
         const timeAgo = getTimeAgo(session.lastAccessedAt);
+        const isAgentChat = session.agentId && session.agentId !== 'null';
+
+        // Choose icon based on chat type
+        const chatIcon = isAgentChat
+            ? `<svg class="session-icon session-icon-agent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+              </svg>`
+            : `<svg class="session-icon session-icon-simple" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>`;
 
         sessionItem.innerHTML = `
+            ${chatIcon}
             <div class="session-item-content">
                 <div class="session-item-header">
                     <span class="session-title">${title}</span>
