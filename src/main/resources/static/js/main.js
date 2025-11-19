@@ -510,7 +510,7 @@ async function handleMcpServerToggle(serverId, enabled) {
 
         if (result.success) {
             // Reload MCP servers list
-            await loadMcpServers();
+            await settingsService.loadMcpServers();
 
             // Re-render the modal with updated data
             const state = appState.getState();
@@ -525,7 +525,7 @@ async function handleMcpServerToggle(serverId, enabled) {
         alert(`Ошибка при ${enabled ? 'включении' : 'отключении'} сервера: ${error.message}`);
 
         // Reload to reset toggle state
-        await loadMcpServers();
+        await settingsService.loadMcpServers();
         const state = appState.getState();
         modalsUI.renderMcpServersList(state.mcpServers, handleMcpServerToggle);
     }
