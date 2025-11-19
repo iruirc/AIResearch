@@ -243,8 +243,15 @@ export const modalsUI = {
         if (server.tools && server.tools.length > 0) {
             toolsHtml = `
                 <div class="mcp-server-tools">
-                    <div class="mcp-tools-header">Инструменты (${server.tools.length}):</div>
-                    <ul class="mcp-tools-list">
+                    <div class="mcp-tools-header">
+                        <span>Инструменты (${server.tools.length}):</span>
+                        <button class="mcp-tools-toggle collapsed" aria-label="Развернуть/свернуть инструменты">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <ul class="mcp-tools-list collapsed">
                         ${server.tools.map(tool => `
                             <li class="mcp-tool-item">
                                 <div class="mcp-tool-name">${tool.name}</div>
@@ -263,6 +270,19 @@ export const modalsUI = {
             </div>
             ${toolsHtml}
         `;
+
+        // Add event listener for toggle button
+        if (server.tools && server.tools.length > 0) {
+            const toggleButton = serverItem.querySelector('.mcp-tools-toggle');
+            const toolsList = serverItem.querySelector('.mcp-tools-list');
+
+            if (toggleButton && toolsList) {
+                toggleButton.addEventListener('click', () => {
+                    const isCollapsed = toolsList.classList.toggle('collapsed');
+                    toggleButton.classList.toggle('collapsed', isCollapsed);
+                });
+            }
+        }
 
         return serverItem;
     }

@@ -113,6 +113,35 @@
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: var(--spacing-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mcp-tools-toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    color: var(--text-secondary);
+}
+
+.mcp-tools-toggle:hover {
+    background: var(--bg-gray);
+    color: var(--color-primary);
+}
+
+.mcp-tools-toggle svg {
+    transition: transform var(--transition-fast);
+}
+
+.mcp-tools-toggle.collapsed svg {
+    transform: rotate(-90deg);
 }
 
 .mcp-tools-list {
@@ -122,6 +151,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height var(--transition-medium) ease-in-out;
+}
+
+.mcp-tools-list.collapsed {
+    max-height: 0;
+    margin-top: 0;
 }
 
 .mcp-tool-item {
