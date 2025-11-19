@@ -5,6 +5,9 @@ import { appState } from '../state/appState.js';
 // DOM element references
 let sessionsListElement = null;
 
+// Current filter state
+let currentFilter = 'all'; // 'all', 'simple', 'agents'
+
 /**
  * Initialize sessions UI with DOM element
  * @param {HTMLElement} element - Sessions list element
@@ -81,6 +84,9 @@ export const sessionsUI = {
     _createSessionItem(session, currentSessionId, callbacks) {
         const sessionItem = document.createElement('div');
         sessionItem.className = 'session-item';
+        sessionItem.dataset.sessionId = session.id;
+        sessionItem.dataset.agentId = session.agentId || 'null';
+
         if (session.id === currentSessionId) {
             sessionItem.classList.add('active');
         }
@@ -170,6 +176,117 @@ export const sessionsUI = {
         });
 
         return sessionItem;
+    },
+
+    /**
+     * Filter sessions by category
+     * @param {string} category - Category to filter by ('all', 'simple', 'agents')
+     * @param {Array} sessions - Array of all sessions
+     */
+    filterSessions(category, sessions) {
+        currentFilter = category;
+
+        // Update active category button
+        document.querySelectorAll('.category-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.category === category);
+        });
+
+        // Filter session items in the DOM
+        const sessionItems = document.querySelectorAll('.session-item');
+        let visibleCount = 0;
+
+        sessionItems.forEach(item => {
+            const agentId = item.dataset.agentId;
+            let shouldShow = false;
+
+            switch (category) {
+                case 'all':
+                    shouldShow = true;
+                    break;
+                case 'simple':
+                    shouldShow = !agentId || agentId === 'null';
+                    break;
+                case 'agents':
+                    shouldShow = agentId && agentId !== 'null';
+                    break;
+            }
+
+            item.style.display = shouldShow ? 'flex' : 'none';
+            if (shouldShow) visibleCount++;
+        });
+
+        // Update empty state
+        this._updateEmptyState(visibleCount, category);
+    },
+
+    /**
+     * Update category counts
+     * @param {Array} sessions - Array of all sessions
+     */
+    updateCategoryCounts(sessions) {
+        if (!sessions) return;
+
+        const allCount = sessions.length;
+        const simpleCount = sessions.filter(s => !s.agentId).length;
+        const agentsCount = sessions.filter(s => s.agentId).length;
+
+        const allCountEl = document.getElementById('allCount');
+        const simpleCountEl = document.getElementById('simpleCount');
+        const agentsCountEl = document.getElementById('agentsCount');
+
+        if (allCountEl) allCountEl.textContent = allCount;
+        if (simpleCountEl) simpleCountEl.textContent = simpleCount;
+        if (agentsCountEl) agentsCountEl.textContent = agentsCount;
+    },
+
+    /**
+     * Update empty state message
+     * @private
+     * @param {number} visibleCount - Number of visible sessions
+     * @param {string} category - Current category filter
+     */
+    _updateEmptyState(visibleCount, category) {
+        let emptyMessage = sessionsListElement.querySelector('.sessions-empty');
+
+        if (visibleCount === 0) {
+            const message = this._getEmptyMessage(category);
+
+            if (!emptyMessage) {
+                emptyMessage = document.createElement('div');
+                emptyMessage.className = 'sessions-empty';
+                sessionsListElement.appendChild(emptyMessage);
+            }
+
+            emptyMessage.textContent = message;
+            emptyMessage.style.display = 'block';
+        } else if (emptyMessage) {
+            emptyMessage.style.display = 'none';
+        }
+    },
+
+    /**
+     * Get empty state message based on category
+     * @private
+     * @param {string} category - Current category
+     * @returns {string} Empty message
+     */
+    _getEmptyMessage(category) {
+        switch (category) {
+            case 'simple':
+                return 'Нет простых чатов';
+            case 'agents':
+                return 'Нет чатов с агентами';
+            default:
+                return 'Нет активных чатов';
+        }
+    },
+
+    /**
+     * Get current filter
+     * @returns {string} Current filter category
+     */
+    getCurrentFilter() {
+        return currentFilter;
     }
 };
 

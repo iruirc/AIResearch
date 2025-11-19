@@ -94,6 +94,15 @@ function setupEventListeners() {
     document.getElementById('newChatButtonSidebar').addEventListener('click', handleNewChat);
     document.getElementById('toggleSidebarButton').addEventListener('click', handleToggleSidebar);
 
+    // Category filter events
+    document.querySelectorAll('.category-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const category = item.dataset.category;
+            const sessions = appState.getState().sessions || [];
+            sessionsUI.filterSessions(category, sessions);
+        });
+    });
+
     // Modal events
     document.getElementById('agentsButton').addEventListener('click', handleOpenAgentsModal);
     document.getElementById('settingsButton').addEventListener('click', handleOpenSettingsModal);
@@ -175,6 +184,13 @@ function subscribeToStateChanges() {
             onDelete: handleSessionDelete
         });
         sidebarUI.updateSessionCount(sessions.length);
+
+        // Update category counts
+        sessionsUI.updateCategoryCounts(sessions);
+
+        // Apply current filter
+        const currentFilter = sessionsUI.getCurrentFilter();
+        sessionsUI.filterSessions(currentFilter, sessions);
     });
 
     // Subscribe to current session changes
@@ -244,11 +260,9 @@ async function handleSendMessage() {
         // Add assistant message to UI with metadata and timestamp
         messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());
 
-        // If session ID changed after sending (shouldn't happen now), reload sessions
-        if (wasNewChat && response.sessionId !== appState.getState().currentSessionId) {
-            console.warn('Session ID mismatch! Created:', appState.getState().currentSessionId, 'Returned:', response.sessionId);
-            await sessionService.loadSessions();
-        }
+        // Reload sessions list to update message count
+        await sessionService.loadSessions();
+        console.log('Sessions list reloaded to update message count');
     } catch (error) {
         console.error('Error sending message:', error);
         messagesUI.addMessage(

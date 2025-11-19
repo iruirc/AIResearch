@@ -29,15 +29,18 @@ export const sessionService = {
      * @returns {Promise<Object>} Session data with messages
      */
     async switchSession(sessionId) {
-        if (appState.isLoading || sessionId === appState.currentSessionId) {
+        if (appState.isLoading) {
             return null;
         }
 
         try {
             const sessionData = await sessionsApi.getSession(sessionId);
 
-            // Update state
-            appState.setCurrentSessionId(sessionId);
+            // Update state only if switching to different session
+            if (sessionId !== appState.currentSessionId) {
+                appState.setCurrentSessionId(sessionId);
+            }
+
             appState.setSessionTotalTokens(0);
 
             // Calculate total tokens from history
