@@ -1,6 +1,7 @@
 package com.researchai.data.mcp
 
 import com.researchai.domain.models.mcp.*
+import com.researchai.persistence.MCPPreferencesStorage
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonElement
 import org.slf4j.LoggerFactory
@@ -9,38 +10,56 @@ import org.slf4j.LoggerFactory
  * Manages multiple MCP server connections
  */
 class MCPServerManager(
-    private val serverConfigs: List<MCPServerConfig>
+    private val serverConfigs: List<MCPServerConfig>,
+    private val preferencesStorage: MCPPreferencesStorage
 ) {
     private val logger = LoggerFactory.getLogger(MCPServerManager::class.java)
     private val clients = mutableMapOf<String, MCPClientWrapper>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
-     * Initialize all enabled MCP servers
+     * Initialize MCP servers based on user preferences
+     * If preferences file doesn't exist, use enabled flag from config
      */
     suspend fun initialize() {
         logger.info("Initializing MCP servers...")
 
-        serverConfigs
-            .filter { it.enabled }
-            .forEach { config ->
-                try {
-                    val client = MCPClientWrapper(config)
-                    clients[config.id] = client
+        val preferences = preferencesStorage.loadPreferences().getOrNull()
+        val enabledServerIds = preferences?.enabledServers ?: emptyList()
 
-                    // Connect in background
-                    scope.launch {
-                        val connected = client.connect()
-                        if (connected) {
-                            logger.info("✅ Connected to MCP server: ${config.name} (${config.id})")
-                        } else {
-                            logger.warn("⚠️  Failed to connect to MCP server: ${config.name} (${config.id})")
-                        }
-                    }
-                } catch (e: Exception) {
-                    logger.error("Failed to initialize MCP server ${config.id}: ${e.message}", e)
-                }
+        // If preferences exist, use them; otherwise fall back to config enabled flag
+        val serversToInitialize = if (enabledServerIds.isNotEmpty()) {
+            serverConfigs.filter { it.id in enabledServerIds }
+        } else {
+            // First time: save currently enabled servers to preferences
+            val currentlyEnabled = serverConfigs.filter { it.enabled }
+            if (currentlyEnabled.isNotEmpty()) {
+                val initialPreferences = com.researchai.persistence.MCPPreferences(
+                    enabledServers = currentlyEnabled.map { it.id }
+                )
+                preferencesStorage.savePreferences(initialPreferences)
             }
+            currentlyEnabled
+        }
+
+        serversToInitialize.forEach { config ->
+            try {
+                val client = MCPClientWrapper(config)
+                clients[config.id] = client
+
+                // Connect in background
+                scope.launch {
+                    val connected = client.connect()
+                    if (connected) {
+                        logger.info("✅ Connected to MCP server: ${config.name} (${config.id})")
+                    } else {
+                        logger.warn("⚠️  Failed to connect to MCP server: ${config.name} (${config.id})")
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to initialize MCP server ${config.id}: ${e.message}", e)
+            }
+        }
 
         // Wait a bit for connections to establish
         delay(2000)
@@ -280,5 +299,74 @@ class MCPServerManager(
      */
     fun getConnectionStatus(): Map<String, Boolean> {
         return clients.mapValues { (_, client) -> client.isConnected() }
+    }
+
+    /**
+     * Enable and connect to a specific MCP server
+     */
+    suspend fun enableServer(serverId: String): Boolean {
+        return try {
+            // Check if server config exists
+            val config = serverConfigs.find { it.id == serverId }
+                ?: run {
+                    logger.error("Server config not found: $serverId")
+                    return false
+                }
+
+            // Save to preferences
+            preferencesStorage.enableServer(serverId).getOrThrow()
+
+            // If already connected, do nothing
+            if (clients[serverId]?.isConnected() == true) {
+                logger.info("Server $serverId is already connected")
+                return true
+            }
+
+            // Create and connect client
+            val client = MCPClientWrapper(config)
+            clients[serverId] = client
+
+            val connected = client.connect()
+            if (connected) {
+                logger.info("✅ Enabled and connected to MCP server: ${config.name} (${config.id})")
+            } else {
+                logger.warn("⚠️  Enabled but failed to connect to MCP server: ${config.name} (${config.id})")
+            }
+            connected
+        } catch (e: Exception) {
+            logger.error("Failed to enable server $serverId: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Disable and disconnect from a specific MCP server
+     */
+    suspend fun disableServer(serverId: String): Boolean {
+        return try {
+            // Save to preferences
+            preferencesStorage.disableServer(serverId).getOrThrow()
+
+            // Disconnect and remove client
+            val client = clients[serverId]
+            if (client != null) {
+                client.disconnect()
+                clients.remove(serverId)
+                logger.info("🔌 Disabled and disconnected from MCP server: ${client.serverName} ($serverId)")
+            } else {
+                logger.info("Server $serverId was not connected")
+            }
+            true
+        } catch (e: Exception) {
+            logger.error("Failed to disable server $serverId: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Check if a server is enabled in user preferences
+     */
+    suspend fun isServerEnabled(serverId: String): Boolean {
+        return preferencesStorage.isServerEnabled(serverId)
     }
 }

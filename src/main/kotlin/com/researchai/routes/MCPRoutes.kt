@@ -18,6 +18,7 @@ data class MCPServerInfo(
     val name: String,
     val description: String? = null,
     val connected: Boolean,
+    val enabled: Boolean,
     val transport: String,
     val toolsCount: Int = 0,
     val resourcesCount: Int = 0,
@@ -34,44 +35,53 @@ data class MCPServersResponse(
 )
 
 /**
+ * Response for server toggle operations
+ */
+@Serializable
+data class MCPServerToggleResponse(
+    val success: Boolean,
+    val message: String
+)
+
+/**
  * Configure MCP-related routes
  */
 fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
     route("/mcp") {
-        // Get list of configured MCP servers
+        // Get list of all MCP servers (both enabled and disabled)
         get("/servers") {
             try {
                 val configs = mcpServerManager.getAllServerConfigs()
                 val connectionStatus = mcpServerManager.getConnectionStatus()
 
-                val serverInfoList = configs
-                    .filter { it.enabled }
-                    .map { config ->
-                        val connected = connectionStatus[config.id] ?: false
+                val serverInfoList = configs.map { config ->
+                    val connected = connectionStatus[config.id] ?: false
+                    val enabled = mcpServerManager.isServerEnabled(config.id)
 
-                        // Get tools, resources, and prompts lists if connected
-                        val (tools, resources, prompts) = if (connected) {
-                            Triple(
-                                mcpServerManager.listTools(config.id),
-                                mcpServerManager.listResources(config.id),
-                                mcpServerManager.listPrompts(config.id)
-                            )
-                        } else {
-                            Triple(emptyList(), emptyList(), emptyList())
-                        }
-
-                        MCPServerInfo(
-                            id = config.id,
-                            name = config.name,
-                            description = config.description,
-                            connected = connected,
-                            transport = config.transport,
-                            toolsCount = tools.size,
-                            resourcesCount = resources.size,
-                            promptsCount = prompts.size,
-                            tools = tools
+                    // Get tools, resources, and prompts lists if connected
+                    val (tools, resources, prompts) = if (connected) {
+                        Triple(
+                            mcpServerManager.listTools(config.id),
+                            mcpServerManager.listResources(config.id),
+                            mcpServerManager.listPrompts(config.id)
                         )
+                    } else {
+                        Triple(emptyList(), emptyList(), emptyList())
                     }
+
+                    MCPServerInfo(
+                        id = config.id,
+                        name = config.name,
+                        description = config.description,
+                        connected = connected,
+                        enabled = enabled,
+                        transport = config.transport,
+                        toolsCount = tools.size,
+                        resourcesCount = resources.size,
+                        promptsCount = prompts.size,
+                        tools = tools
+                    )
+                }
 
                 call.respond(HttpStatusCode.OK, MCPServersResponse(servers = serverInfoList))
             } catch (e: Exception) {
@@ -97,6 +107,7 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
 
                 val client = mcpServerManager.getClient(serverId)
                 val connected = client?.isConnected() ?: false
+                val enabled = mcpServerManager.isServerEnabled(serverId)
 
                 // Get tools, resources, and prompts lists if connected
                 val (tools, resources, prompts) = if (connected) {
@@ -116,6 +127,7 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                         name = config.name,
                         description = config.description,
                         connected = connected,
+                        enabled = enabled,
                         transport = config.transport,
                         toolsCount = tools.size,
                         resourcesCount = resources.size,
@@ -127,6 +139,56 @@ fun Route.mcpRoutes(mcpServerManager: MCPServerManager) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf("error" to "Failed to get server details: ${e.message}")
+                )
+            }
+        }
+
+        // Enable a specific MCP server
+        post("/servers/{serverId}/enable") {
+            try {
+                val serverId = call.parameters["serverId"] ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Server ID is required")
+                )
+
+                val success = mcpServerManager.enableServer(serverId)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    MCPServerToggleResponse(
+                        success = success,
+                        message = if (success) "Server enabled successfully" else "Failed to enable server"
+                    )
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to enable server: ${e.message}")
+                )
+            }
+        }
+
+        // Disable a specific MCP server
+        post("/servers/{serverId}/disable") {
+            try {
+                val serverId = call.parameters["serverId"] ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Server ID is required")
+                )
+
+                val success = mcpServerManager.disableServer(serverId)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    MCPServerToggleResponse(
+                        success = success,
+                        message = if (success) "Server disabled successfully" else "Failed to disable server"
+                    )
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to disable server: ${e.message}")
                 )
             }
         }

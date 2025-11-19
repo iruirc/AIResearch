@@ -209,8 +209,9 @@ export const modalsUI = {
     /**
      * Render MCP servers list in modal
      * @param {Array} servers - Array of MCP server objects
+     * @param {Function} onToggle - Callback for server toggle (serverId, enabled)
      */
-    renderMcpServersList(servers) {
+    renderMcpServersList(servers, onToggle) {
         const mcpServersListElement = document.getElementById('mcpServersList');
         if (!mcpServersListElement) return;
 
@@ -221,7 +222,7 @@ export const modalsUI = {
 
         mcpServersListElement.innerHTML = '';
         servers.forEach(server => {
-            const serverItem = this._createMcpServerItem(server);
+            const serverItem = this._createMcpServerItem(server, onToggle);
             mcpServersListElement.appendChild(serverItem);
         });
     },
@@ -230,14 +231,15 @@ export const modalsUI = {
      * Create MCP server item element
      * @private
      * @param {Object} server - Server object
+     * @param {Function} onToggle - Callback for toggle switch
      * @returns {HTMLElement} Server item element
      */
-    _createMcpServerItem(server) {
+    _createMcpServerItem(server, onToggle) {
         const serverItem = document.createElement('div');
         serverItem.className = 'mcp-server-item';
 
         const statusClass = server.connected ? 'connected' : 'disconnected';
-        const statusText = server.connected ? 'Подключен' : 'Отключен';
+        const statusText = server.connected ? 'ПОДКЛЮЧЕН' : 'НЕ ПОДКЛЮЧЕН';
 
         let toolsHtml = '';
         if (server.tools && server.tools.length > 0) {
@@ -265,13 +267,27 @@ export const modalsUI = {
 
         serverItem.innerHTML = `
             <div class="mcp-server-header">
-                <div class="mcp-server-name">${server.name}</div>
-                <div class="mcp-server-status ${statusClass}">${statusText}</div>
+                <div class="mcp-server-info">
+                    <div class="mcp-server-name">${server.name}</div>
+                    <div class="mcp-server-status ${statusClass}">${statusText}</div>
+                </div>
+                <label class="mcp-server-toggle">
+                    <input type="checkbox" ${server.enabled ? 'checked' : ''} data-server-id="${server.id}">
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
             ${toolsHtml}
         `;
 
-        // Add event listener for toggle button
+        // Add event listener for toggle switch
+        const toggleInput = serverItem.querySelector('.mcp-server-toggle input');
+        if (toggleInput && onToggle) {
+            toggleInput.addEventListener('change', (e) => {
+                onToggle(server.id, e.target.checked);
+            });
+        }
+
+        // Add event listener for tools toggle button
         if (server.tools && server.tools.length > 0) {
             const toggleButton = serverItem.querySelector('.mcp-tools-toggle');
             const toolsList = serverItem.querySelector('.mcp-tools-list');

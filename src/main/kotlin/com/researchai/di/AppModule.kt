@@ -24,6 +24,7 @@ import com.researchai.domain.usecase.GetModelsUseCase
 import com.researchai.domain.usecase.SendMessageUseCase
 import com.researchai.persistence.JsonPersistenceStorage
 import com.researchai.persistence.PersistenceManager
+import com.researchai.persistence.MCPPreferencesStorage
 import com.researchai.services.AgentManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
@@ -101,10 +102,15 @@ class AppModule(
         AIProviderFactoryImpl(httpClient)
     }
 
+    // MCP Preferences Storage
+    val mcpPreferencesStorage: MCPPreferencesStorage by lazy {
+        MCPPreferencesStorage()
+    }
+
     // MCP Server Manager
     val mcpServerManager: MCPServerManager by lazy {
         val configs = getMCPServers()
-        MCPServerManager(configs)
+        MCPServerManager(configs, mcpPreferencesStorage)
     }
 
     // MCP Orchestration Service

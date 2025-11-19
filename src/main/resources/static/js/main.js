@@ -11,6 +11,7 @@ import { compressionService } from './services/compressionService.js';
 
 // Import API modules
 import { sessionsApi } from './api/sessionsApi.js';
+import { mcpApi } from './api/mcpApi.js';
 
 // Import UI modules
 import { messagesUI, initMessagesUI } from './ui/messagesUI.js';
@@ -485,11 +486,48 @@ async function handleSaveSettings() {
 async function handleOpenMcpServersModal() {
     try {
         const state = appState.getState();
-        modalsUI.renderMcpServersList(state.mcpServers);
+        modalsUI.renderMcpServersList(state.mcpServers, handleMcpServerToggle);
         modalsUI.openModal('mcpServersModal');
     } catch (error) {
         console.error('Error opening MCP servers modal:', error);
         alert('Ошибка при открытии списка MCP серверов');
+    }
+}
+
+/**
+ * Handle MCP server toggle (enable/disable)
+ * @param {string} serverId - Server ID
+ * @param {boolean} enabled - New enabled state
+ */
+async function handleMcpServerToggle(serverId, enabled) {
+    try {
+        console.log(`Toggling MCP server ${serverId} to ${enabled ? 'enabled' : 'disabled'}`);
+
+        // Call API to enable/disable server
+        const result = enabled
+            ? await mcpApi.enableServer(serverId)
+            : await mcpApi.disableServer(serverId);
+
+        if (result.success) {
+            // Reload MCP servers list
+            await loadMcpServers();
+
+            // Re-render the modal with updated data
+            const state = appState.getState();
+            modalsUI.renderMcpServersList(state.mcpServers, handleMcpServerToggle);
+
+            console.log(`Server ${serverId} ${enabled ? 'enabled' : 'disabled'} successfully`);
+        } else {
+            throw new Error(result.message || 'Failed to toggle server');
+        }
+    } catch (error) {
+        console.error('Error toggling MCP server:', error);
+        alert(`Ошибка при ${enabled ? 'включении' : 'отключении'} сервера: ${error.message}`);
+
+        // Reload to reset toggle state
+        await loadMcpServers();
+        const state = appState.getState();
+        modalsUI.renderMcpServersList(state.mcpServers, handleMcpServerToggle);
     }
 }
 
