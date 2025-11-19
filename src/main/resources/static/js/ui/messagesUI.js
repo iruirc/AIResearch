@@ -16,6 +16,20 @@ export function initMessagesUI(container) {
 }
 
 /**
+ * Format timestamp to "DD.MM HH:mm" format
+ * @param {number} timestamp - Unix timestamp in milliseconds
+ * @returns {string} Formatted time string
+ */
+function formatMessageTime(timestamp) {
+    const date = new Date(timestamp);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}.${month} ${hours}:${minutes}`;
+}
+
+/**
  * Messages UI module
  */
 export const messagesUI = {
@@ -24,12 +38,21 @@ export const messagesUI = {
      * @param {string} text - Message text
      * @param {string} type - Message type ('user' or 'assistant')
      * @param {Object} metadata - Optional metadata for assistant messages
+     * @param {number} timestamp - Optional timestamp in milliseconds
      */
-    addMessage(text, type, metadata = null) {
-        console.log('addMessage called with:', { text: text?.substring(0, 100), type, metadata });
+    addMessage(text, type, metadata = null, timestamp = null) {
+        console.log('addMessage called with:', { text: text?.substring(0, 100), type, metadata, timestamp });
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
+
+        // Add timestamp if provided
+        if (timestamp) {
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = formatMessageTime(timestamp);
+            messageDiv.appendChild(timeDiv);
+        }
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
@@ -142,7 +165,7 @@ export const messagesUI = {
 
         messages.forEach(message => {
             // Backend returns 'content' field, not 'text'
-            this.addMessage(message.content, message.role, message.metadata);
+            this.addMessage(message.content, message.role, message.metadata, message.timestamp);
         });
     },
 

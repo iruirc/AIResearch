@@ -16,7 +16,17 @@
 .message {
     margin-bottom: var(--spacing-xl);
     display: flex;
+    align-items: flex-end;
+    gap: 8px;
     animation: fadeIn var(--transition-medium) ease-in;
+}
+
+.message-time {
+    font-size: 13px;
+    color: #999;
+    white-space: nowrap;
+    align-self: flex-end;
+    padding-bottom: 2px;
 }
 
 .message-content {
@@ -33,6 +43,10 @@
     justify-content: flex-end;
 }
 
+.message.user .message-time {
+    order: -1;
+}
+
 .message.user .message-content {
     background: var(--gradient-primary);
     color: var(--bg-white);
@@ -42,6 +56,10 @@
 /* Assistant messages */
 .message.assistant {
     justify-content: flex-start;
+}
+
+.message.assistant .message-time {
+    order: 1;
 }
 
 .message.assistant .message-content {

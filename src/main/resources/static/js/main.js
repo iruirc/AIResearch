@@ -212,8 +212,8 @@ async function handleSendMessage() {
     messageInput.value = '';
     messageInput.style.height = 'auto';
 
-    // Add user message to UI
-    messagesUI.addMessage(message, 'user');
+    // Add user message to UI with current timestamp
+    messagesUI.addMessage(message, 'user', null, Date.now());
 
     // Check if this is a new chat
     const wasNewChat = !appState.getState().currentSessionId;
@@ -241,8 +241,8 @@ async function handleSendMessage() {
         const response = await chatService.sendMessage(message);
         console.log('Message sent, response sessionId:', response.sessionId);
 
-        // Add assistant message to UI with metadata
-        messagesUI.addMessage(response.response, 'assistant', response.metadata);
+        // Add assistant message to UI with metadata and timestamp
+        messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());
 
         // If session ID changed after sending (shouldn't happen now), reload sessions
         if (wasNewChat && response.sessionId !== appState.getState().currentSessionId) {
@@ -253,7 +253,9 @@ async function handleSendMessage() {
         console.error('Error sending message:', error);
         messagesUI.addMessage(
             `Ошибка при отправке сообщения: ${error.message}`,
-            'assistant'
+            'assistant',
+            null,
+            Date.now()
         );
     }
 }
