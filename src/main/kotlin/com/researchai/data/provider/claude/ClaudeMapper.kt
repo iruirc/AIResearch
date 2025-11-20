@@ -16,9 +16,27 @@ class ClaudeMapper {
     ): ClaudeApiRequest {
         // Формируем сообщения
         val messages = request.messages.map { message ->
-            val content = when (val msgContent = message.content) {
-                is MessageContent.Text -> msgContent.text
-                is MessageContent.MultiModal -> msgContent.text ?: ""
+            val claudeContent = when (val msgContent = message.content) {
+                is MessageContent.Text -> ClaudeApiMessageContent.Text(msgContent.text)
+                is MessageContent.MultiModal -> ClaudeApiMessageContent.Text(msgContent.text ?: "")
+                is MessageContent.Structured -> {
+                    // Конвертируем domain ContentBlocks в Claude API ContentBlocks
+                    val claudeBlocks = msgContent.blocks.map { block ->
+                        when (block) {
+                            is ContentBlock.Text -> ClaudeContentBlock.Text(text = block.text)
+                            is ContentBlock.ToolUseBlock -> ClaudeContentBlock.ToolUse(
+                                id = block.id,
+                                name = block.name,
+                                input = block.input
+                            )
+                            is ContentBlock.ToolResultBlock -> ClaudeContentBlock.ToolResult(
+                                toolUseId = block.toolUseId,
+                                content = block.content
+                            )
+                        }
+                    }
+                    ClaudeApiMessageContent.Structured(claudeBlocks)
+                }
             }
 
             ClaudeApiMessage(
@@ -27,7 +45,7 @@ class ClaudeMapper {
                     MessageRole.ASSISTANT -> "assistant"
                     MessageRole.SYSTEM -> "user" // Claude doesn't have system role in messages
                 },
-                content = ClaudeApiMessageContent.Text(content)
+                content = claudeContent
             )
         }.toMutableList()
 

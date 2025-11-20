@@ -200,6 +200,16 @@ fun Route.chatRoutes(
                     val contentText = when (val content = message.content) {
                         is com.researchai.domain.models.MessageContent.Text -> content.text
                         is com.researchai.domain.models.MessageContent.MultiModal -> content.text ?: ""
+                        is com.researchai.domain.models.MessageContent.Structured -> {
+                            // Конвертируем structured content в читаемый текст
+                            content.blocks.joinToString("\n") { block ->
+                                when (block) {
+                                    is com.researchai.domain.models.ContentBlock.Text -> block.text
+                                    is com.researchai.domain.models.ContentBlock.ToolUseBlock -> "[Tool: ${block.name}]"
+                                    is com.researchai.domain.models.ContentBlock.ToolResultBlock -> "[Tool Result: ${block.content}]"
+                                }
+                            }
+                        }
                     }
 
                     // Преобразуем метаданные если они есть

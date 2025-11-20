@@ -215,6 +215,7 @@ class ChatCompressionService(
                 val content = when (val c = msg.content) {
                     is MessageContent.Text -> c.text.take(100)
                     is MessageContent.MultiModal -> c.text?.take(100) ?: "[Мультимодальное сообщение]"
+                    is MessageContent.Structured -> "[Структурированное сообщение с tool calls]"
                 }
                 "- ${msg.role}: $content..."
             }}

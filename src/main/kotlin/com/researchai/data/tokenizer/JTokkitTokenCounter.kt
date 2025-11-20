@@ -4,6 +4,7 @@ import com.knuddels.jtokkit.Encodings
 import com.knuddels.jtokkit.api.Encoding
 import com.knuddels.jtokkit.api.EncodingRegistry
 import com.knuddels.jtokkit.api.EncodingType
+import com.researchai.domain.models.ContentBlock
 import com.researchai.domain.models.Message
 import com.researchai.domain.models.MessageContent
 import com.researchai.domain.models.MessageRole
@@ -60,6 +61,16 @@ class JTokkitTokenCounter(
             val text = when (val content = message.content) {
                 is MessageContent.Text -> content.text
                 is MessageContent.MultiModal -> content.text ?: ""
+                is MessageContent.Structured -> {
+                    // Подсчет токенов для structured content
+                    content.blocks.joinToString("\n") { block ->
+                        when (block) {
+                            is ContentBlock.Text -> block.text
+                            is ContentBlock.ToolUseBlock -> "[Tool: ${block.name}]"
+                            is ContentBlock.ToolResultBlock -> block.content
+                        }
+                    }
+                }
             }
             countTokens(text)
         }

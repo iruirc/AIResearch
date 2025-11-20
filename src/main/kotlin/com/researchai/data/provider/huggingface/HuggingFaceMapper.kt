@@ -19,6 +19,16 @@ class HuggingFaceMapper {
             val content = when (val msgContent = message.content) {
                 is MessageContent.Text -> msgContent.text
                 is MessageContent.MultiModal -> msgContent.text ?: ""
+                is MessageContent.Structured -> {
+                    // HuggingFace не поддерживает structured content, конвертируем в text
+                    msgContent.blocks.joinToString("\n") { block ->
+                        when (block) {
+                            is ContentBlock.Text -> block.text
+                            is ContentBlock.ToolUseBlock -> "[Tool: ${block.name}]"
+                            is ContentBlock.ToolResultBlock -> "[Tool Result: ${block.content}]"
+                        }
+                    }
+                }
             }
 
             HuggingFaceApiMessage(

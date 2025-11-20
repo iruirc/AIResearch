@@ -22,13 +22,20 @@ data class OpenAIApiRequest(
     val frequencyPenalty: Double? = null,
     @SerialName("presence_penalty")
     val presencePenalty: Double? = null,
-    val stop: List<String>? = null
+    val stop: List<String>? = null,
+    val tools: List<OpenAITool>? = null,
+    @SerialName("tool_choice")
+    val toolChoice: String? = null
 )
 
 @Serializable
 data class OpenAIApiMessage(
     val role: String,
-    val content: String
+    val content: String? = null,
+    @SerialName("tool_calls")
+    val toolCalls: List<OpenAIToolCall>? = null,
+    @SerialName("tool_call_id")
+    val toolCallId: String? = null
 )
 
 @Serializable
@@ -87,4 +94,36 @@ data class OpenAIApiErrorDetails(
     val type: String,
     val param: String? = null,
     val code: String? = null
+)
+
+/**
+ * OpenAI Tool Definition (function calling)
+ */
+@Serializable
+data class OpenAITool(
+    val type: String = "function",
+    val function: OpenAIFunction
+)
+
+@Serializable
+data class OpenAIFunction(
+    val name: String,
+    val description: String,
+    val parameters: kotlinx.serialization.json.JsonElement
+)
+
+/**
+ * OpenAI Tool Call (в ответе от модели)
+ */
+@Serializable
+data class OpenAIToolCall(
+    val id: String,
+    val type: String,
+    val function: OpenAIFunctionCall
+)
+
+@Serializable
+data class OpenAIFunctionCall(
+    val name: String,
+    val arguments: String  // JSON string
 )

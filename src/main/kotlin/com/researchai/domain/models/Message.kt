@@ -48,6 +48,38 @@ sealed class MessageContent {
         val text: String? = null,
         val images: List<ImageContent> = emptyList()
     ) : MessageContent()
+
+    /**
+     * Structured content for tool uses and tool results
+     * Used for proper Claude/OpenAI API integration
+     */
+    @Serializable
+    data class Structured(
+        val blocks: List<ContentBlock>
+    ) : MessageContent()
+}
+
+/**
+ * Content block for structured messages (tool_use, tool_result, etc.)
+ */
+@Serializable
+sealed class ContentBlock {
+    @Serializable
+    data class Text(val text: String) : ContentBlock()
+
+    @Serializable
+    data class ToolUseBlock(
+        val id: String,
+        val name: String,
+        val input: kotlinx.serialization.json.JsonElement
+    ) : ContentBlock()
+
+    @Serializable
+    data class ToolResultBlock(
+        val toolUseId: String,
+        val content: String,
+        val isError: Boolean = false
+    ) : ContentBlock()
 }
 
 @Serializable

@@ -284,14 +284,14 @@ class MCPClientWrapper(
 
     /**
      * Read a resource from this server
-     * TODO: Implement after MCP SDK API stabilizes
+     * TODO: MCP SDK API still evolving - needs proper request object
      */
     suspend fun readResource(uri: String): MCPResourceReadResult = withContext(Dispatchers.IO) {
-        logger.warn("readResource not yet implemented - waiting for MCP SDK API stabilization")
+        logger.warn("readResource: MCP SDK API still evolving - implementation pending proper request format")
         MCPResourceReadResult(
             success = false,
             contents = emptyList(),
-            error = "Not yet implemented - MCP SDK API pending"
+            error = "Not yet implemented - MCP SDK API format pending"
         )
     }
 
@@ -333,15 +333,15 @@ class MCPClientWrapper(
 
     /**
      * Get a prompt from this server
-     * TODO: Implement after MCP SDK API stabilizes
+     * TODO: MCP SDK API still evolving - needs proper request object
      */
     suspend fun getPrompt(name: String, arguments: Map<String, String>): MCPPromptGetResult = withContext(Dispatchers.IO) {
-        logger.warn("getPrompt not yet implemented - waiting for MCP SDK API stabilization")
+        logger.warn("getPrompt: MCP SDK API still evolving - implementation pending proper request format")
         MCPPromptGetResult(
             success = false,
             description = null,
             messages = emptyList(),
-            error = "Not yet implemented - MCP SDK API pending"
+            error = "Not yet implemented - MCP SDK API format pending"
         )
     }
 }
