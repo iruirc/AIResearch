@@ -482,9 +482,18 @@ function handleCreateAssistant() {
  * Handle edit assistant button click
  * @param {Object} assistant - Assistant to edit
  */
-function handleEditAssistant(assistant) {
-    modalsUI.closeModal('assistantModal');
-    modalsUI.openAssistantFormModal(assistant);
+async function handleEditAssistant(assistant) {
+    try {
+        modalsUI.closeModal('assistantModal');
+
+        // Load full assistant details including systemPrompt
+        const fullAssistant = await assistantsApi.getAssistant(assistant.id);
+
+        modalsUI.openAssistantFormModal(fullAssistant);
+    } catch (error) {
+        console.error('Error loading assistant details:', error);
+        alert('Ошибка при загрузке данных ассистента');
+    }
 }
 
 /**

@@ -135,6 +135,33 @@ export const assistantsApi = {
     },
 
     /**
+     * Get a specific assistant by ID
+     * @async
+     * @param {string} id - The assistant identifier
+     * @returns {Promise<Object>} Assistant object with full details
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const assistant = await assistantsApi.getAssistant('code-reviewer');
+     */
+    async getAssistant(id) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.ASSISTANTS}/${id}`,
+            {
+                method: 'GET',
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to get assistant: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.assistant;
+    },
+
+    /**
      * Delete a custom assistant
      * @async
      * @param {string} id - The assistant identifier
