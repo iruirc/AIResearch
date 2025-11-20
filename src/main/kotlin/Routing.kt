@@ -6,6 +6,7 @@ import com.researchai.di.AppModule
 import com.researchai.routes.chatRoutes
 import com.researchai.routes.compressionRoutes
 import com.researchai.routes.mcpRoutes
+import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.routes.schedulerRoutes
 import com.researchai.services.ClaudeService
@@ -45,6 +46,9 @@ fun Application.configureRouting(
 
         // API роуты для планировщика задач
         schedulerRoutes(appModule.schedulerManager)
+
+        // API роуты для assistant pipelines
+        pipelineRoutes(appModule.assistantPipelineUseCase, appModule.pipelineStorage)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

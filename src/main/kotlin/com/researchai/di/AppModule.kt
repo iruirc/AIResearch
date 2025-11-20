@@ -182,6 +182,32 @@ class AppModule(
         }
     }
 
+    // ============================================
+    // Pipeline Components
+    // ============================================
+
+    /**
+     * Storage for pipeline configurations and executions
+     */
+    val pipelineStorage: com.researchai.persistence.AssistantPipelineStorage by lazy {
+        com.researchai.persistence.JsonPipelineStorage(
+            pipelinesDir = java.io.File("data/assistant_pipelines"),
+            executionsDir = java.io.File("data/pipeline_executions")
+        )
+    }
+
+    /**
+     * Use case for executing assistant pipelines
+     */
+    val assistantPipelineUseCase: com.researchai.domain.usecase.AssistantPipelineUseCase by lazy {
+        com.researchai.domain.usecase.AssistantPipelineUseCase(
+            sendMessageUseCase = sendMessageUseCase,
+            assistantManager = assistantManager,
+            sessionRepository = sessionRepository,
+            pipelineStorage = pipelineStorage
+        )
+    }
+
     /**
      * Initialize MCP servers asynchronously
      */
@@ -197,6 +223,7 @@ class AppModule(
             schedulerManager.shutdown()
             chatSessionManager.shutdown()
             mcpServerManager.shutdown()
+            pipelineStorage.close()
         }
         httpClient.close()
     }

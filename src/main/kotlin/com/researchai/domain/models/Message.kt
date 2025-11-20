@@ -30,7 +30,12 @@ data class MessageMetadata(
     // Токены, подсчитанные локально (оценочные)
     val estimatedInputTokens: Int = 0, // Локальная оценка входных токенов
     val estimatedOutputTokens: Int = 0, // Локальная оценка выходных токенов
-    val estimatedTotalTokens: Int = estimatedInputTokens + estimatedOutputTokens // Локальная оценка общих
+    val estimatedTotalTokens: Int = estimatedInputTokens + estimatedOutputTokens, // Локальная оценка общих
+
+    // Pipeline execution metadata
+    val pipelineExecutionId: String? = null,
+    val pipelineStepIndex: Int? = null,
+    val pipelineAssistantId: String? = null
 )
 
 @Serializable

@@ -62,5 +62,7 @@ data class ChatSession(
     val messages: List<Message> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val lastAccessedAt: Long = System.currentTimeMillis(),
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
+    val pipelineExecutionId: String? = null, // ID выполнения pipeline
+    val currentPipelineStep: Int? = null // Текущий шаг в pipeline
 )
