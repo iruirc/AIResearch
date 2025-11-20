@@ -18,6 +18,7 @@ import { messagesUI, initMessagesUI } from './ui/messagesUI.js';
 import { sessionsUI, initSessionsUI } from './ui/sessionsUI.js';
 import { modalsUI } from './ui/modalsUI.js';
 import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
+import { SchedulerModal } from './ui/schedulerModal.js';
 
 // Import utilities
 import { debounce } from './utils/helpers.js';
@@ -44,6 +45,9 @@ async function initApp() {
     initMessagesUI(messagesContainer);
     initSessionsUI(sessionsList);
     initSidebarUI(sidebar, toggleSidebarButton);
+
+    // Initialize scheduler modal
+    const schedulerModal = new SchedulerModal();
 
     // Setup event listeners
     setupEventListeners();

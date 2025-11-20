@@ -7,6 +7,7 @@ import com.researchai.routes.chatRoutes
 import com.researchai.routes.compressionRoutes
 import com.researchai.routes.mcpRoutes
 import com.researchai.routes.providerRoutes
+import com.researchai.routes.schedulerRoutes
 import com.researchai.services.ClaudeService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -41,6 +42,9 @@ fun Application.configureRouting(
 
         // API роуты для MCP серверов
         mcpRoutes(appModule.mcpServerManager)
+
+        // API роуты для планировщика задач
+        schedulerRoutes(appModule.schedulerManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

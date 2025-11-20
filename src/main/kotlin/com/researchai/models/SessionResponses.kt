@@ -12,7 +12,8 @@ data class SessionListItem(
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,
-    val agentId: String? = null
+    val agentId: String? = null,
+    val scheduledTaskId: String? = null
 )
 
 /**

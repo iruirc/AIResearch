@@ -18,6 +18,7 @@ data class ChatSession(
     val createdAt: Long = System.currentTimeMillis(),
     var lastAccessedAt: Long = System.currentTimeMillis(),
     val agentId: String? = null, // ID агента, если сессия связана с агентом
+    val scheduledTaskId: String? = null, // ID задачи планировщика, если сессия связана с задачей
 
     // Поля для сжатия диалогов
     private val _archivedMessages: MutableList<Message> = mutableListOf(), // Архив сжатых сообщений

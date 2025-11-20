@@ -119,6 +119,28 @@
     gap: var(--spacing-xl);
 }
 
+/* Scheduler content */
+.scheduler-content {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.scheduler-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.scheduler-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-light);
+}
+
 .settings-actions {
     display: flex;
     gap: var(--spacing-md);

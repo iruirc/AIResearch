@@ -25,9 +25,11 @@ import com.researchai.domain.usecase.SendMessageUseCase
 import com.researchai.persistence.JsonPersistenceStorage
 import com.researchai.persistence.PersistenceManager
 import com.researchai.persistence.MCPPreferencesStorage
+import com.researchai.persistence.ScheduledTaskStorage
 import com.researchai.services.AgentManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
+import com.researchai.services.SchedulerManager
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -144,6 +146,19 @@ class AppModule(
         )
     }
 
+    // Scheduler
+    val scheduledTaskStorage: ScheduledTaskStorage by lazy {
+        ScheduledTaskStorage()
+    }
+
+    val schedulerManager: SchedulerManager by lazy {
+        SchedulerManager(
+            sessionManager = chatSessionManager,
+            sendMessageUseCase = sendMessageUseCase,
+            storage = scheduledTaskStorage
+        )
+    }
+
     // Authentication
     val userRepository: UserRepository by lazy {
         UserRepositoryImpl()
@@ -179,6 +194,7 @@ class AppModule(
      */
     fun close() {
         runBlocking {
+            schedulerManager.shutdown()
             chatSessionManager.shutdown()
             mcpServerManager.shutdown()
         }
