@@ -109,3 +109,32 @@ export function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+/**
+ * Generates a URL-friendly slug from a text string
+ * Converts text to lowercase, transliterates Cyrillic to Latin, and replaces spaces/special chars with hyphens
+ * @param {string} text - The text to convert to a slug
+ * @returns {string} URL-friendly slug
+ * @example
+ * generateSlug('AI Репетитор'); // returns 'ai-repetitor'
+ * generateSlug('Code Reviewer!!!'); // returns 'code-reviewer'
+ */
+export function generateSlug(text) {
+    // Transliteration map for Cyrillic characters
+    const translitMap = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+        'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+        'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+    };
+
+    return text
+        .toLowerCase()
+        .split('')
+        .map(char => translitMap[char] || char)
+        .join('')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/-+/g, '-');
+}

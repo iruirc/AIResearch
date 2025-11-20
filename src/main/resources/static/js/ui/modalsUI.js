@@ -41,25 +41,93 @@ export const modalsUI = {
      * Render assistants list in modal
      * @param {Array} assistants - Array of assistant objects
      * @param {Function} onAssistantClick - Callback for assistant selection
+     * @param {Function} onCreateClick - Callback for create button click
+     * @param {Function} onEditClick - Callback for edit button click
+     * @param {Function} onDeleteClick - Callback for delete button click
      */
-    renderAssistantsList(assistants, onAssistantClick) {
+    renderAssistantsList(assistants, onAssistantClick, onCreateClick, onEditClick, onDeleteClick) {
         const assistantsListElement = document.getElementById('assistantsList');
         if (!assistantsListElement) return;
 
+        assistantsListElement.innerHTML = '';
+
+        // Add create button at the top
+        const createButton = document.createElement('button');
+        createButton.className = 'create-assistant-button';
+        createButton.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Создать ассистента</span>
+        `;
+        createButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            onCreateClick();
+        });
+        assistantsListElement.appendChild(createButton);
+
         if (!assistants || assistants.length === 0) {
-            assistantsListElement.innerHTML = '<div class="assistants-loading">Нет доступных ассистентов</div>';
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'assistants-loading';
+            emptyMessage.textContent = 'Нет доступных ассистентов';
+            assistantsListElement.appendChild(emptyMessage);
             return;
         }
 
-        assistantsListElement.innerHTML = '';
         assistants.forEach(assistant => {
             const assistantItem = document.createElement('div');
             assistantItem.className = 'assistant-item';
-            assistantItem.innerHTML = `
+
+            // Debug logging
+            console.log(`Assistant: ${assistant.name}, isSystem: ${assistant.isSystem}`);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'assistant-item-content';
+            contentDiv.innerHTML = `
                 <div class="assistant-name">${assistant.name}</div>
                 <div class="assistant-description">${assistant.description}</div>
             `;
-            assistantItem.addEventListener('click', () => onAssistantClick(assistant.id));
+            contentDiv.addEventListener('click', () => onAssistantClick(assistant.id));
+
+            assistantItem.appendChild(contentDiv);
+
+            // Add action buttons for custom (non-system) assistants
+            if (!assistant.isSystem) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'assistant-item-actions';
+
+                const editButton = document.createElement('button');
+                editButton.className = 'assistant-action-button edit-button';
+                editButton.title = 'Редактировать';
+                editButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+                editButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    onEditClick(assistant);
+                });
+
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'assistant-action-button delete-button';
+                deleteButton.title = 'Удалить';
+                deleteButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    onDeleteClick(assistant);
+                });
+
+                actionsDiv.appendChild(editButton);
+                actionsDiv.appendChild(deleteButton);
+                assistantItem.appendChild(actionsDiv);
+            }
+
             assistantsListElement.appendChild(assistantItem);
         });
     },
@@ -301,5 +369,82 @@ export const modalsUI = {
         }
 
         return serverItem;
+    },
+
+    /**
+     * Open assistant form modal for create or edit
+     * @param {Object|null} assistant - Assistant object for editing, null for creating
+     */
+    openAssistantFormModal(assistant = null) {
+        const modal = document.getElementById('assistantFormModal');
+        const title = document.getElementById('assistantFormTitle');
+        const nameInput = document.getElementById('assistantName');
+        const descriptionInput = document.getElementById('assistantDescription');
+        const systemPromptInput = document.getElementById('assistantSystemPrompt');
+
+        if (assistant) {
+            // Edit mode
+            title.textContent = 'Редактировать ассистента';
+            nameInput.value = assistant.name;
+            descriptionInput.value = assistant.description || '';
+            systemPromptInput.value = assistant.systemPrompt;
+            // Store assistant ID for editing
+            modal.dataset.assistantId = assistant.id;
+            modal.dataset.mode = 'edit';
+        } else {
+            // Create mode
+            title.textContent = 'Создать ассистента';
+            nameInput.value = '';
+            descriptionInput.value = '';
+            systemPromptInput.value = '';
+            delete modal.dataset.assistantId;
+            modal.dataset.mode = 'create';
+        }
+
+        this.openModal('assistantFormModal');
+    },
+
+    /**
+     * Get assistant form data
+     * @returns {Object} Form data with name, description, systemPrompt, and mode
+     */
+    getAssistantFormData() {
+        const modal = document.getElementById('assistantFormModal');
+        const nameInput = document.getElementById('assistantName');
+        const descriptionInput = document.getElementById('assistantDescription');
+        const systemPromptInput = document.getElementById('assistantSystemPrompt');
+
+        return {
+            name: nameInput.value.trim(),
+            description: descriptionInput.value.trim(),
+            systemPrompt: systemPromptInput.value.trim(),
+            mode: modal.dataset.mode || 'create',
+            assistantId: modal.dataset.assistantId || null
+        };
+    },
+
+    /**
+     * Open delete confirmation modal
+     * @param {Object} assistant - Assistant to delete
+     * @param {Function} onConfirm - Callback when deletion is confirmed
+     */
+    openDeleteAssistantModal(assistant, onConfirm) {
+        const modal = document.getElementById('deleteAssistantModal');
+        const nameElement = document.getElementById('deleteAssistantName');
+        const confirmButton = document.getElementById('confirmDeleteAssistantButton');
+
+        nameElement.textContent = assistant.name;
+
+        // Remove old event listeners by cloning and replacing
+        const newConfirmButton = confirmButton.cloneNode(true);
+        confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+
+        // Add new event listener
+        newConfirmButton.addEventListener('click', () => {
+            onConfirm(assistant.id);
+            this.closeModal('deleteAssistantModal');
+        });
+
+        this.openModal('deleteAssistantModal');
     }
 };

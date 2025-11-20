@@ -13,6 +13,7 @@ import { messagePollingService } from './services/messagePollingService.js';
 // Import API modules
 import { sessionsApi } from './api/sessionsApi.js';
 import { mcpApi } from './api/mcpApi.js';
+import { assistantsApi } from './api/assistantsApi.js';
 
 // Import UI modules
 import { messagesUI, initMessagesUI } from './ui/messagesUI.js';
@@ -22,7 +23,7 @@ import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
 
 // Import utilities
-import { debounce } from './utils/helpers.js';
+import { debounce, generateSlug } from './utils/helpers.js';
 
 // DOM element references
 let messageInput = null;
@@ -118,6 +119,8 @@ function setupEventListeners() {
     document.getElementById('closeSettingsModal').addEventListener('click', () => modalsUI.closeModal('settingsModal'));
     document.getElementById('closeCompressionModal').addEventListener('click', () => modalsUI.closeModal('compressionModal'));
     document.getElementById('closeMcpServersModal').addEventListener('click', () => modalsUI.closeModal('mcpServersModal'));
+    document.getElementById('closeAssistantFormModal').addEventListener('click', () => modalsUI.closeModal('assistantFormModal'));
+    document.getElementById('closeDeleteAssistantModal').addEventListener('click', () => modalsUI.closeModal('deleteAssistantModal'));
 
     // Settings modal events
     document.getElementById('saveSettingsButton').addEventListener('click', handleSaveSettings);
@@ -140,6 +143,11 @@ function setupEventListeners() {
     // Compression modal events
     document.getElementById('applyCompressionButton').addEventListener('click', handleApplyCompression);
     document.getElementById('cancelCompressionButton').addEventListener('click', () => modalsUI.closeModal('compressionModal'));
+
+    // Assistant form modal events
+    document.getElementById('assistantForm').addEventListener('submit', handleSaveAssistantForm);
+    document.getElementById('cancelAssistantFormButton').addEventListener('click', () => modalsUI.closeModal('assistantFormModal'));
+    document.getElementById('cancelDeleteAssistantButton').addEventListener('click', () => modalsUI.closeModal('deleteAssistantModal'));
 
     // Close modals on background click
     window.addEventListener('click', (e) => {
@@ -416,7 +424,13 @@ async function handleSessionDelete(sessionId) {
 async function handleOpenAssistantsModal() {
     try {
         const state = appState.getState();
-        modalsUI.renderAssistantsList(state.assistants, handleAssistantSelect);
+        modalsUI.renderAssistantsList(
+            state.assistants,
+            handleAssistantSelect,
+            handleCreateAssistant,
+            handleEditAssistant,
+            handleDeleteAssistant
+        );
         modalsUI.openModal('assistantModal');
     } catch (error) {
         console.error('Error opening assistants modal:', error);
@@ -453,6 +467,98 @@ async function handleAssistantSelect(assistantId) {
     } catch (error) {
         console.error('Error starting assistant session:', error);
         alert('Ошибка при создании сессии с ассистентом');
+    }
+}
+
+/**
+ * Handle create assistant button click
+ */
+function handleCreateAssistant() {
+    modalsUI.closeModal('assistantModal');
+    modalsUI.openAssistantFormModal(null);
+}
+
+/**
+ * Handle edit assistant button click
+ * @param {Object} assistant - Assistant to edit
+ */
+function handleEditAssistant(assistant) {
+    modalsUI.closeModal('assistantModal');
+    modalsUI.openAssistantFormModal(assistant);
+}
+
+/**
+ * Handle delete assistant button click
+ * @param {Object} assistant - Assistant to delete
+ */
+function handleDeleteAssistant(assistant) {
+    modalsUI.openDeleteAssistantModal(assistant, async (assistantId) => {
+        try {
+            await assistantsApi.deleteAssistant(assistantId);
+
+            // Reload assistants list
+            await settingsService.loadAssistants();
+
+            console.log(`Assistant ${assistantId} deleted successfully`);
+            alert('Ассистент успешно удалён');
+        } catch (error) {
+            console.error('Error deleting assistant:', error);
+            alert(`Ошибка при удалении ассистента: ${error.message}`);
+        }
+    });
+}
+
+/**
+ * Handle save assistant form
+ * @param {Event} e - Form submit event
+ */
+async function handleSaveAssistantForm(e) {
+    e.preventDefault();
+
+    try {
+        const formData = modalsUI.getAssistantFormData();
+
+        // Validate
+        if (!formData.name || !formData.systemPrompt) {
+            alert('Пожалуйста, заполните обязательные поля');
+            return;
+        }
+
+        if (formData.mode === 'create') {
+            // Generate ID from name
+            const id = generateSlug(formData.name);
+
+            // Create assistant
+            await assistantsApi.createAssistant(
+                id,
+                formData.name,
+                formData.description,
+                formData.systemPrompt
+            );
+
+            console.log(`Assistant ${id} created successfully`);
+            alert('Ассистент успешно создан');
+        } else {
+            // Update assistant
+            await assistantsApi.updateAssistant(
+                formData.assistantId,
+                formData.name,
+                formData.description,
+                formData.systemPrompt
+            );
+
+            console.log(`Assistant ${formData.assistantId} updated successfully`);
+            alert('Ассистент успешно обновлён');
+        }
+
+        // Reload assistants list
+        await settingsService.loadAssistants();
+
+        // Close form modal
+        modalsUI.closeModal('assistantFormModal');
+    } catch (error) {
+        console.error('Error saving assistant:', error);
+        alert(`Ошибка при сохранении ассистента: ${error.message}`);
     }
 }
 

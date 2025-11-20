@@ -66,5 +66,97 @@ export const assistantsApi = {
         }
 
         return await response.json();
+    },
+
+    /**
+     * Create a new custom assistant
+     * @async
+     * @param {string} id - The assistant identifier (slug)
+     * @param {string} name - Display name of the assistant
+     * @param {string} description - Brief description of the assistant
+     * @param {string} systemPrompt - System prompt defining assistant behavior
+     * @returns {Promise<Object>} Created assistant data
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const assistant = await assistantsApi.createAssistant('code-reviewer', 'Code Reviewer', 'Reviews code', 'You are...');
+     */
+    async createAssistant(id, name, description, systemPrompt) {
+        const response = await fetchWithTimeout(
+            API_CONFIG.ASSISTANTS,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id, name, description, systemPrompt }),
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to create assistant: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
+     * Update an existing custom assistant
+     * @async
+     * @param {string} id - The assistant identifier
+     * @param {string} name - Updated display name
+     * @param {string} description - Updated description
+     * @param {string} systemPrompt - Updated system prompt
+     * @returns {Promise<Object>} Updated assistant data
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const assistant = await assistantsApi.updateAssistant('code-reviewer', 'Senior Code Reviewer', 'Reviews code...', 'You are...');
+     */
+    async updateAssistant(id, name, description, systemPrompt) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.ASSISTANTS}/${id}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id, name, description, systemPrompt }),
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to update assistant: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
+     * Delete a custom assistant
+     * @async
+     * @param {string} id - The assistant identifier
+     * @returns {Promise<Object>} Deletion confirmation
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await assistantsApi.deleteAssistant('code-reviewer');
+     */
+    async deleteAssistant(id) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.ASSISTANTS}/${id}`,
+            {
+                method: 'DELETE',
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to delete assistant: ${response.status}`);
+        }
+
+        return await response.json();
     }
 };
