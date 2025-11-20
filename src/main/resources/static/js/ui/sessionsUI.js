@@ -86,6 +86,7 @@ export const sessionsUI = {
         sessionItem.className = 'session-item';
         sessionItem.dataset.sessionId = session.id;
         sessionItem.dataset.agentId = session.agentId || 'null';
+        sessionItem.dataset.scheduledTaskId = session.scheduledTaskId || 'null';
 
         if (session.id === currentSessionId) {
             sessionItem.classList.add('active');
@@ -93,16 +94,30 @@ export const sessionsUI = {
 
         const title = session.title || 'Новый чат';
         const timeAgo = getTimeAgo(session.lastAccessedAt);
+        const isScheduledTask = session.scheduledTaskId && session.scheduledTaskId !== 'null';
         const isAgentChat = session.agentId && session.agentId !== 'null';
 
         // Choose icon based on chat type
-        const chatIcon = isAgentChat
-            ? `<svg class="session-icon session-icon-agent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        let chatIcon;
+        if (isScheduledTask) {
+            // Task icon (calendar)
+            chatIcon = `<svg class="session-icon session-icon-task" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>`;
+        } else if (isAgentChat) {
+            // Agent icon (user)
+            chatIcon = `<svg class="session-icon session-icon-agent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
-              </svg>`
-            : `<svg class="session-icon session-icon-simple" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              </svg>`;
+        } else {
+            // Simple chat icon (message bubble)
+            chatIcon = `<svg class="session-icon session-icon-simple" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>`;
+        }
 
         sessionItem.innerHTML = `
             ${chatIcon}
@@ -191,7 +206,7 @@ export const sessionsUI = {
 
     /**
      * Filter sessions by category
-     * @param {string} category - Category to filter by ('all', 'simple', 'agents')
+     * @param {string} category - Category to filter by ('all', 'simple', 'agents', 'tasks')
      * @param {Array} sessions - Array of all sessions
      */
     filterSessions(category, sessions) {
@@ -208,6 +223,7 @@ export const sessionsUI = {
 
         sessionItems.forEach(item => {
             const agentId = item.dataset.agentId;
+            const scheduledTaskId = item.dataset.scheduledTaskId;
             let shouldShow = false;
 
             switch (category) {
@@ -215,10 +231,14 @@ export const sessionsUI = {
                     shouldShow = true;
                     break;
                 case 'simple':
-                    shouldShow = !agentId || agentId === 'null';
+                    shouldShow = (!agentId || agentId === 'null') &&
+                                 (!scheduledTaskId || scheduledTaskId === 'null');
                     break;
                 case 'agents':
                     shouldShow = agentId && agentId !== 'null';
+                    break;
+                case 'tasks':
+                    shouldShow = scheduledTaskId && scheduledTaskId !== 'null';
                     break;
             }
 
@@ -238,16 +258,19 @@ export const sessionsUI = {
         if (!sessions) return;
 
         const allCount = sessions.length;
-        const simpleCount = sessions.filter(s => !s.agentId).length;
+        const simpleCount = sessions.filter(s => !s.agentId && !s.scheduledTaskId).length;
         const agentsCount = sessions.filter(s => s.agentId).length;
+        const tasksCount = sessions.filter(s => s.scheduledTaskId).length;
 
         const allCountEl = document.getElementById('allCount');
         const simpleCountEl = document.getElementById('simpleCount');
         const agentsCountEl = document.getElementById('agentsCount');
+        const tasksCountEl = document.getElementById('tasksCount');
 
         if (allCountEl) allCountEl.textContent = allCount;
         if (simpleCountEl) simpleCountEl.textContent = simpleCount;
         if (agentsCountEl) agentsCountEl.textContent = agentsCount;
+        if (tasksCountEl) tasksCountEl.textContent = tasksCount;
     },
 
     /**
@@ -287,6 +310,8 @@ export const sessionsUI = {
                 return 'Нет простых чатов';
             case 'agents':
                 return 'Нет чатов с агентами';
+            case 'tasks':
+                return 'Нет запланированных задач';
             default:
                 return 'Нет активных чатов';
         }

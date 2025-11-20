@@ -64,6 +64,11 @@
     opacity: 0.8;
 }
 
+.session-icon-task {
+    color: #ea8b33;
+    opacity: 0.8;
+}
+
 .session-item:hover .session-icon {
     opacity: 1;
 }
