@@ -83,14 +83,18 @@ The codebase uses a **Strategy Pattern** with Clean Architecture principles to s
 
 The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container that initializes:
 - HTTP client with timeouts (5 min request, 10 sec connect)
-- Persistence layer (PersistenceManager, JsonPersistenceStorage)
+- Persistence layer (PersistenceManager, JsonPersistenceStorage, ScheduledTaskStorage)
 - Provider factory
 - Repositories (ConfigRepository, SessionRepository)
 - Use cases (SendMessageUseCase, GetModelsUseCase)
-- Legacy services (ClaudeService, ChatSessionManager, AgentManager)
+- Services (ChatSessionManager, AgentManager, SchedulerManager)
+- Legacy services (ClaudeService)
 
 **Important**: Close the AppModule on application shutdown to:
+- Shutdown SchedulerManager (stop all tasks, save state)
 - Save all pending sessions to disk
+- Shutdown ChatSessionManager
+- Shutdown MCPServerManager
 - Clean up HTTP client resources
 - Gracefully shutdown PersistenceManager
 
@@ -98,7 +102,8 @@ The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container t
 
 Sessions are managed by `ChatSessionManager` with automatic persistence:
 - Each session maintains conversation history as `List<Message>`
-- Sessions can be associated with agents (for custom system prompts)
+- Sessions can be associated with agents (for custom system prompts) OR scheduled tasks
+- **Mutual exclusivity**: A session has EITHER `agentId` OR `scheduledTaskId` (or neither)
 - Messages store metadata (model, tokens used, response time)
 - **Automatic persistence**: Sessions are saved to disk and restored on restart
 
@@ -132,7 +137,7 @@ The persistence system uses a **Hybrid approach** (JSON + in-memory cache):
 - Message history
 - Archived messages (from compression)
 - Compression configuration and count
-- Session metadata (created/accessed timestamps, agent ID)
+- Session metadata (created/accessed timestamps, agent ID, scheduled task ID)
 
 ### API Versioning
 
@@ -285,16 +290,156 @@ GET /compression/archived/{sessionId}
 
 Original messages are preserved in `archivedMessages` for audit/review purposes.
 
+## Task Scheduler
+
+The application supports **automated recurring chat tasks** via the Task Scheduler feature.
+
+### Overview
+
+The Task Scheduler allows creating scheduled tasks that automatically send messages to AI providers at configurable intervals. Each task creates a dedicated chat session and executes periodically.
+
+### Architecture Components
+
+1. **Domain Layer** (`com.researchai.scheduler`):
+   - `ScheduledTask` interface - Base contract for scheduled tasks
+   - `TaskScheduler<T>` abstract class - Coroutine-based scheduler with lifecycle management
+   - `ScheduledChatTask` data class - Task configuration with hybrid provider/model settings
+   - `ChatTaskScheduler` concrete class - Chat message execution implementation
+
+2. **Service Layer** (`com.researchai.services`):
+   - `SchedulerManager` - Central manager for all task schedulers
+   - Handles lifecycle: creation, start, stop, delete
+   - Auto-loads tasks from storage on startup
+
+3. **Persistence Layer** (`com.researchai.persistence`):
+   - `ScheduledTaskStorage` - JSON-based task persistence
+   - Storage directory: `data/scheduled_tasks/`
+   - Uses atomic file writes to prevent corruption
+
+### Key Features
+
+- **Recurring Execution**: Tasks run at user-defined intervals (minimum 10 seconds)
+- **Immediate Execution**: Optional first execution on task creation
+- **Hybrid Configuration**: Global provider/model settings with per-task overrides
+- **Graceful Error Handling**: Errors displayed in chat without stopping scheduler
+- **Session Integration**: Automatic session creation with `scheduledTaskId` linkage
+- **Persistent Storage**: Tasks survive application restarts
+- **Full Lifecycle**: Create, start, stop, delete operations via REST API
+
+### API Endpoints
+
+**Task Management:**
+- `POST /scheduler/tasks` - Create new scheduled task
+- `GET /scheduler/tasks` - List all tasks
+- `GET /scheduler/tasks/{id}` - Get task details
+- `POST /scheduler/tasks/{id}/stop` - Pause task execution
+- `POST /scheduler/tasks/{id}/start` - Resume task execution
+- `DELETE /scheduler/tasks/{id}` - Delete task and associated session
+
+**Create Task Request:**
+```json
+{
+  "title": "Daily Market Summary",
+  "taskRequest": "Provide market summary",
+  "intervalSeconds": 86400,
+  "executeImmediately": true,
+  "providerId": "CLAUDE",
+  "model": "claude-sonnet-4-5"
+}
+```
+
+### Lifecycle Management
+
+**On Application Start:**
+1. `SchedulerManager` initialized by `AppModule`
+2. Loads all tasks from `data/scheduled_tasks/`
+3. Creates `ChatTaskScheduler` instances
+4. Starts schedulers (without calling `initialize()` - sessions exist)
+
+**On Application Shutdown:**
+1. `AppModule.close()` calls `SchedulerManager.shutdown()`
+2. All schedulers stopped
+3. All tasks saved to disk
+4. Coroutine scopes cancelled
+
+### Integration with Sessions
+
+Sessions are linked to tasks via `scheduledTaskId` field:
+
+```kotlin
+data class ChatSession(
+    val id: String,
+    val agentId: String? = null,
+    val scheduledTaskId: String? = null,  // Links to task
+    // ...
+)
+```
+
+**Mutual Exclusivity:**
+- A session can have EITHER `agentId` OR `scheduledTaskId` (or neither)
+- When task is deleted, associated session is also deleted
+- When session is manually deleted, task becomes orphaned (will fail on execution)
+
+### Error Handling Strategy
+
+Execution errors are handled gracefully:
+
+```kotlin
+override suspend fun onTaskError(error: Exception) {
+    val errorMessage = """
+        ⚠️ Ошибка выполнения задачи:
+        ${error.message}
+        Следующая попытка через ${formatInterval(task.intervalSeconds)}
+    """.trimIndent()
+
+    sessionManager.addMessageToSession(sessionId, MessageRole.ASSISTANT, errorMessage)
+}
+```
+
+- Errors posted to chat as messages
+- Scheduler continues running
+- Next execution attempted after interval
+- No automatic task termination
+
+### Frontend Integration
+
+**UI Components:**
+- Scheduler button in sidebar
+- Modal form for task creation
+- "Задачи" category filter for task sessions
+- Task icon in session list
+
+**JavaScript Modules:**
+- `static/js/api/schedulerApi.js` - API client
+- `static/js/ui/schedulerModal.js` - Modal UI logic
+
+### Configuration
+
+**Minimum Interval:** 10 seconds (enforced in backend and frontend)
+
+**Provider/Model Configuration:**
+- `providerId = null, model = null` → Uses global settings
+- `providerId = CLAUDE, model = null` → Uses Claude with global model
+- `providerId = CLAUDE, model = "opus"` → Uses Claude Opus specifically
+
+### Important Notes
+
+- **Persistence**: Tasks are automatically saved to `data/scheduled_tasks/` directory
+- **Auto-loading**: Tasks are restored and started on application restart
+- **Graceful Shutdown**: Always use proper shutdown to save all tasks
+- **Documentation**: See `Documents/TASK_SCHEDULER.md` for comprehensive details
+
 ## Important Notes
 
 - **No tests**: The project currently has no test suite
 - **Session persistence**: Sessions are automatically saved to `data/sessions/` directory
+- **Task persistence**: Scheduled tasks are automatically saved to `data/scheduled_tasks/` directory
 - **Main application class**: Entry point is `com.researchai.ApplicationKt` (Application.kt)
 - **Java version**: Requires Java 17+
 - **Static resources**: Web UI files are in `src/main/resources/static/`
 - **CORS**: Enabled for all origins with `anyHost()`
 - **Request timeout**: HTTP client has 5-minute timeout for long AI responses
-- **Graceful shutdown**: Always use proper shutdown to save all sessions
+- **Graceful shutdown**: Always use proper shutdown to save all sessions and tasks
 
 
 ## Tasks

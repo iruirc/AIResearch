@@ -67,7 +67,34 @@ Contains:
 
 ---
 
-### 3. ARCHITECTURE_DIAGRAMS.md (42 KB) - VISUAL REPRESENTATIONS
+### 3. TASK_SCHEDULER.md (90 KB) - COMPREHENSIVE SCHEDULER DOCUMENTATION
+**Complete Technical Documentation for Task Scheduler Feature**
+
+Best for:
+- Understanding task scheduling architecture
+- Learning how to create and manage scheduled tasks
+- API endpoint reference for scheduler operations
+- Frontend integration details
+- Troubleshooting scheduler issues
+- Planning scheduler enhancements
+
+Contains:
+- Complete architecture overview with diagrams
+- Core component documentation (TaskScheduler, SchedulerManager, etc.)
+- Full REST API reference with examples
+- Frontend integration guide (modal, API client, UI)
+- Persistence layer details (JSON storage, atomic writes)
+- Lifecycle management (creation, execution, shutdown)
+- Error handling strategies
+- Security considerations
+- Future improvement suggestions
+- 10 usage examples with cURL commands
+
+**Read this for complete understanding of the Task Scheduler feature.**
+
+---
+
+### 4. ARCHITECTURE_DIAGRAMS.md (42 KB) - VISUAL REPRESENTATIONS
 **ASCII Diagrams for Visual Learners**
 
 Best for:
@@ -137,6 +164,12 @@ Contains 9 detailed ASCII diagrams:
 2. Read: CODEBASE_ANALYSIS.md (section 8)
 3. View: ARCHITECTURE_DIAGRAMS.md (diagram 9)
 
+### Understanding Task Scheduler
+1. Read: TASK_SCHEDULER.md (Overview and Architecture sections)
+2. Read: TASK_SCHEDULER.md (Core Components section)
+3. Read: TASK_SCHEDULER.md (API Endpoints for integration)
+4. Read: TASK_SCHEDULER.md (Usage Examples for practical use)
+
 ---
 
 ## Key Takeaways
@@ -196,10 +229,11 @@ All documentation files are in the project root:
 |----------|------|----------|------|
 | ARCHITECTURE_SUMMARY.md | 14 KB | 15 | Overview |
 | CODEBASE_ANALYSIS.md | 24 KB | 11 | Technical |
+| TASK_SCHEDULER.md | 90 KB | 12 | Feature Doc |
 | ARCHITECTURE_DIAGRAMS.md | 42 KB | 9 | Visual |
 | DOCUMENTATION_INDEX.md | This file | Reference |
 
-**Total Documentation:** ~80 KB of comprehensive analysis
+**Total Documentation:** ~170 KB of comprehensive analysis
 
 ---
 
