@@ -244,12 +244,15 @@
 }
 
 .assistant-action-button.delete-button {
-    background: #e53e3e;
-    color: white;
+    font-size: 16px;
+    line-height: 1;
+    background: transparent !important;
+    color: var(--text-muted);
 }
 
 .assistant-action-button.delete-button:hover {
-    background: #c53030;
+    background: rgba(229, 62, 62, 0.1) !important;
+    color: #e53e3e;
 }
 
 /* Assistant form */
@@ -306,7 +309,7 @@
     justify-content: flex-end;
 }
 
-.delete-button {
+.delete-confirmation-actions .delete-button {
     padding: 10px var(--spacing-xl);
     border: none;
     border-radius: var(--radius-md);
@@ -319,7 +322,7 @@
     transition: all var(--transition-fast);
 }
 
-.delete-button:hover {
+.delete-confirmation-actions .delete-button:hover {
     background: #c53030;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(229, 62, 62, 0.3);

@@ -18,7 +18,7 @@ import { assistantsApi } from './api/assistantsApi.js';
 // Import UI modules
 import { messagesUI, initMessagesUI } from './ui/messagesUI.js';
 import { sessionsUI, initSessionsUI } from './ui/sessionsUI.js';
-import { modalsUI } from './ui/modalsUI.js';
+import { modalsUI } from './ui/modalsUI.js?v=3';
 import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
 

@@ -100,7 +100,8 @@ data class CopySessionResponse(
 data class AssistantListItem(
     val id: String,
     val name: String,
-    val description: String
+    val description: String,
+    val isSystem: Boolean = false
 )
 
 /**

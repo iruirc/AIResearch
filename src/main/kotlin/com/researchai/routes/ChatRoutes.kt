@@ -359,7 +359,8 @@ fun Route.chatRoutes(
                     AssistantListItem(
                         id = assistant.id,
                         name = assistant.name,
-                        description = assistant.description
+                        description = assistant.description,
+                        isSystem = assistant.isSystem
                     )
                 }
                 call.respond(AssistantListResponse(assistants = assistantList))
