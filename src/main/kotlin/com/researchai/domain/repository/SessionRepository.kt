@@ -12,7 +12,7 @@ interface SessionRepository {
      */
     suspend fun createSession(
         providerId: ProviderType,
-        agentId: String? = null,
+        assistantId: String? = null,
         metadata: Map<String, String> = emptyMap()
     ): Result<ChatSession>
 
@@ -58,7 +58,7 @@ interface SessionRepository {
 data class ChatSession(
     val id: String,
     val providerId: ProviderType,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val messages: List<Message> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val lastAccessedAt: Long = System.currentTimeMillis(),

@@ -26,7 +26,7 @@ import com.researchai.persistence.JsonPersistenceStorage
 import com.researchai.persistence.PersistenceManager
 import com.researchai.persistence.MCPPreferencesStorage
 import com.researchai.persistence.ScheduledTaskStorage
-import com.researchai.services.AgentManager
+import com.researchai.services.AssistantManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
 import com.researchai.services.SchedulerManager
@@ -86,8 +86,8 @@ class AppModule(
         ChatSessionManager(persistenceManager)
     }
 
-    val agentManager: AgentManager by lazy {
-        AgentManager()
+    val assistantManager: AssistantManager by lazy {
+        AssistantManager()
     }
 
     // Repositories
@@ -126,7 +126,7 @@ class AppModule(
             providerFactory = providerFactory,
             sessionRepository = sessionRepository,
             configRepository = configRepository,
-            agentManager = agentManager,
+            assistantManager = assistantManager,
             mcpOrchestrationService = mcpOrchestrationService
         )
     }

@@ -12,7 +12,7 @@ data class SessionListItem(
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val scheduledTaskId: String? = null
 )
 
@@ -94,38 +94,38 @@ data class CopySessionResponse(
 )
 
 /**
- * Информация об агенте для отображения
+ * Информация об ассистенте для отображения
  */
 @Serializable
-data class AgentListItem(
+data class AssistantListItem(
     val id: String,
     val name: String,
     val description: String
 )
 
 /**
- * Список всех доступных агентов
+ * Список всех доступных ассистентов
  */
 @Serializable
-data class AgentListResponse(
-    val agents: List<AgentListItem>
+data class AssistantListResponse(
+    val assistants: List<AssistantListItem>
 )
 
 /**
- * Запрос на создание сессии с агентом
+ * Запрос на создание сессии с ассистентом
  */
 @Serializable
-data class CreateAgentSessionRequest(
-    val agentId: String
+data class CreateAssistantSessionRequest(
+    val assistantId: String
 )
 
 /**
- * Ответ на создание сессии с агентом
+ * Ответ на создание сессии с ассистентом
  */
 @Serializable
-data class CreateAgentSessionResponse(
+data class CreateAssistantSessionResponse(
     val sessionId: String,
-    val agentName: String,
+    val assistantName: String,
     val initialMessage: String
 )
 

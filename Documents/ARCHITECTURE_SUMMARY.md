@@ -22,7 +22,7 @@ ResearchAI is a Ktor-based REST API server that acts as a bridge between a front
 Main endpoints:
 - `POST /chat` - Process user message and get Claude response
 - `GET/DELETE /sessions/*` - Manage chat sessions
-- `GET /agents/*` - List and start agent sessions
+- `GET /assistants/*` - List and start agent sessions
 - `GET /models` - List available Claude models
 - `GET /config` - Get current configuration
 
@@ -33,7 +33,7 @@ Main endpoints:
 |---------|---------|
 | `ClaudeService` | Makes HTTP requests to Claude API |
 | `ChatSessionManager` | Stores and manages chat sessions (in-memory) |
-| `AgentManager` | Manages agent definitions and system prompts |
+| `AssistantManager` | Manages agent definitions and system prompts |
 | `ClaudeMessageFormatter` | Pre/post-processes messages for different formats |
 
 ### 3. Data Models
@@ -98,14 +98,14 @@ Post-processing: Cleans markdown blocks, validates, and formats output
 - Optional agent association for personalized behavior
 
 ### Agent System
-Two built-in agents:
+Two built-in assistants:
 1. **Greeting Assistant**: Simple welcoming agent
 2. **AI Tutor**: Complex multi-stage educational assistant
    - Gathers information about learner goals and level
    - Proposes learning plan
    - Provides structured educational content
 
-Custom agents can be registered at runtime.
+Custom assistants can be registered at runtime.
 
 ### HTTP Client Configuration
 - Engine: CIO (Coroutine I/O)
@@ -168,7 +168,7 @@ Custom agents can be registered at runtime.
 ```
 1. Create Session
    - User sends first message without sessionId
-   - OR explicitly calls POST /agents/start
+   - OR explicitly calls POST /assistants/start
    - New UUID generated
    - Session stored in ChatSessionManager
 
@@ -464,7 +464,7 @@ src/main/kotlin/
 ├── routes/
 │   └── ChatRoutes.kt                # HTTP endpoint handlers
 └── services/
-    ├── AgentManager.kt              # Agent management
+    ├── AssistantManager.kt              # Agent management
     ├── ChatSessionManager.kt        # Session management
     ├── ClaudeMessageFormatter.kt    # Message formatting
     └── ClaudeService.kt             # Claude API integration

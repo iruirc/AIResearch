@@ -18,16 +18,16 @@ class SessionRepositoryImpl(
 
     override suspend fun createSession(
         providerId: ProviderType,
-        agentId: String?,
+        assistantId: String?,
         metadata: Map<String, String>
     ): Result<ChatSession> {
         return try {
-            val sessionId = sessionManager.createSession(agentId)
+            val sessionId = sessionManager.createSession(assistantId)
 
             val session = ChatSession(
                 id = sessionId,
                 providerId = providerId,
-                agentId = agentId,
+                assistantId = assistantId,
                 messages = emptyList(),
                 metadata = metadata
             )
@@ -49,7 +49,7 @@ class SessionRepositoryImpl(
             val session = ChatSession(
                 id = legacySession.id,
                 providerId = ProviderType.CLAUDE, // Default для legacy сессий
-                agentId = legacySession.agentId,
+                assistantId = legacySession.assistantId,
                 messages = messages,
                 createdAt = legacySession.createdAt,
                 lastAccessedAt = legacySession.lastAccessedAt
@@ -70,7 +70,7 @@ class SessionRepositoryImpl(
                 ChatSession(
                     id = info.id,
                     providerId = ProviderType.CLAUDE,
-                    agentId = info.agentId,
+                    assistantId = info.assistantId,
                     messages = legacySession.messages, // ChatSession теперь использует domain.Message напрямую
                     createdAt = info.createdAt,
                     lastAccessedAt = info.lastAccessedAt

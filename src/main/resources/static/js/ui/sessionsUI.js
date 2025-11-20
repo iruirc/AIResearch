@@ -85,7 +85,7 @@ export const sessionsUI = {
         const sessionItem = document.createElement('div');
         sessionItem.className = 'session-item';
         sessionItem.dataset.sessionId = session.id;
-        sessionItem.dataset.agentId = session.agentId || 'null';
+        sessionItem.dataset.assistantId = session.assistantId || 'null';
         sessionItem.dataset.scheduledTaskId = session.scheduledTaskId || 'null';
 
         if (session.id === currentSessionId) {
@@ -95,7 +95,7 @@ export const sessionsUI = {
         const title = session.title || 'Новый чат';
         const timeAgo = getTimeAgo(session.lastAccessedAt);
         const isScheduledTask = session.scheduledTaskId && session.scheduledTaskId !== 'null';
-        const isAgentChat = session.agentId && session.agentId !== 'null';
+        const isAssistantChat = session.assistantId && session.assistantId !== 'null';
 
         // Choose icon based on chat type
         let chatIcon;
@@ -107,9 +107,9 @@ export const sessionsUI = {
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>`;
-        } else if (isAgentChat) {
-            // Agent icon (user)
-            chatIcon = `<svg class="session-icon session-icon-agent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        } else if (isAssistantChat) {
+            // Assistant icon (user)
+            chatIcon = `<svg class="session-icon session-icon-assistant" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
               </svg>`;
         } else {
@@ -222,7 +222,7 @@ export const sessionsUI = {
         let visibleCount = 0;
 
         sessionItems.forEach(item => {
-            const agentId = item.dataset.agentId;
+            const assistantId = item.dataset.assistantId;
             const scheduledTaskId = item.dataset.scheduledTaskId;
             let shouldShow = false;
 
@@ -231,11 +231,11 @@ export const sessionsUI = {
                     shouldShow = true;
                     break;
                 case 'simple':
-                    shouldShow = (!agentId || agentId === 'null') &&
+                    shouldShow = (!assistantId || assistantId === 'null') &&
                                  (!scheduledTaskId || scheduledTaskId === 'null');
                     break;
                 case 'agents':
-                    shouldShow = agentId && agentId !== 'null';
+                    shouldShow = assistantId && assistantId !== 'null';
                     break;
                 case 'tasks':
                     shouldShow = scheduledTaskId && scheduledTaskId !== 'null';
@@ -258,18 +258,18 @@ export const sessionsUI = {
         if (!sessions) return;
 
         const allCount = sessions.length;
-        const simpleCount = sessions.filter(s => !s.agentId && !s.scheduledTaskId).length;
-        const agentsCount = sessions.filter(s => s.agentId).length;
+        const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId).length;
+        const assistantsCount = sessions.filter(s => s.assistantId).length;
         const tasksCount = sessions.filter(s => s.scheduledTaskId).length;
 
         const allCountEl = document.getElementById('allCount');
         const simpleCountEl = document.getElementById('simpleCount');
-        const agentsCountEl = document.getElementById('agentsCount');
+        const assistantsCountEl = document.getElementById('assistantsCount');
         const tasksCountEl = document.getElementById('tasksCount');
 
         if (allCountEl) allCountEl.textContent = allCount;
         if (simpleCountEl) simpleCountEl.textContent = simpleCount;
-        if (agentsCountEl) agentsCountEl.textContent = agentsCount;
+        if (assistantsCountEl) assistantsCountEl.textContent = assistantsCount;
         if (tasksCountEl) tasksCountEl.textContent = tasksCount;
     },
 
@@ -309,7 +309,7 @@ export const sessionsUI = {
             case 'simple':
                 return 'Нет простых чатов';
             case 'agents':
-                return 'Нет чатов с агентами';
+                return 'Нет чатов с ассистентами';
             case 'tasks':
                 return 'Нет запланированных задач';
             default:

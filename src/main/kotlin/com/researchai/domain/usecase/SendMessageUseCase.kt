@@ -6,7 +6,7 @@ import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ChatSession
 import com.researchai.domain.repository.ConfigRepository
 import com.researchai.domain.repository.SessionRepository
-import com.researchai.services.AgentManager
+import com.researchai.services.AssistantManager
 import com.researchai.data.provider.claude.ClaudeMapper
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -22,7 +22,7 @@ class SendMessageUseCase(
     private val providerFactory: AIProviderFactory,
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigRepository,
-    private val agentManager: AgentManager,
+    private val assistantManager: AssistantManager,
     private val mcpOrchestrationService: MCPOrchestrationService? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
@@ -78,15 +78,15 @@ class SendMessageUseCase(
 
             logger.info("Message history retrieved: ${messages.size} messages")
 
-            // 6. Получаем системный промпт от агента если есть
-            val systemPrompt = session.agentId?.let { agentId ->
-                logger.info("Retrieving systemPrompt for agent: $agentId")
-                val agent = agentManager.getAgent(agentId)
-                if (agent != null) {
-                    logger.info("Agent found: ${agent.name}, systemPrompt length: ${agent.systemPrompt.length}")
-                    agent.systemPrompt
+            // 6. Получаем системный промпт от ассистента если есть
+            val systemPrompt = session.assistantId?.let { assistantId ->
+                logger.info("Retrieving systemPrompt for assistant: $assistantId")
+                val assistant = assistantManager.getAssistant(assistantId)
+                if (assistant != null) {
+                    logger.info("Assistant found: ${assistant.name}, systemPrompt length: ${assistant.systemPrompt.length}")
+                    assistant.systemPrompt
                 } else {
-                    logger.warn("Agent not found: $agentId")
+                    logger.warn("Assistant not found: $assistantId")
                     null
                 }
             }

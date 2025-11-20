@@ -45,8 +45,8 @@ button:disabled {
     flex-shrink: 0;
 }
 
-/* Agents button (sidebar) */
-.agents-button-sidebar {
+/* Assistants button (sidebar) */
+.assistants-button-sidebar {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -61,16 +61,16 @@ button:disabled {
     font-weight: 600;
 }
 
-.agents-button-sidebar:hover {
+.assistants-button-sidebar:hover {
     background: var(--bg-gray);
     transform: translateX(2px);
 }
 
-.agents-button-sidebar:active {
+.assistants-button-sidebar:active {
     background: var(--bg-gray);
 }
 
-.agents-button-sidebar svg {
+.assistants-button-sidebar svg {
     flex-shrink: 0;
 }
 
@@ -224,8 +224,8 @@ button:disabled {
     flex-shrink: 0;
 }
 
-/* Agents button (header) */
-.agents-button {
+/* Assistants button (header) */
+.assistants-button {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -238,16 +238,16 @@ button:disabled {
     font-weight: 500;
 }
 
-.agents-button:hover {
+.assistants-button:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-1px);
 }
 
-.agents-button:active {
+.assistants-button:active {
     transform: translateY(0);
 }
 
-.agents-button svg {
+.assistants-button svg {
     flex-shrink: 0;
 }
 

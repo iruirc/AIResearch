@@ -92,7 +92,7 @@ src/main/resources/static/
     │   ├── chatApi.js            # Chat API
     │   ├── sessionsApi.js        # Sessions API
     │   ├── settingsApi.js        # Settings/Config API
-    │   ├── agentsApi.js          # Agents API
+    │   ├── assistantsApi.js          # Assistants API
     │   ├── compressionApi.js     # Compression API
     │   └── mcpApi.js             # MCP Servers API
     │
@@ -169,7 +169,7 @@ import { chatApi } from './api/chatApi.js';
 │      ├─ settingsService.loadConfig()                        │
 │      ├─ sessionService.loadSessions()                       │
 │      ├─ settingsService.loadProviders()                     │
-│      ├─ settingsService.loadAgents()                        │
+│      ├─ settingsService.loadAssistants()                        │
 │      └─ settingsService.loadMcpServers()                    │
 │                                                              │
 │  Event Handlers:                                             │
@@ -179,7 +179,7 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ handleSessionRename()                                   │
 │  ├─ handleSessionDelete()                                   │
 │  ├─ handleSessionCompress()                                 │
-│  ├─ handleOpenAgentsModal()                                 │
+│  ├─ handleOpenAssistantsModal()                                 │
 │  ├─ handleOpenSettingsModal()                               │
 │  └─ handleOpenMcpServersModal()                             │
 │                                                              │
@@ -199,7 +199,7 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ loadingMessageId: string|null                           │
 │  ├─ currentSessionId: string|null                           │
 │  ├─ sessions: Array<Session>                                │
-│  ├─ agents: Array<Agent>                                    │
+│  ├─ assistants: Array<Agent>                                    │
 │  ├─ providers: Array<Provider>                              │
 │  ├─ models: Array<Model>                                    │
 │  ├─ mcpServers: Array<MCPServer>                            │
@@ -216,7 +216,7 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ setLoading(value)              # + notify              │
 │  ├─ setCurrentSessionId(value)    # + notify              │
 │  ├─ setSessions(value)             # + notify              │
-│  ├─ setAgents(value)               # + notify              │
+│  ├─ setAssistants(value)               # + notify              │
 │  ├─ setProviders(value)            # + notify              │
 │  ├─ setModels(value)               # + notify              │
 │  ├─ setMcpServers(value)           # + notify              │
@@ -264,8 +264,8 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ sessionsApi.getSessions()                               │
 │  └─ appState.setSessions(sessions)                          │
 │                                                              │
-│  async createSession(agentId?)                               │
-│  ├─ sessionsApi.createSession(agentId)                      │
+│  async createSession(assistantId?)                               │
+│  ├─ sessionsApi.createSession(assistantId)                      │
 │  ├─ appState.setCurrentSessionId(sessionId)                 │
 │  └─ loadSessions() # Обновить список                        │
 │                                                              │
@@ -291,8 +291,8 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ sessionsApi.copySession(sessionId)                      │
 │  └─ loadSessions()                                           │
 │                                                              │
-│  async startAgentSession(agentId)                            │
-│  ├─ createSession(agentId)                                  │
+│  async startAgentSession(assistantId)                            │
+│  ├─ createSession(assistantId)                                  │
 │  └─ return sessionId                                         │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -318,9 +318,9 @@ import { chatApi } from './api/chatApi.js';
 │  ├─ appState.setModels(models)                              │
 │  └─ return models                                            │
 │                                                              │
-│  async loadAgents()                                          │
-│  ├─ agentsApi.getAgents()                                   │
-│  └─ appState.setAgents(agents)                              │
+│  async loadAssistants()                                          │
+│  ├─ assistantsApi.getAssistants()                                   │
+│  └─ appState.setAssistants(assistants)                              │
 │                                                              │
 │  async loadMcpServers()                                      │
 │  ├─ mcpApi.getMcpServers()                                  │
@@ -378,7 +378,7 @@ import { chatApi } from './api/chatApi.js';
 │                                                              │
 │  async getSessions()         → GET /sessions                 │
 │  async getSession(id)        → GET /sessions/:id             │
-│  async createSession(agentId) → POST /sessions               │
+│  async createSession(assistantId) → POST /sessions               │
 │  async updateSession(id, data) → PUT /sessions/:id           │
 │  async deleteSession(id)     → DELETE /sessions/:id          │
 │  async copySession(id)       → POST /sessions/:id/copy       │
@@ -397,10 +397,10 @@ import { chatApi } from './api/chatApi.js';
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│                      agentsApi.js                            │
+│                      assistantsApi.js                            │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  async getAgents()           → GET /agents                   │
+│  async getAssistants()           → GET /assistants                   │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 
@@ -503,7 +503,7 @@ import { chatApi } from './api/chatApi.js';
 │  openModal(modalId) / closeModal(modalId)                   │
 │  └─ Add/remove 'active' class                               │
 │                                                              │
-│  renderAgentsList(agents, onAgentClick)                      │
+│  renderAssistantsList(assistants, onAgentClick)                      │
 │  ├─ Clear list                                              │
 │  └─ Create agent items with click handlers                  │
 │                                                              │
@@ -726,14 +726,14 @@ appState.subscribe('currentSessionId', (sessionId) => {
 
 Приложение использует 4 основных модальных окна:
 
-### 1. Agents Modal (`#agentModal`)
+### 1. Assistants Modal (`#agentModal`)
 
-**Назначение:** Выбор AI агента для создания специализированного чата
+**Назначение:** Выбор AI ассистента для создания специализированного чата
 
 **Структура:**
 ```
 ┌─────────────────────────────────────┐
-│  Выберите агента              [X]   │
+│  Выберите ассистента              [X]   │
 ├─────────────────────────────────────┤
 │  ┌───────────────────────────────┐  │
 │  │ Agent Name                    │  │
@@ -747,11 +747,11 @@ appState.subscribe('currentSessionId', (sessionId) => {
 ```
 
 **Поток:**
-1. User clicks "Агенты" button
-2. `handleOpenAgentsModal()` → `settingsService.loadAgents()`
-3. `modalsUI.renderAgentsList()` → Display agents
+1. User clicks "Ассистенты" button
+2. `handleOpenAssistantsModal()` → `settingsService.loadAssistants()`
+3. `modalsUI.renderAssistantsList()` → Display assistants
 4. User selects agent
-5. `handleAgentSelect(agentId)` → `sessionService.startAgentSession()`
+5. `handleAgentSelect(assistantId)` → `sessionService.startAgentSession()`
 6. Create new session with agent
 7. Load session and display messages
 
@@ -872,8 +872,8 @@ Providers & Models:
   GET    /providers               # Get available providers
   GET    /providers/:id/models    # Get models for provider
 
-Agents:
-  GET    /agents                  # Get available agents
+Assistants:
+  GET    /assistants                  # Get available assistants
 
 Compression:
   GET    /compression/check/:id   # Get compression info
@@ -925,7 +925,7 @@ Response:
   "title": "Chat about AI",
   "createdAt": "2025-01-19T10:00:00Z",
   "updatedAt": "2025-01-19T10:05:00Z",
-  "agentId": null,
+  "assistantId": null,
   "messages": [
     {
       "role": "user",
@@ -956,7 +956,7 @@ Response:
 export const API_CONFIG = {
   CHAT: '/chat',
   SESSIONS: '/sessions',
-  AGENTS: '/agents',
+  AGENTS: '/assistants',
   MODELS: '/models',
   PROVIDERS: '/providers',
   CONFIG: '/config',
@@ -1000,7 +1000,7 @@ export const COMPRESSION_CONFIG = {
     <div class="sidebar">
       <div class="sidebar-settings">
         <button id="newChatButtonSidebar">Новый чат</button>
-        <button id="agentsButton">Агенты</button>
+        <button id="assistantsButton">Ассистенты</button>
         <button id="mcpServersButton">MCP-сервера</button>
         <button id="settingsButton">Настройки</button>
       </div>
@@ -1183,7 +1183,7 @@ styles/
   title: string,
   createdAt: timestamp,
   updatedAt: timestamp,
-  agentId: string|null,
+  assistantId: string|null,
   messages: Message[]
 }
 
@@ -1283,7 +1283,7 @@ styles/
 │     - settingsService.loadConfig()                       │
 │     - sessionService.loadSessions()                      │
 │     - settingsService.loadProviders()                    │
-│     - settingsService.loadAgents()                       │
+│     - settingsService.loadAssistants()                       │
 │     - settingsService.loadMcpServers()                   │
 │  5. Show welcome message (if no session)                 │
 └───────────────────┬─────────────────────────────────────┘
@@ -1303,8 +1303,8 @@ styles/
                     ├─→ User opens settings
                     │   └─→ handleOpenSettingsModal() flow
                     │
-                    ├─→ User opens agents
-                    │   └─→ handleOpenAgentsModal() flow
+                    ├─→ User opens assistants
+                    │   └─→ handleOpenAssistantsModal() flow
                     │
                     ├─→ User compresses session
                     │   └─→ handleSessionCompress() flow

@@ -9,7 +9,7 @@
  * @typedef {Object} ApiConfig
  * @property {string} CHAT - Chat endpoint for sending messages
  * @property {string} SESSIONS - Sessions endpoint for managing chat sessions
- * @property {string} AGENTS - Agents endpoint for AI agents
+ * @property {string} ASSISTANTS - Assistants endpoint for AI assistants
  * @property {string} MODELS - Models endpoint for available AI models
  * @property {string} PROVIDERS - Providers endpoint for AI providers
  * @property {string} CONFIG - Configuration endpoint
@@ -20,7 +20,7 @@
 export const API_CONFIG = {
     CHAT: '/chat',
     SESSIONS: '/sessions',
-    AGENTS: '/agents',
+    ASSISTANTS: '/assistants',
     MODELS: '/models',
     PROVIDERS: '/providers',
     CONFIG: '/config',

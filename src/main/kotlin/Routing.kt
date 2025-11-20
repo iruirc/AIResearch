@@ -32,7 +32,7 @@ fun Application.configureRouting(
         }
 
         // API роуты для чата (legacy + новая архитектура)
-        chatRoutes(claudeService, appModule.chatSessionManager, appModule.agentManager, claudeConfig, appModule)
+        chatRoutes(claudeService, appModule.chatSessionManager, appModule.assistantManager, claudeConfig, appModule)
 
         // Новые API роуты для работы с провайдерами
         providerRoutes(appModule)

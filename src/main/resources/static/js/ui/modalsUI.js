@@ -38,29 +38,29 @@ export const modalsUI = {
     },
 
     /**
-     * Render agents list in modal
-     * @param {Array} agents - Array of agent objects
-     * @param {Function} onAgentClick - Callback for agent selection
+     * Render assistants list in modal
+     * @param {Array} assistants - Array of assistant objects
+     * @param {Function} onAssistantClick - Callback for assistant selection
      */
-    renderAgentsList(agents, onAgentClick) {
-        const agentsListElement = document.getElementById('agentsList');
-        if (!agentsListElement) return;
+    renderAssistantsList(assistants, onAssistantClick) {
+        const assistantsListElement = document.getElementById('assistantsList');
+        if (!assistantsListElement) return;
 
-        if (!agents || agents.length === 0) {
-            agentsListElement.innerHTML = '<div class="agents-loading">Нет доступных агентов</div>';
+        if (!assistants || assistants.length === 0) {
+            assistantsListElement.innerHTML = '<div class="assistants-loading">Нет доступных ассистентов</div>';
             return;
         }
 
-        agentsListElement.innerHTML = '';
-        agents.forEach(agent => {
-            const agentItem = document.createElement('div');
-            agentItem.className = 'agent-item';
-            agentItem.innerHTML = `
-                <div class="agent-name">${agent.name}</div>
-                <div class="agent-description">${agent.description}</div>
+        assistantsListElement.innerHTML = '';
+        assistants.forEach(assistant => {
+            const assistantItem = document.createElement('div');
+            assistantItem.className = 'assistant-item';
+            assistantItem.innerHTML = `
+                <div class="assistant-name">${assistant.name}</div>
+                <div class="assistant-description">${assistant.description}</div>
             `;
-            agentItem.addEventListener('click', () => onAgentClick(agent.id));
-            agentsListElement.appendChild(agentItem);
+            assistantItem.addEventListener('click', () => onAssistantClick(assistant.id));
+            assistantsListElement.appendChild(assistantItem);
         });
     },
 

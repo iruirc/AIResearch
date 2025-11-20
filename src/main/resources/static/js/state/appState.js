@@ -20,7 +20,7 @@ class AppState {
         this.loadingMessageId = null;
         this.currentSessionId = null;
         this.sessions = [];
-        this.agents = [];
+        this.assistants = [];
         this.providers = [];
         this.models = [];
         this.mcpServers = [];
@@ -66,7 +66,7 @@ class AppState {
         const propertyMap = {
             'loading': 'isLoading',
             'sessions': 'sessions',
-            'agents': 'agents',
+            'assistants': 'assistants',
             'providers': 'providers',
             'models': 'models',
             'mcpServers': 'mcpServers',
@@ -92,7 +92,7 @@ class AppState {
             loading: this.isLoading,
             currentSessionId: this.currentSessionId,
             sessions: this.sessions,
-            agents: this.agents,
+            assistants: this.assistants,
             providers: this.providers,
             models: this.models,
             mcpServers: this.mcpServers,
@@ -145,12 +145,12 @@ class AppState {
     }
 
     /**
-     * Set agents list and notify subscribers
-     * @param {Array} value - Array of agent objects
+     * Set assistants list and notify subscribers
+     * @param {Array} value - Array of assistant objects
      */
-    setAgents(value) {
-        this.agents = value;
-        this.notify('agents');
+    setAssistants(value) {
+        this.assistants = value;
+        this.notify('assistants');
     }
 
     /**

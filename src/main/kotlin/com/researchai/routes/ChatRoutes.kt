@@ -3,7 +3,7 @@ package com.researchai.routes
 import com.researchai.config.ClaudeConfig
 import com.researchai.di.AppModule
 import com.researchai.models.*
-import com.researchai.services.AgentManager
+import com.researchai.services.AssistantManager
 import com.researchai.services.ChatSessionManager
 import com.researchai.services.ClaudeService
 import io.ktor.http.*
@@ -15,7 +15,7 @@ import io.ktor.server.routing.*
 fun Route.chatRoutes(
     claudeService: ClaudeService,
     sessionManager: ChatSessionManager,
-    agentManager: AgentManager,
+    assistantManager: AssistantManager,
     claudeConfig: ClaudeConfig,
     appModule: AppModule
 ) {
@@ -42,9 +42,9 @@ fun Route.chatRoutes(
                 // Получаем или создаем сессию
                 val (sessionId, session) = sessionManager.getOrCreateSession(request.sessionId)
 
-                // Получаем system prompt если сессия связана с агентом
-                val systemPrompt = session.agentId?.let { agentId ->
-                    agentManager.getAgent(agentId)?.systemPrompt
+                // Получаем system prompt если сессия связана с ассистентом
+                val systemPrompt = session.assistantId?.let { assistantId ->
+                    assistantManager.getAssistant(assistantId)?.systemPrompt
                 }
 
                 // Используем новую архитектуру с SendMessageUseCase
@@ -150,7 +150,7 @@ fun Route.chatRoutes(
                         messageCount = info.messageCount,
                         createdAt = info.createdAt,
                         lastAccessedAt = info.lastAccessedAt,
-                        agentId = info.agentId,
+                        assistantId = info.assistantId,
                         scheduledTaskId = info.scheduledTaskId
                     )
                 }.sortedByDescending { it.lastAccessedAt }
@@ -350,68 +350,68 @@ fun Route.chatRoutes(
         }
     }
 
-    // Получить список всех доступных агентов
-    route("/agents") {
+    // Получить список всех доступных ассистентов
+    route("/assistants") {
         get {
             try {
-                val agents = agentManager.getAllAgents()
-                val agentList = agents.map { agent ->
-                    AgentListItem(
-                        id = agent.id,
-                        name = agent.name,
-                        description = agent.description
+                val assistants = assistantManager.getAllAssistants()
+                val assistantList = assistants.map { assistant ->
+                    AssistantListItem(
+                        id = assistant.id,
+                        name = assistant.name,
+                        description = assistant.description
                     )
                 }
-                call.respond(AgentListResponse(agents = agentList))
+                call.respond(AssistantListResponse(assistants = assistantList))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Failed to get agents: ${e.message}")
+                    mapOf("error" to "Failed to get assistants: ${e.message}")
                 )
             }
         }
 
-        // Создать новую сессию с агентом
+        // Создать новую сессию с ассистентом
         post("/start") {
             try {
-                val request = call.receive<CreateAgentSessionRequest>()
+                val request = call.receive<CreateAssistantSessionRequest>()
 
-                val agent = agentManager.getAgent(request.agentId)
-                if (agent == null) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Agent not found"))
+                val assistant = assistantManager.getAssistant(request.assistantId)
+                if (assistant == null) {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Assistant not found"))
                     return@post
                 }
 
-                // Создаем новую сессию с агентом
-                val sessionId = sessionManager.createSession(agentId = agent.id)
+                // Создаем новую сессию с ассистентом
+                val sessionId = sessionManager.createSession(assistantId = assistant.id)
                 val session = sessionManager.getSession(sessionId)!!
 
-                // Отправляем пустое сообщение с system prompt для инициализации агента
+                // Отправляем пустое сообщение с system prompt для инициализации ассистента
                 val initialMessage = claudeService.sendMessage(
                     userMessage = "Привет",
                     format = ResponseFormat.PLAIN_TEXT,
                     messageHistory = emptyList(),
-                    systemPrompt = agent.systemPrompt,
+                    systemPrompt = assistant.systemPrompt,
                     model = null
                 )
 
                 // Сохраняем приветственное сообщение пользователя
                 session.addMessage(MessageRole.USER, "Привет")
 
-                // Сохраняем ответ агента
+                // Сохраняем ответ ассистента
                 session.addMessage(MessageRole.ASSISTANT, initialMessage)
 
                 call.respond(
-                    CreateAgentSessionResponse(
+                    CreateAssistantSessionResponse(
                         sessionId = sessionId,
-                        agentName = agent.name,
+                        assistantName = assistant.name,
                         initialMessage = initialMessage
                     )
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Failed to start agent session: ${e.message}")
+                    mapOf("error" to "Failed to start assistant session: ${e.message}")
                 )
             }
         }

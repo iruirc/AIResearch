@@ -87,7 +87,7 @@ The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container t
 - Provider factory
 - Repositories (ConfigRepository, SessionRepository)
 - Use cases (SendMessageUseCase, GetModelsUseCase)
-- Services (ChatSessionManager, AgentManager, SchedulerManager)
+- Services (ChatSessionManager, AssistantManager, SchedulerManager)
 - Legacy services (ClaudeService)
 
 **Important**: Close the AppModule on application shutdown to:
@@ -102,8 +102,8 @@ The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container t
 
 Sessions are managed by `ChatSessionManager` with automatic persistence:
 - Each session maintains conversation history as `List<Message>`
-- Sessions can be associated with agents (for custom system prompts) OR scheduled tasks
-- **Mutual exclusivity**: A session has EITHER `agentId` OR `scheduledTaskId` (or neither)
+- Sessions can be associated with assistants (for custom system prompts) OR scheduled tasks
+- **Mutual exclusivity**: A session has EITHER `assistantId` OR `scheduledTaskId` (or neither)
 - Messages store metadata (model, tokens used, response time)
 - **Automatic persistence**: Sessions are saved to disk and restored on restart
 
@@ -137,7 +137,7 @@ The persistence system uses a **Hybrid approach** (JSON + in-memory cache):
 - Message history
 - Archived messages (from compression)
 - Compression configuration and count
-- Session metadata (created/accessed timestamps, agent ID, scheduled task ID)
+- Session metadata (created/accessed timestamps, assistant ID, scheduled task ID)
 
 ### API Versioning
 
@@ -369,14 +369,14 @@ Sessions are linked to tasks via `scheduledTaskId` field:
 ```kotlin
 data class ChatSession(
     val id: String,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val scheduledTaskId: String? = null,  // Links to task
     // ...
 )
 ```
 
 **Mutual Exclusivity:**
-- A session can have EITHER `agentId` OR `scheduledTaskId` (or neither)
+- A session can have EITHER `assistantId` OR `scheduledTaskId` (or neither)
 - When task is deleted, associated session is also deleted
 - When session is manually deleted, task becomes orphaned (will fail on execution)
 

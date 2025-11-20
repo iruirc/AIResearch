@@ -67,8 +67,8 @@ async function initApp() {
         console.log('📥 Loading providers...');
         await settingsService.loadProviders();
 
-        console.log('📥 Loading agents...');
-        await settingsService.loadAgents();
+        console.log('📥 Loading assistants...');
+        await settingsService.loadAssistants();
 
         console.log('📥 Loading MCP servers...');
         await settingsService.loadMcpServers();
@@ -109,12 +109,12 @@ function setupEventListeners() {
     });
 
     // Modal events
-    document.getElementById('agentsButton').addEventListener('click', handleOpenAgentsModal);
+    document.getElementById('assistantsButton').addEventListener('click', handleOpenAssistantsModal);
     document.getElementById('settingsButton').addEventListener('click', handleOpenSettingsModal);
     document.getElementById('mcpServersButton').addEventListener('click', handleOpenMcpServersModal);
 
     // Close modal buttons
-    document.getElementById('closeModal').addEventListener('click', () => modalsUI.closeModal('agentModal'));
+    document.getElementById('closeModal').addEventListener('click', () => modalsUI.closeModal('assistantModal'));
     document.getElementById('closeSettingsModal').addEventListener('click', () => modalsUI.closeModal('settingsModal'));
     document.getElementById('closeCompressionModal').addEventListener('click', () => modalsUI.closeModal('compressionModal'));
     document.getElementById('closeMcpServersModal').addEventListener('click', () => modalsUI.closeModal('mcpServersModal'));
@@ -411,32 +411,32 @@ async function handleSessionDelete(sessionId) {
 }
 
 /**
- * Handle open agents modal
+ * Handle open assistants modal
  */
-async function handleOpenAgentsModal() {
+async function handleOpenAssistantsModal() {
     try {
         const state = appState.getState();
-        modalsUI.renderAgentsList(state.agents, handleAgentSelect);
-        modalsUI.openModal('agentModal');
+        modalsUI.renderAssistantsList(state.assistants, handleAssistantSelect);
+        modalsUI.openModal('assistantModal');
     } catch (error) {
-        console.error('Error opening agents modal:', error);
-        alert('Ошибка при открытии списка агентов');
+        console.error('Error opening assistants modal:', error);
+        alert('Ошибка при открытии списка ассистентов');
     }
 }
 
 /**
- * Handle agent select
+ * Handle assistant select
  */
-async function handleAgentSelect(agentId) {
+async function handleAssistantSelect(assistantId) {
     try {
-        modalsUI.closeModal('agentModal');
+        modalsUI.closeModal('assistantModal');
 
         // Clear messages immediately to show new empty chat
         messagesUI.clearMessages();
 
-        // Start agent session (creates session, sets as current, and reloads sessions list)
+        // Start assistant session (creates session, sets as current, and reloads sessions list)
         // This will trigger loading state and show loading indicator in the cleared chat
-        const sessionId = await sessionService.startAgentSession(agentId);
+        const sessionId = await sessionService.startAssistantSession(assistantId);
 
         // Load session data directly from API to get any initial messages
         const sessionData = await sessionsApi.getSession(sessionId);
@@ -451,8 +451,8 @@ async function handleAgentSelect(agentId) {
 
         messageInput.focus();
     } catch (error) {
-        console.error('Error starting agent session:', error);
-        alert('Ошибка при создании сессии с агентом');
+        console.error('Error starting assistant session:', error);
+        alert('Ошибка при создании сессии с ассистентом');
     }
 }
 

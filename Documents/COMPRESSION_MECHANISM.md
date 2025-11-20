@@ -637,7 +637,7 @@ data class ChatSession(
 
     val createdAt: Long,
     var lastAccessedAt: Long,
-    val agentId: String? = null
+    val assistantId: String? = null
 ) {
     val messages: List<Message> get() = _messages.toList()
     val archivedMessages: List<Message> get() = _archivedMessages.toList()

@@ -27,7 +27,7 @@
 ### 4. API Layer - COMPLETED ✅
 - **`js/api/chatApi.js`** (38 lines) - Chat API wrapper
 - **`js/api/sessionsApi.js`** (139 lines) - Session CRUD operations
-- **`js/api/agentsApi.js`** (54 lines) - Agent operations
+- **`js/api/assistantsApi.js`** (54 lines) - Assistant operations
 - **`js/api/settingsApi.js`** (92 lines) - Settings, providers, models
 - **`js/api/compressionApi.js`** (115 lines) - Compression operations
 - **`js/api/mcpApi.js`** (29 lines) - MCP servers operations
@@ -63,11 +63,11 @@ export const sessionsApi = {
 };
 ```
 
-**agentsApi.js**
+**assistantsApi.js**
 ```javascript
-export const agentsApi = {
+export const assistantsApi = {
     loadAgents: async () => { /* ... */ },
-    startAgentSession: async (agentId) => { /* ... */ }
+    startAssistantSession: async (assistantId) => { /* ... */ }
 };
 ```
 
@@ -148,7 +148,7 @@ export const modalsUI = {
     openModal: (modalId) => { /* ... */ },
     closeModal: (modalId) => { /* ... */ },
     // Specific modals
-    agentModal: { /* ... */ },
+    assistantModal: { /* ... */ },
     settingsModal: { /* ... */ },
     compressionModal: { /* ... */ },
     mcpServersModal: { /* ... */ }
@@ -194,7 +194,7 @@ function setupEventListeners() {
     document.getElementById('toggleSidebarButton').addEventListener('click', toggleSidebar);
 
     // Modals
-    document.getElementById('agentsButton').addEventListener('click', openAgentsModal);
+    document.getElementById('assistantsButton').addEventListener('click', openAssistantsModal);
     document.getElementById('settingsButton').addEventListener('click', openSettingsModal);
     // ... more listeners
 }
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', initApp);
 - ✅ Create utilities
 
 ### Phase 2: API Layer ✅ COMPLETED
-1. ✅ Created all API modules (sessionsApi, agentsApi, settingsApi, compressionApi, mcpApi)
+1. ✅ Created all API modules (sessionsApi, assistantsApi, settingsApi, compressionApi, mcpApi)
 2. ⏳ Replace direct fetch calls in app.js with API calls (pending Phase 5)
 3. ⏳ Test each API module independently (pending Phase 5)
 
@@ -269,7 +269,7 @@ static/
 │   ├── api/                   # API Layer (467 lines total)
 │   │   ├── chatApi.js         # Chat API wrapper (38 lines)
 │   │   ├── sessionsApi.js     # Sessions CRUD (139 lines)
-│   │   ├── agentsApi.js       # Agents operations (54 lines)
+│   │   ├── assistantsApi.js       # Agents operations (54 lines)
 │   │   ├── settingsApi.js     # Settings management (92 lines)
 │   │   ├── compressionApi.js  # Compression API (115 lines)
 │   │   └── mcpApi.js          # MCP servers (29 lines)

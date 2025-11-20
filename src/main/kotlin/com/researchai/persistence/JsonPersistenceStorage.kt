@@ -46,7 +46,8 @@ class JsonPersistenceStorage(
                 messages = session.messages,
                 createdAt = session.createdAt,
                 lastAccessedAt = session.lastAccessedAt,
-                agentId = session.agentId,
+                assistantId = session.assistantId,
+                scheduledTaskId = session.scheduledTaskId,
                 archivedMessages = session.archivedMessages,
                 compressionConfig = session.compressionConfig,
                 compressionCount = session.compressionCount
@@ -80,7 +81,8 @@ class JsonPersistenceStorage(
             val session = ChatSession(
                 id = sessionData.id,
                 createdAt = sessionData.createdAt,
-                agentId = sessionData.agentId,
+                assistantId = sessionData.assistantId,
+                scheduledTaskId = sessionData.scheduledTaskId,
                 compressionConfig = sessionData.compressionConfig,
                 compressionCount = sessionData.compressionCount
             )
@@ -118,7 +120,8 @@ class JsonPersistenceStorage(
                     val session = ChatSession(
                         id = sessionData.id,
                         createdAt = sessionData.createdAt,
-                        agentId = sessionData.agentId,
+                        assistantId = sessionData.assistantId,
+                        scheduledTaskId = sessionData.scheduledTaskId,
                         compressionConfig = sessionData.compressionConfig,
                         compressionCount = sessionData.compressionCount
                     )
@@ -184,7 +187,8 @@ private data class SessionData(
     val messages: List<Message>,
     val createdAt: Long,
     val lastAccessedAt: Long,
-    val agentId: String? = null,
+    val assistantId: String? = null,
+    val scheduledTaskId: String? = null,
     val archivedMessages: List<Message> = emptyList(),
     val compressionConfig: CompressionConfig = CompressionConfig(),
     val compressionCount: Int = 0

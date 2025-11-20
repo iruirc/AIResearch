@@ -41,7 +41,7 @@ Best for:
 - Detailed HTTP client configuration
 - Understanding session management
 - Learning about message formatting
-- Agent system details
+- Assistant system details
 
 Contains:
 - Architecture overview with layered diagram
@@ -52,7 +52,7 @@ Contains:
   - Request/Response Models (ClaudeModels.kt)
   - Session Management (ChatSessionManager.kt)
   - Message Formatting (ClaudeMessageFormatter.kt)
-  - Agent Management (AgentManager.kt)
+  - Assistant Management (AssistantManager.kt)
   - REST API Routes (ChatRoutes.kt with complete endpoint specs)
   - Application Initialization (Application.kt)
   - Configuration Loading (DotenvLoader.kt)
@@ -101,7 +101,7 @@ Best for:
 - Visual understanding of system architecture
 - Understanding data flow visually
 - Session management architecture
-- Agent-based session flow
+- Assistant-based session flow
 - Message formatting pipeline
 - Configuration hierarchy
 - Error handling flow
@@ -112,7 +112,7 @@ Contains 9 detailed ASCII diagrams:
 1. High-Level System Architecture
 2. Request/Response Flow Diagram
 3. Session Management Architecture
-4. Agent-Based Session Flow
+4. Assistant-Based Session Flow
 5. Message Formatting Pipeline
 6. Configuration Hierarchy
 7. Error Handling Flow
@@ -149,8 +149,8 @@ Contains 9 detailed ASCII diagrams:
 2. Read: CODEBASE_ANALYSIS.md (section 3.5)
 3. View: ARCHITECTURE_DIAGRAMS.md (diagram 5)
 
-### Understanding Agent System
-1. Read: ARCHITECTURE_SUMMARY.md (Agent System section)
+### Understanding Assistant System
+1. Read: ARCHITECTURE_SUMMARY.md (Assistant System section)
 2. Read: CODEBASE_ANALYSIS.md (section 3.6)
 3. View: ARCHITECTURE_DIAGRAMS.md (diagram 4)
 
@@ -175,7 +175,7 @@ Contains 9 detailed ASCII diagrams:
 ## Key Takeaways
 
 ### What ResearchAI Does
-ResearchAI is a Ktor-based REST API that bridges a frontend application with the Claude API. It manages conversations, provides multiple response formats (Plain Text, JSON, XML), and supports agent-based interactions.
+ResearchAI is a Ktor-based REST API that bridges a frontend application with the Claude API. It manages conversations, provides multiple response formats (Plain Text, JSON, XML), and supports assistant-based interactions.
 
 ### Architecture Pattern
 **Layered Architecture:**
@@ -193,7 +193,7 @@ Routes (HTTP) → Services (Business Logic) → Models (Data) → Claude API
 ### Main Features
 1. **Multi-format responses** (Plain Text, JSON, XML)
 2. **Session management** with message history
-3. **Agent-based interactions** with custom system prompts
+3. **Assistant-based interactions** with custom system prompts
 4. **Flexible configuration** via environment variables
 5. **Comprehensive error handling**
 
@@ -300,7 +300,7 @@ All documentation files are in the project root:
 **"What are the scalability limitations?"**
 → See ARCHITECTURE_SUMMARY.md "Performance & Scalability"
 
-**"How do agents work?"**
+**"How do assistants work?"**
 → See CODEBASE_ANALYSIS.md section 3.6 or ARCHITECTURE_DIAGRAMS.md diagram 4
 
 **"What errors can occur and how are they handled?"**
@@ -320,7 +320,7 @@ Key areas that may change:
 - Implementing authentication
 - Adding new Claude models
 - Implementing streaming
-- Adding new agents
+- Adding new assistants
 - Performance optimizations
 - Security enhancements
 

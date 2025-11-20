@@ -1,6 +1,6 @@
 // Settings Service - manages application settings and configuration
 import { settingsApi } from '../api/settingsApi.js';
-import { agentsApi } from '../api/agentsApi.js';
+import { assistantsApi } from '../api/assistantsApi.js';
 import { mcpApi } from '../api/mcpApi.js';
 import { appState } from '../state/appState.js';
 import { detectProviderFromModel } from '../utils/helpers.js';
@@ -129,16 +129,16 @@ export const settingsService = {
     },
 
     /**
-     * Load all available agents
-     * @returns {Promise<Array>} Array of agent objects
+     * Load all available assistants
+     * @returns {Promise<Array>} Array of assistant objects
      */
-    async loadAgents() {
+    async loadAssistants() {
         try {
-            const agents = await agentsApi.loadAgents();
-            appState.setAgents(agents);
-            return agents;
+            const assistants = await assistantsApi.loadAssistants();
+            appState.setAssistants(assistants);
+            return assistants;
         } catch (error) {
-            console.error('Error loading agents:', error);
+            console.error('Error loading assistants:', error);
             throw error;
         }
     },

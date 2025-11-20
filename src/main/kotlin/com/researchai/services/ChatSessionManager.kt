@@ -37,13 +37,13 @@ class ChatSessionManager(
 
     /**
      * Создает новую сессию чата
-     * @param agentId ID агента (опционально)
+     * @param assistantId ID ассистента (опционально)
      * @param scheduledTaskId ID задачи планировщика (опционально)
      * @return ID новой сессии
      */
-    fun createSession(agentId: String? = null, scheduledTaskId: String? = null): String {
+    fun createSession(assistantId: String? = null, scheduledTaskId: String? = null): String {
         val session = ChatSession(
-            agentId = agentId,
+            assistantId = assistantId,
             scheduledTaskId = scheduledTaskId
         )
         sessions[session.id] = session
@@ -52,7 +52,7 @@ class ChatSessionManager(
         persistenceManager?.markDirty(session)
 
         when {
-            agentId != null -> logger.info("Created new session with agent: ${session.id}, agentId=$agentId")
+            assistantId != null -> logger.info("Created new session with assistant: ${session.id}, assistantId=$assistantId")
             scheduledTaskId != null -> logger.info("Created new session with scheduled task: ${session.id}, scheduledTaskId=$scheduledTaskId")
             else -> logger.info("Created new session: ${session.id}")
         }
@@ -216,7 +216,7 @@ class ChatSessionManager(
             // Создаем новую сессию с копией всех данных
             val copiedSession = ChatSession(
                 title = originalSession.title?.let { "$it (копия)" },
-                agentId = originalSession.agentId
+                assistantId = originalSession.assistantId
             ).apply {
                 // Копируем все сообщения
                 originalSession.messages.forEach { message ->
@@ -259,7 +259,7 @@ class ChatSessionManager(
                 messageCount = session.messages.size,
                 createdAt = session.createdAt,
                 lastAccessedAt = session.lastAccessedAt,
-                agentId = session.agentId,
+                assistantId = session.assistantId,
                 scheduledTaskId = session.scheduledTaskId
             )
         }
@@ -284,6 +284,6 @@ data class SessionInfo(
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val scheduledTaskId: String? = null
 )

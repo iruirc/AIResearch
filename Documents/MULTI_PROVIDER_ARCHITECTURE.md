@@ -252,7 +252,7 @@ init {
 Все старые endpoints продолжают работать:
 - `POST /chat` - работает как раньше с Claude
 - `GET /sessions` - управление сессиями
-- `GET /agents` - работа с агентами
+- `GET /assistants` - работа с ассистентами
 - `GET /models` - список моделей Claude
 - `GET /config` - текущая конфигурация
 

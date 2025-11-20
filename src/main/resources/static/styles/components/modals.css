@@ -50,34 +50,34 @@
    Modal Content Areas
    ======================================== */
 
-/* Agents list */
-.agents-list {
+/* Assistants list */
+.assistants-list {
     padding: var(--spacing-xl);
     overflow-y: auto;
     flex: 1;
 }
 
-.agents-list::-webkit-scrollbar {
+.assistants-list::-webkit-scrollbar {
     width: 6px;
 }
 
-.agents-list::-webkit-scrollbar-track {
+.assistants-list::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.agents-list::-webkit-scrollbar-thumb {
+.assistants-list::-webkit-scrollbar-thumb {
     background: var(--border-medium);
     border-radius: var(--radius-sm);
 }
 
-.agents-loading {
+.assistants-loading {
     text-align: center;
     padding: 40px var(--spacing-xl);
     color: var(--text-muted);
     font-size: 16px;
 }
 
-.agent-item {
+.assistant-item {
     padding: var(--spacing-lg);
     margin-bottom: var(--spacing-md);
     border: 2px solid var(--border-light);
@@ -87,25 +87,25 @@
     background: var(--bg-white);
 }
 
-.agent-item:hover {
+.assistant-item:hover {
     border-color: var(--color-primary);
     background: var(--bg-light);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
-.agent-item:active {
+.assistant-item:active {
     transform: translateY(0);
 }
 
-.agent-name {
+.assistant-name {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 6px;
 }
 
-.agent-description {
+.assistant-description {
     font-size: 14px;
     color: var(--text-muted);
     line-height: 1.4;

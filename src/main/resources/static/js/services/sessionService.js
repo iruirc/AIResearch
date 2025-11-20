@@ -1,6 +1,6 @@
 // Session Service - orchestrates session operations
 import { sessionsApi } from '../api/sessionsApi.js';
-import { agentsApi } from '../api/agentsApi.js';
+import { assistantsApi } from '../api/assistantsApi.js';
 import { appState } from '../state/appState.js';
 
 /**
@@ -162,11 +162,11 @@ export const sessionService = {
     },
 
     /**
-     * Start a new session with an agent
-     * @param {string} agentId - Agent ID to start session with
+     * Start a new session with an assistant
+     * @param {string} assistantId - Assistant ID to start session with
      * @returns {Promise<string>} New session ID
      */
-    async startAgentSession(agentId) {
+    async startAssistantSession(assistantId) {
         if (appState.isLoading) {
             return null;
         }
@@ -174,7 +174,7 @@ export const sessionService = {
         try {
             appState.setLoading(true);
 
-            const result = await agentsApi.startAgentSession(agentId);
+            const result = await assistantsApi.startAssistantSession(assistantId);
 
             // Update current session
             appState.setCurrentSessionId(result.sessionId);
@@ -185,7 +185,7 @@ export const sessionService = {
 
             return result.sessionId;
         } catch (error) {
-            console.error('Error starting agent session:', error);
+            console.error('Error starting assistant session:', error);
             throw error;
         } finally {
             appState.setLoading(false);

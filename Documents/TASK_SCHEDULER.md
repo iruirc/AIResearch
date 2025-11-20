@@ -1085,14 +1085,14 @@ Sessions are linked to tasks via `scheduledTaskId` field:
 // ChatSession.kt
 data class ChatSession(
     val id: String,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val scheduledTaskId: String? = null,  // Links to task
     // ... other fields
 )
 ```
 
 **Mutual Exclusivity:**
-- A session can have EITHER `agentId` OR `scheduledTaskId` (or neither)
+- A session can have EITHER `assistantId` OR `scheduledTaskId` (or neither)
 - Not both at the same time
 - Enforced by business logic, not database constraints
 
@@ -1107,7 +1107,7 @@ data class SessionListItem(
     val messageCount: Int,
     val createdAt: Long,
     val lastAccessedAt: Long,
-    val agentId: String? = null,
+    val assistantId: String? = null,
     val scheduledTaskId: String? = null
 )
 ```

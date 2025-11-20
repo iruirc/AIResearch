@@ -11,7 +11,7 @@ js/
 ├── api/                 # API Layer - HTTP abstraction (467 lines total)
 │   ├── chatApi.js       # Chat API wrapper
 │   ├── sessionsApi.js   # Sessions CRUD operations
-│   ├── agentsApi.js     # Agents operations
+│   ├── assistantsApi.js     # Agents operations
 │   ├── settingsApi.js   # Settings, providers, models
 │   ├── compressionApi.js# Compression operations
 │   └── mcpApi.js        # MCP servers operations

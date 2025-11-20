@@ -256,7 +256,7 @@ class SendMessageUseCase(
     private val providerFactory: AIProviderFactory,
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigRepository,
-    private val agentManager: AgentManager,
+    private val assistantManager: AssistantManager,
     private val mcpOrchestrationService: MCPOrchestrationService? = null // NEW
 )
 ```
@@ -428,7 +428,7 @@ class AppModule(/* ... */) {
             providerFactory = providerFactory,
             sessionRepository = sessionRepository,
             configRepository = configRepository,
-            agentManager = agentManager,
+            assistantManager = assistantManager,
             mcpOrchestrationService = mcpOrchestrationService // NEW
         )
     }
@@ -722,7 +722,7 @@ class SendMessageUseCase(
     private val providerFactory: AIProviderFactory,
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigRepository,
-    private val agentManager: AgentManager,
+    private val assistantManager: AssistantManager,
     private val mcpOrchestrationService: MCPOrchestrationService? = null
 )
 

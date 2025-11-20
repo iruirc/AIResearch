@@ -30,11 +30,11 @@
                     </svg>
                     Новый чат
                 </button>
-                <button id="agentsButton" class="agents-button-sidebar" title="Создать чат с агентом">
+                <button id="assistantsButton" class="assistants-button-sidebar" title="Создать чат с ассистентом">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm11 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Новый агент
+                    Новый ассистент
                 </button>
                 <button id="schedulerButton" class="scheduler-button-sidebar" title="Создать задачу планировщика">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -88,8 +88,8 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span class="category-label">Агенты</span>
-                    <span class="category-count" id="agentsCount">0</span>
+                    <span class="category-label">Ассистенты</span>
+                    <span class="category-count" id="assistantsCount">0</span>
                 </button>
                 <button class="category-item" data-category="tasks">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -147,15 +147,15 @@
         </div>
     </div>
 
-    <!-- Модальное окно для выбора агента -->
-    <div id="agentModal" class="modal">
+    <!-- Модальное окно для выбора ассистента -->
+    <div id="assistantModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Выберите агента</h3>
+                <h3>Выберите ассистента</h3>
                 <button id="closeModal" class="close-button">&times;</button>
             </div>
-            <div id="agentsList" class="agents-list">
-                <div class="agents-loading">Загрузка агентов...</div>
+            <div id="assistantsList" class="assistants-list">
+                <div class="assistants-loading">Загрузка ассистентов...</div>
             </div>
         </div>
     </div>

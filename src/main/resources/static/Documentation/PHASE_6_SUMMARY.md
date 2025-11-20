@@ -27,7 +27,7 @@ Phase 6 completed the final cleanup and optimization of the JavaScript refactori
 #### API Layer (6 modules)
 - ✅ `api/chatApi.js` - Chat endpoint wrapper
 - ✅ `api/sessionsApi.js` - Session CRUD operations
-- ✅ `api/agentsApi.js` - Agent operations
+- ✅ `api/assistantsApi.js` - Assistant operations
 - ✅ `api/settingsApi.js` - Settings and config
 - ✅ `api/compressionApi.js` - Compression API
 - ✅ `api/mcpApi.js` - MCP servers API
@@ -105,10 +105,10 @@ Average Module Size: ~5.6 KB
 }
 ```
 
-✅ Agents API: `GET /agents`
+✅ Assistants API: `GET /assistants`
 ```json
 {
-  "agents": [
+  "assistants": [
     { "id": "greeting-assistant", "name": "Ассистент Приветствия", ... },
     { "id": "ai-tutor", "name": "AI Репетитор", ... }
   ]
@@ -147,7 +147,7 @@ static/
 │   ├── api/                   # API Layer (~20 KB)
 │   │   ├── chatApi.js
 │   │   ├── sessionsApi.js
-│   │   ├── agentsApi.js
+│   │   ├── assistantsApi.js
 │   │   ├── settingsApi.js
 │   │   ├── compressionApi.js
 │   │   └── mcpApi.js

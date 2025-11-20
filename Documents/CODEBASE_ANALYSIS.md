@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-ResearchAI is a Ktor-based backend application that provides a REST API for interacting with the Claude API from Anthropic. It manages chat sessions, agents, and handles request/response formatting for multiple output formats (Plain Text, JSON, XML).
+ResearchAI is a Ktor-based backend application that provides a REST API for interacting with the Claude API from Anthropic. It manages chat sessions, assistants, and handles request/response formatting for multiple output formats (Plain Text, JSON, XML).
 
 **Technology Stack:**
 - Framework: Ktor Server (Kotlin)
@@ -25,7 +25,7 @@ ResearchAI is a Ktor-based backend application that provides a REST API for inte
 │  │ ChatRoutes (com.example.routes)          │   │
 │  │ - /chat (POST)                           │   │
 │  │ - /sessions (GET, POST, DELETE)          │   │
-│  │ - /agents (GET)                          │   │
+│  │ - /assistants (GET)                          │   │
 │  │ - /models (GET)                          │   │
 │  │ - /config (GET)                          │   │
 │  └──────────────────────────────────────────┘   │
@@ -46,7 +46,7 @@ ResearchAI is a Ktor-based backend application that provides a REST API for inte
 │  │ - Session lifecycle                       │ │
 │  └────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────┐ │
-│  │ AgentManager                               │ │
+│  │ AssistantManager                               │ │
 │  │ - Agent registration and retrieval         │ │
 │  │ - Agent configuration                     │ │
 │  └────────────────────────────────────────────┘ │
@@ -68,7 +68,7 @@ ResearchAI is a Ktor-based backend application that provides a REST API for inte
 │  ┌────────────────────────────────────────────┐ │
 │  │ Session & Agent Models                     │ │
 │  │ - ChatSession / ChatRequest / ChatResponse │ │
-│  │ - Agent / AgentManager                     │ │
+│  │ - Agent / AssistantManager                     │ │
 │  └────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────┐ │
 │  │ Configuration (ClaudeConfig)               │ │
@@ -273,7 +273,7 @@ data class ClaudeErrorDetails(
 **Session Storage:** In-memory `ConcurrentHashMap<String, ChatSession>`
 
 **Key Methods:**
-- `createSession(agentId: String?)`: String - Creates new session
+- `createSession(assistantId: String?)`: String - Creates new session
 - `getSession(sessionId: String)`: ChatSession? - Retrieves existing session
 - `getOrCreateSession(sessionId: String?)`: Pair<String, ChatSession> - Gets or creates
 - `addMessageToSession(sessionId, role, content)`: Boolean - Adds message to history
@@ -297,7 +297,7 @@ data class ChatSession(
     private val _messages: MutableList<ClaudeMessage> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     var lastAccessedAt: Long = System.currentTimeMillis(),
-    val agentId: String? = null
+    val assistantId: String? = null
 ) {
     val messages: List<ClaudeMessage> // Read-only copy
     fun addMessage(role: MessageRole, content: String)
@@ -358,9 +358,9 @@ XML Template:
 
 ### 3.6 Agent Management
 
-**File:** `/src/main/kotlin/com/example/services/AgentManager.kt`
+**File:** `/src/main/kotlin/com/example/services/AssistantManager.kt`
 
-**Available Agents:**
+**Available Assistants:**
 1. **Greeting Assistant** (greeting-assistant)
    - Purpose: Welcome and conversation initiation
    - System Prompt: "Ты - ассистент приветствия..."
@@ -376,12 +376,12 @@ XML Template:
 
 **Agent Features:**
 - `registerAgent(agent: Agent)`: Register new agent
-- `getAgent(agentId: String)`: Agent? - Get agent by ID
-- `getAllAgents()`: List<Agent> - List all available agents
-- `hasAgent(agentId: String)`: Boolean - Check if agent exists
+- `getAgent(assistantId: String)`: Agent? - Get agent by ID
+- `getAllAssistants()`: List<Agent> - List all available assistants
+- `hasAgent(assistantId: String)`: Boolean - Check if agent exists
 
 **Session-Agent Connection:**
-- Session can be created with optional `agentId`
+- Session can be created with optional `assistantId`
 - When chat message processed in agent session, system prompt applied
 - System prompt determines agent behavior/personality
 
@@ -427,7 +427,7 @@ Response:
         "messageCount": number,
         "createdAt": number (timestamp),
         "lastAccessedAt": number (timestamp),
-        "agentId": "string (optional)"
+        "assistantId": "string (optional)"
       }
     ]
   }
@@ -469,11 +469,11 @@ Response:
 
 #### Agent Endpoints
 
-**GET /agents** - List available agents
+**GET /assistants** - List available assistants
 ```
 Response:
   {
-    "agents": [
+    "assistants": [
       {
         "id": "string",
         "name": "string",
@@ -483,11 +483,11 @@ Response:
   }
 ```
 
-**POST /agents/start** - Start new session with agent
+**POST /assistants/start** - Start new session with agent
 ```
 Request:
   {
-    "agentId": "string"
+    "assistantId": "string"
   }
 
 Response:
@@ -557,7 +557,7 @@ Response:
 
 3. configureRouting() function
    ├─ ChatSessionManager() - Create session manager
-   ├─ AgentManager() - Create and register agents
+   ├─ AssistantManager() - Create and register assistants
    └─ chatRoutes() - Set up all API endpoints
 ```
 
@@ -656,14 +656,14 @@ ClaudeService:
 
 ```
 Start Agent Session:
-POST /agents/start
+POST /assistants/start
 {
-  "agentId": "ai-tutor"
+  "assistantId": "ai-tutor"
 }
 
 Server:
 1. Get agent with system prompt
-2. Create session with agentId reference
+2. Create session with assistantId reference
 3. Call ClaudeService with agent's system prompt
 4. Claude responds with greeting
 5. Save both messages to session
@@ -728,7 +728,7 @@ Subsequent messages in this session:
 | `DotenvLoader.kt` | Environment loading | `DotenvLoader` |
 | `ClaudeService.kt` | API communication | `ClaudeService` |
 | `ChatSessionManager.kt` | Session lifecycle | `ChatSessionManager`, `SessionInfo` |
-| `AgentManager.kt` | Agent management | `AgentManager`, `Agent` |
+| `AssistantManager.kt` | Agent management | `AssistantManager`, `Agent` |
 | `ClaudeMessageFormatter.kt` | Format handling | `ClaudeMessageFormatter` |
 | `ClaudeModels.kt` | API data models | `ClaudeRequest`, `ClaudeResponse`, `MessageRole` |
 | `ChatRequest.kt` | Client request | `ChatRequest`, `ConfigResponse` |
@@ -736,7 +736,7 @@ Subsequent messages in this session:
 | `ChatSession.kt` | Session model | `ChatSession`, `ClaudeMessage` |
 | `ResponseFormat.kt` | Format enum | `ResponseFormat` |
 | `SessionResponses.kt` | Session API models | `SessionListItem`, `SessionDetailResponse`, etc. |
-| `ChatRoutes.kt` | HTTP routes | Route handlers for /chat, /sessions, /agents, etc. |
+| `ChatRoutes.kt` | HTTP routes | Route handlers for /chat, /sessions, /assistants, etc. |
 | `Application.kt` | App entry point | `main()`, `module()` |
 | `Routing.kt` | Route configuration | `configureRouting()` |
 

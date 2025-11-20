@@ -60,7 +60,7 @@ com.researchai/
 │   ├── ResponseFormat.kt
 │   └── SessionResponses.kt
 ├── services/                         # Legacy services
-│   ├── AgentManager.kt
+│   ├── AssistantManager.kt
 │   ├── ChatSessionManager.kt
 │   ├── ClaudeMessageFormatter.kt
 │   └── ClaudeService.kt
@@ -116,7 +116,7 @@ com.researchai/
 Legacy API:
 - `POST /chat`
 - `GET /sessions`
-- `GET /agents`
+- `GET /assistants`
 - `GET /models`
 - `GET /config`
 
