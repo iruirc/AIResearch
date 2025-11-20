@@ -8,6 +8,7 @@ import { sessionService } from './services/sessionService.js';
 import { chatService } from './services/chatService.js';
 import { settingsService } from './services/settingsService.js';
 import { compressionService } from './services/compressionService.js';
+import { messagePollingService } from './services/messagePollingService.js';
 
 // Import API modules
 import { sessionsApi } from './api/sessionsApi.js';
@@ -301,6 +302,9 @@ function handleMessageInputResize() {
  */
 async function handleNewChat() {
     try {
+        // Stop polling when creating new chat
+        messagePollingService.stopPolling();
+
         await sessionService.createNewSession();
         messagesUI.clearMessages();
         messageInput.value = '';
@@ -331,6 +335,9 @@ async function handleSessionClick(sessionId) {
         } else {
             messagesUI.clearMessages();
         }
+
+        // Start polling for new messages in this session
+        messagePollingService.startPolling(sessionId);
 
         messageInput.focus();
     } catch (error) {
@@ -438,6 +445,9 @@ async function handleAgentSelect(agentId) {
         if (sessionData && sessionData.messages && sessionData.messages.length > 0) {
             messagesUI.renderMessages(sessionData.messages);
         }
+
+        // Start polling for new messages in this session
+        messagePollingService.startPolling(sessionId);
 
         messageInput.focus();
     } catch (error) {

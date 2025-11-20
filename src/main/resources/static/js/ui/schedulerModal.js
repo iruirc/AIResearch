@@ -4,6 +4,9 @@
 
 import { schedulerApi } from '../api/schedulerApi.js';
 import { sessionService } from '../services/sessionService.js';
+import { messagePollingService } from '../services/messagePollingService.js';
+import { sessionsApi } from '../api/sessionsApi.js';
+import { messagesUI } from './messagesUI.js';
 
 export class SchedulerModal {
     constructor() {
@@ -93,7 +96,17 @@ export class SchedulerModal {
 
             // Переключиться на новую сессию
             if (result.sessionId) {
-                await sessionService.switchSession(result.sessionId);
+                const sessionData = await sessionService.switchSession(result.sessionId);
+
+                // Отобразить сообщения из сессии
+                if (sessionData && sessionData.messages) {
+                    messagesUI.renderMessages(sessionData.messages);
+                } else {
+                    messagesUI.clearMessages();
+                }
+
+                // Запустить polling для автообновления сообщений
+                messagePollingService.startPolling(result.sessionId);
             }
 
             // Показать уведомление
