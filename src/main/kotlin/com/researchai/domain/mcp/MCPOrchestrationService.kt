@@ -84,15 +84,52 @@ class MCPOrchestrationService(
     /**
      * Convert MCP tools to Anthropic Claude tool format
      * This is used to send tools to Claude API
+     *
+     * Note: This function also fixes incomplete JSON schemas from MCP servers.
+     * Some MCP servers (like @modelcontextprotocol/server-filesystem) return
+     * schemas with "type": "object" but without "properties" field, which
+     * Claude API rejects as invalid.
      */
     fun convertToClaudeTools(mcpTools: List<MCPTool>): List<ClaudeTool> {
         return mcpTools.map { tool ->
             ClaudeTool(
                 name = tool.name,
                 description = tool.description,
-                input_schema = tool.inputSchema
+                input_schema = fixInputSchema(tool.inputSchema)
             )
         }
+    }
+
+    /**
+     * Fix incomplete JSON schemas from MCP servers
+     *
+     * Problem: Some MCP servers return schemas like:
+     * {"type": "object"}
+     *
+     * But Claude API requires:
+     * {"type": "object", "properties": {}}
+     *
+     * This function adds the missing "properties" field.
+     */
+    private fun fixInputSchema(schema: JsonElement): JsonElement {
+        if (schema is JsonObject) {
+            val typeElement = schema["type"]
+            val hasProperties = schema.containsKey("properties")
+
+            // If type is "object" but properties is missing, add empty properties
+            if (typeElement is kotlinx.serialization.json.JsonPrimitive &&
+                typeElement.content == "object" &&
+                !hasProperties) {
+
+                logger.debug("Fixing incomplete JSON schema: adding empty 'properties' field")
+
+                val mutableMap = schema.toMutableMap()
+                mutableMap["properties"] = kotlinx.serialization.json.buildJsonObject { }
+                return kotlinx.serialization.json.JsonObject(mutableMap)
+            }
+        }
+
+        return schema
     }
 
     /**

@@ -44,12 +44,11 @@ sealed class ClaudeApiMessageContent {
 sealed class ClaudeContentBlock {
     @Serializable
     @SerialName("text")
-    data class Text(val type: String = "text", val text: String) : ClaudeContentBlock()
+    data class Text(val text: String) : ClaudeContentBlock()
 
     @Serializable
     @SerialName("tool_use")
     data class ToolUse(
-        val type: String = "tool_use",
         val id: String,
         val name: String,
         val input: JsonElement
@@ -58,7 +57,6 @@ sealed class ClaudeContentBlock {
     @Serializable
     @SerialName("tool_result")
     data class ToolResult(
-        val type: String = "tool_result",
         @SerialName("tool_use_id")
         val toolUseId: String,
         val content: String

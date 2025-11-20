@@ -49,20 +49,25 @@ class ClaudeMapper {
             )
         }.toMutableList()
 
-        // Применяем форматирование для последнего пользовательского сообщения
+        // Применяем форматирование только для текстового содержимого последнего пользовательского сообщения
+        // Structured content (например, tool_result) не должен форматироваться
         if (messages.isNotEmpty() && messages.last().role == "user") {
             val lastMessage = messages.last()
-            val lastContent = when (val content = lastMessage.content) {
-                is ClaudeApiMessageContent.Text -> content.value
-                is ClaudeApiMessageContent.Structured -> ""
+            when (val content = lastMessage.content) {
+                is ClaudeApiMessageContent.Text -> {
+                    val enhancedContent = formatter.enhanceMessage(
+                        content.value,
+                        request.parameters.responseFormat
+                    )
+                    messages[messages.lastIndex] = lastMessage.copy(
+                        content = ClaudeApiMessageContent.Text(enhancedContent)
+                    )
+                }
+                is ClaudeApiMessageContent.Structured -> {
+                    // Не применяем форматирование к Structured content
+                    // (например, tool_result блоки)
+                }
             }
-            val enhancedContent = formatter.enhanceMessage(
-                lastContent,
-                request.parameters.responseFormat
-            )
-            messages[messages.lastIndex] = lastMessage.copy(
-                content = ClaudeApiMessageContent.Text(enhancedContent)
-            )
         }
 
         // Конвертируем MCP tools в Claude API формат
