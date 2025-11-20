@@ -19,7 +19,7 @@
       "transport": "stdio",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
-      "enabled": false
+      "enabled": true
     },
     {
       "id": "weather",
