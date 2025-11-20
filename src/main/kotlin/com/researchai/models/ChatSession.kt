@@ -8,8 +8,9 @@ import java.util.*
 
 /**
  * Представляет сессию чата с историей сообщений.
- * Каждая сессия хранит полную историю диалога между пользователем и Claude.
- * Сессия может быть связана с ассистентом, который определяет ее поведение.
+ * Каждая сессия хранит полную историю диалога между пользователем и AI.
+ * Сессия может быть связана с ассистентом, задачей планировщика или пайплайном.
+ * ВАЖНО: Сессия может иметь только ОДНО из: assistantId, scheduledTaskId, pipelineId (mutual exclusivity).
  */
 data class ChatSession(
     val id: String = UUID.randomUUID().toString(),
@@ -19,8 +20,7 @@ data class ChatSession(
     var lastAccessedAt: Long = System.currentTimeMillis(),
     val assistantId: String? = null, // ID ассистента, если сессия связана с ассистентом
     val scheduledTaskId: String? = null, // ID задачи планировщика, если сессия связана с задачей
-    val pipelineExecutionId: String? = null, // ID выполнения pipeline, если сессия связана с pipeline
-    var currentPipelineStep: Int? = null, // Текущий шаг в pipeline (0-based)
+    val pipelineId: String? = null, // ID пайплайна, если сессия связана с пайплайном
 
     // Поля для сжатия диалогов
     private val _archivedMessages: MutableList<Message> = mutableListOf(), // Архив сжатых сообщений
