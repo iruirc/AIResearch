@@ -26,6 +26,8 @@ import com.researchai.persistence.JsonPersistenceStorage
 import com.researchai.persistence.PersistenceManager
 import com.researchai.persistence.MCPPreferencesStorage
 import com.researchai.persistence.ScheduledTaskStorage
+import com.researchai.persistence.AssistantStorage
+import com.researchai.persistence.JsonAssistantStorage
 import com.researchai.services.AssistantManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
@@ -81,13 +83,18 @@ class AppModule(
         )
     }
 
+    // Assistant Storage
+    val assistantStorage: AssistantStorage by lazy {
+        JsonAssistantStorage()
+    }
+
     // Legacy services
     val chatSessionManager: ChatSessionManager by lazy {
         ChatSessionManager(persistenceManager)
     }
 
     val assistantManager: AssistantManager by lazy {
-        AssistantManager()
+        AssistantManager(assistantStorage)
     }
 
     // Repositories
@@ -223,6 +230,7 @@ class AppModule(
             schedulerManager.shutdown()
             chatSessionManager.shutdown()
             mcpServerManager.shutdown()
+            assistantManager.close()
             pipelineStorage.close()
         }
         httpClient.close()

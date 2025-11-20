@@ -3,6 +3,7 @@ package com.researchai
 import com.researchai.auth.routes.authRoutes
 import com.researchai.config.ClaudeConfig
 import com.researchai.di.AppModule
+import com.researchai.routes.assistantRoutes
 import com.researchai.routes.chatRoutes
 import com.researchai.routes.compressionRoutes
 import com.researchai.routes.mcpRoutes
@@ -49,6 +50,9 @@ fun Application.configureRouting(
 
         // API роуты для assistant pipelines
         pipelineRoutes(appModule.assistantPipelineUseCase, appModule.pipelineStorage)
+
+        // API роуты для ассистентов
+        assistantRoutes(appModule.assistantManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

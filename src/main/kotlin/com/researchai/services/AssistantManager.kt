@@ -1,17 +1,26 @@
 package com.researchai.services
 
 import com.researchai.models.Assistant
+import com.researchai.persistence.AssistantStorage
+import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 
 /**
  * Менеджер для управления AI ассистентами.
  * Хранит список доступных ассистентов и предоставляет методы для работы с ними.
  */
-class AssistantManager {
+class AssistantManager(
+    private val storage: AssistantStorage
+) {
+    private val logger = LoggerFactory.getLogger(AssistantManager::class.java)
     private val assistants = mutableMapOf<String, Assistant>()
 
     init {
-        // Инициализируем встроенных ассистентов
+        // Регистрируем системных ассистентов
         registerDefaultAssistants()
+
+        // Загружаем пользовательских ассистентов из хранилища
+        loadAssistantsFromStorage()
     }
 
     /**
@@ -23,10 +32,106 @@ class AssistantManager {
     }
 
     /**
-     * Регистрирует нового ассистента
+     * Загружает пользовательских ассистентов из хранилища
      */
-    fun registerAssistant(assistant: Assistant) {
+    private fun loadAssistantsFromStorage() {
+        runBlocking {
+            storage.loadAllAssistants()
+                .onSuccess { loadedAssistants ->
+                    loadedAssistants.forEach { assistant ->
+                        assistants[assistant.id] = assistant
+                    }
+                    logger.info("Loaded ${loadedAssistants.size} custom assistants from storage")
+                }
+                .onFailure { error ->
+                    logger.error("Failed to load assistants from storage", error)
+                }
+        }
+    }
+
+    /**
+     * Регистрирует нового ассистента (только в памяти, для системных)
+     */
+    private fun registerAssistant(assistant: Assistant) {
         assistants[assistant.id] = assistant
+    }
+
+    /**
+     * Создает нового пользовательского ассистента и сохраняет в хранилище
+     */
+    suspend fun createAssistant(assistant: Assistant): Result<Assistant> {
+        // Проверяем, что ID не занят
+        if (assistants.containsKey(assistant.id)) {
+            return Result.failure(IllegalArgumentException("Assistant with ID '${assistant.id}' already exists"))
+        }
+
+        // Пользовательские ассистенты не могут быть системными
+        val userAssistant = assistant.copy(isSystem = false)
+
+        // Сохраняем в хранилище
+        storage.saveAssistant(userAssistant)
+            .onSuccess {
+                assistants[userAssistant.id] = userAssistant
+                logger.info("Created assistant: ${userAssistant.id}")
+            }
+            .onFailure { error ->
+                logger.error("Failed to create assistant: ${userAssistant.id}", error)
+                return Result.failure(error)
+            }
+
+        return Result.success(userAssistant)
+    }
+
+    /**
+     * Обновляет существующего ассистента
+     */
+    suspend fun updateAssistant(assistant: Assistant): Result<Assistant> {
+        val existing = assistants[assistant.id]
+            ?: return Result.failure(IllegalArgumentException("Assistant with ID '${assistant.id}' not found"))
+
+        // Системных ассистентов нельзя изменять
+        if (existing.isSystem) {
+            return Result.failure(IllegalStateException("Cannot modify system assistant"))
+        }
+
+        // Сохраняем в хранилище
+        storage.saveAssistant(assistant)
+            .onSuccess {
+                assistants[assistant.id] = assistant
+                logger.info("Updated assistant: ${assistant.id}")
+            }
+            .onFailure { error ->
+                logger.error("Failed to update assistant: ${assistant.id}", error)
+                return Result.failure(error)
+            }
+
+        return Result.success(assistant)
+    }
+
+    /**
+     * Удаляет ассистента
+     */
+    suspend fun deleteAssistant(assistantId: String): Result<Unit> {
+        val existing = assistants[assistantId]
+            ?: return Result.failure(IllegalArgumentException("Assistant with ID '$assistantId' not found"))
+
+        // Системных ассистентов нельзя удалять
+        if (existing.isSystem) {
+            return Result.failure(IllegalStateException("Cannot delete system assistant"))
+        }
+
+        // Удаляем из хранилища
+        storage.deleteAssistant(assistantId)
+            .onSuccess {
+                assistants.remove(assistantId)
+                logger.info("Deleted assistant: $assistantId")
+            }
+            .onFailure { error ->
+                logger.error("Failed to delete assistant: $assistantId", error)
+                return Result.failure(error)
+            }
+
+        return Result.success(Unit)
     }
 
     /**
@@ -51,6 +156,13 @@ class AssistantManager {
     }
 
     /**
+     * Закрывает ресурсы
+     */
+    suspend fun close() {
+        storage.close()
+    }
+
+    /**
      * Создает ассистента приветствия
      */
     private fun createGreetingAssistant(): Assistant {
@@ -58,7 +170,8 @@ class AssistantManager {
             id = "greeting-assistant",
             name = "Ассистент Приветствия",
             systemPrompt = "Ты - ассистент приветствия. Ты приветствуешь пользователя и предлагаешь ему начать диалог.",
-            description = "Приветствует пользователей и помогает начать диалог"
+            description = "Приветствует пользователей и помогает начать диалог",
+            isSystem = true
         )
     }
 
@@ -177,7 +290,8 @@ class AssistantManager {
 - адаптирует объяснение под уровень пользователя;
 - выдаёт **структурированный финальный ответ** с шагами для дальнейшего обучения.
             """.trimIndent(),
-            description = "Персональный AI репетитор для обучения и ответов на вопросы"
+            description = "Персональный AI репетитор для обучения и ответов на вопросы",
+            isSystem = true
         )
     }
 }

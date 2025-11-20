@@ -83,7 +83,7 @@ The codebase uses a **Strategy Pattern** with Clean Architecture principles to s
 
 The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container that initializes:
 - HTTP client with timeouts (5 min request, 10 sec connect)
-- Persistence layer (PersistenceManager, JsonPersistenceStorage, ScheduledTaskStorage)
+- Persistence layer (PersistenceManager, JsonPersistenceStorage, AssistantStorage, ScheduledTaskStorage)
 - Provider factory
 - Repositories (ConfigRepository, SessionRepository)
 - Use cases (SendMessageUseCase, GetModelsUseCase)
@@ -95,6 +95,7 @@ The `AppModule` class (`com.researchai.di.AppModule`) is a manual DI container t
 - Save all pending sessions to disk
 - Shutdown ChatSessionManager
 - Shutdown MCPServerManager
+- Close AssistantManager (saves all custom assistants)
 - Clean up HTTP client resources
 - Gracefully shutdown PersistenceManager
 
@@ -151,6 +152,101 @@ The application supports two API versions:
 - `POST /api/v2/chat` - Multi-provider chat with explicit provider specification
 - `GET /api/v2/providers` - List available providers
 - `GET /api/v2/providers/{provider}/models` - Get models for specific provider
+
+### Assistant Management
+
+The application supports **custom AI assistants** with personalized system prompts and behavior.
+
+#### Overview
+
+Assistants allow creating reusable AI personas with specific behaviors, expertise, and communication styles. Each assistant has:
+- **Unique ID**: Identifier for the assistant
+- **Name**: Display name
+- **System Prompt**: Defines assistant's behavior and expertise
+- **Description**: Brief description of assistant's purpose
+- **Type**: System (built-in) or User (custom)
+
+#### Architecture Components
+
+1. **Assistant Model** (`com.researchai.models.Assistant`):
+   - Data class with id, name, systemPrompt, description, isSystem
+   - `@Serializable` for JSON persistence
+
+2. **AssistantStorage** (`com.researchai.persistence.AssistantStorage`):
+   - Interface for assistant persistence
+   - `JsonAssistantStorage` implementation saves to `data/assistants/`
+
+3. **AssistantManager** (`com.researchai.services.AssistantManager`):
+   - Manages assistants in memory and storage
+   - Auto-loads custom assistants on startup
+   - Protects system assistants from modification/deletion
+
+4. **AssistantRoutes** (`com.researchai.routes.AssistantRoutes`):
+   - REST API for CRUD operations
+   - Full validation and error handling
+
+#### Assistant Types
+
+**System Assistants** (`isSystem: true`):
+- Built into the application
+- Cannot be modified or deleted via API
+- Examples: `greeting-assistant`, `ai-tutor`
+- Always available
+
+**Custom Assistants** (`isSystem: false`):
+- Created via REST API
+- Fully editable and deletable
+- Persisted to `data/assistants/{id}.json`
+- Survive application restarts
+
+#### API Endpoints
+
+**Assistant Management:**
+- `GET /assistants` - List all assistants (system + custom)
+- `GET /assistants/{id}` - Get assistant by ID
+- `POST /assistants` - Create new custom assistant
+- `PUT /assistants/{id}` - Update custom assistant
+- `DELETE /assistants/{id}` - Delete custom assistant
+
+**Example - Create Assistant:**
+```http
+POST /assistants
+Content-Type: application/json
+
+{
+  "id": "code-reviewer",
+  "name": "Code Reviewer",
+  "systemPrompt": "You are an expert code reviewer...",
+  "description": "Reviews code and suggests improvements"
+}
+```
+
+**Example - Use in Chat:**
+```http
+POST /chat
+Content-Type: application/json
+
+{
+  "message": "Review this code: ...",
+  "sessionId": "my-session",
+  "assistantId": "code-reviewer"
+}
+```
+
+#### Persistence
+
+- **Storage**: JSON files in `data/assistants/` directory
+- **Format**: One file per assistant (`{id}.json`)
+- **Loading**: Automatic on application startup
+- **Saving**: Immediate on create/update operations
+- **Atomic Writes**: Protection against corruption
+
+#### Important Notes
+
+- **Session Integration**: Sessions can have `assistantId` to use custom system prompts
+- **Mutual Exclusivity**: Session has EITHER `assistantId` OR `scheduledTaskId` (or neither)
+- **Protection**: System assistants cannot be modified or deleted
+- **Documentation**: See `Documents/ASSISTANT_API.md` for comprehensive API docs
 
 ## Configuration
 
@@ -434,12 +530,13 @@ override suspend fun onTaskError(error: Exception) {
 - **No tests**: The project currently has no test suite
 - **Session persistence**: Sessions are automatically saved to `data/sessions/` directory
 - **Task persistence**: Scheduled tasks are automatically saved to `data/scheduled_tasks/` directory
+- **Assistant persistence**: Custom assistants are automatically saved to `data/assistants/` directory
 - **Main application class**: Entry point is `com.researchai.ApplicationKt` (Application.kt)
 - **Java version**: Requires Java 17+
 - **Static resources**: Web UI files are in `src/main/resources/static/`
 - **CORS**: Enabled for all origins with `anyHost()`
 - **Request timeout**: HTTP client has 5-minute timeout for long AI responses
-- **Graceful shutdown**: Always use proper shutdown to save all sessions and tasks
+- **Graceful shutdown**: Always use proper shutdown to save all sessions, tasks, and assistants
 
 
 ## Tasks
