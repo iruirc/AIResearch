@@ -105,7 +105,7 @@
 }
 
 .pipeline-form-content {
-    padding: 8px 0;
+    padding: 16px 24px;
 }
 
 .pipeline-form {
@@ -223,7 +223,8 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    padding-top: 8px;
+    padding-top: 16px;
+    padding-bottom: 8px;
 }
 
 /* Delete confirmation modal */
