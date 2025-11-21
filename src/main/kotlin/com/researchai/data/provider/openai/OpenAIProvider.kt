@@ -5,6 +5,7 @@ import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
+import com.researchai.domain.utils.RetryUtils
 import com.researchai.models.AvailableOpenAIModels
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -42,57 +43,77 @@ class OpenAIProvider(
             // Маппинг domain модели в OpenAI API модель
             val openAIRequest = mapper.toOpenAIRequest(request, config)
 
-            // HTTP запрос
-            val httpResponse: HttpResponse = httpClient.post(config.baseUrl) {
-                header("Authorization", "Bearer ${config.apiKey}")
-                config.organization?.let { header("OpenAI-Organization", it) }
-                config.projectId?.let { header("OpenAI-Project", it) }
-                header("Content-Type", "application/json")
-                setBody(openAIRequest)
-            }
+            // Retry config: retry on 429 (rate limit), 529 (overloaded) and network errors
+            val retryConfig = RetryUtils.RetryConfig(
+                maxRetries = 3,
+                baseDelayMs = 1000L,
+                shouldRetry = { exception ->
+                    // Retry on network errors and connection issues
+                    exception is java.net.SocketException ||
+                    exception is java.net.ConnectException ||
+                    exception is java.io.IOException
+                }
+            )
 
-            logger.info("OpenAI API response status: ${httpResponse.status}")
+            // Execute with retry
+            val finalResponse = RetryUtils.withRetry(retryConfig) {
+                // HTTP запрос
+                val httpResponse: HttpResponse = httpClient.post(config.baseUrl) {
+                    header("Authorization", "Bearer ${config.apiKey}")
+                    config.organization?.let { header("OpenAI-Organization", it) }
+                    config.projectId?.let { header("OpenAI-Project", it) }
+                    header("Content-Type", "application/json")
+                    setBody(openAIRequest)
+                }
 
-            // Обработка ошибок
-            if (!httpResponse.status.isSuccess()) {
-                val errorBody = httpResponse.bodyAsText()
-                logger.error("OpenAI API error response: $errorBody")
+                logger.info("OpenAI API response status: ${httpResponse.status}")
 
-                return try {
-                    val errorResponse: OpenAIApiError = Json.decodeFromString(errorBody)
-                    Result.failure(
-                        AIError.NetworkException("OpenAI API Error: ${errorResponse.error.message}")
-                    )
-                } catch (e: Exception) {
-                    Result.failure(
-                        AIError.NetworkException("OpenAI API Error (${httpResponse.status}): $errorBody")
+                // Обработка ошибок 429 (Rate Limit) и 529 (Overloaded) - retry
+                if (httpResponse.status.value == 429 || httpResponse.status.value == 529) {
+                    val errorBody = httpResponse.bodyAsText()
+                    throw java.io.IOException("OpenAI API rate limited or overloaded: $errorBody")
+                }
+
+                // Обработка других ошибок - не retry
+                if (!httpResponse.status.isSuccess()) {
+                    val errorBody = httpResponse.bodyAsText()
+                    logger.error("OpenAI API error response: $errorBody")
+
+                    val errorResponse = try {
+                        Json.decodeFromString<OpenAIApiError>(errorBody)
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                    throw AIError.NetworkException(
+                        errorResponse?.error?.message ?: "OpenAI API Error (${httpResponse.status}): $errorBody"
                     )
                 }
+
+                val openAIResponse: OpenAIApiResponse = httpResponse.body()
+
+                // Маппинг обратно в domain модель
+                val aiResponse = mapper.fromOpenAIResponse(openAIResponse)
+
+                // Подсчёт выходных токенов локально (приблизительная оценка)
+                val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
+
+                // Добавляем локально подсчитанные токены
+                aiResponse.copy(
+                    estimatedInputTokens = estimatedInputTokens,
+                    estimatedOutputTokens = estimatedOutputTokens
+                )
             }
-
-            val openAIResponse: OpenAIApiResponse = httpResponse.body()
-
-            // Маппинг обратно в domain модель
-            val aiResponse = mapper.fromOpenAIResponse(openAIResponse)
-
-            // Подсчёт выходных токенов локально (приблизительная оценка)
-            val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
-
-            // Добавляем локально подсчитанные токены
-            val finalResponse = aiResponse.copy(
-                estimatedInputTokens = estimatedInputTokens,
-                estimatedOutputTokens = estimatedOutputTokens
-            )
 
             logger.info("Successfully received response from OpenAI API")
             logger.info("Actual tokens - Input: ${finalResponse.usage.inputTokens}, Output: ${finalResponse.usage.outputTokens}")
-            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: $estimatedOutputTokens (diff: ${finalResponse.usage.outputTokens - estimatedOutputTokens})")
+            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: ${finalResponse.estimatedOutputTokens} (diff: ${finalResponse.usage.outputTokens - finalResponse.estimatedOutputTokens})")
 
             Result.success(finalResponse)
 
         } catch (e: Exception) {
             logger.error("Exception in OpenAIProvider: ${e.message}", e)
-            Result.failure(AIError.NetworkException("OpenAI API error", e))
+            Result.failure(AIError.fromException(e))
         }
     }
 

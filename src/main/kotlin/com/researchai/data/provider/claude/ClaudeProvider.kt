@@ -5,6 +5,7 @@ import com.researchai.domain.provider.AIModel
 import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
+import com.researchai.domain.utils.RetryUtils
 import com.researchai.models.AvailableClaudeModels
 import com.researchai.models.LLMModel as LegacyLLMModel
 import com.researchai.services.ClaudeMessageFormatter
@@ -45,56 +46,77 @@ class ClaudeProvider(
             // Маппинг domain модели в Claude API модель
             val claudeRequest = mapper.toClaudeRequest(request, config, formatter)
 
-            // HTTP запрос
-            val httpResponse: HttpResponse = httpClient.post(config.baseUrl) {
-                header("x-api-key", config.apiKey)
-                header("anthropic-version", config.apiVersion)
-                header("content-type", "application/json")
-                setBody(claudeRequest)
-            }
+            // Retry config: retry on 529 (overloaded) and network errors
+            val retryConfig = RetryUtils.RetryConfig(
+                maxRetries = 3,
+                baseDelayMs = 1000L,
+                shouldRetry = { exception ->
+                    // Retry on network errors and connection issues
+                    exception is java.net.SocketException ||
+                    exception is java.net.ConnectException ||
+                    exception is java.io.IOException
+                }
+            )
 
-            logger.info("Claude API response status: ${httpResponse.status}")
+            // Execute with retry
+            val finalResponse = RetryUtils.withRetry(retryConfig) {
+                // HTTP запрос
+                val httpResponse: HttpResponse = httpClient.post(config.baseUrl) {
+                    header("x-api-key", config.apiKey)
+                    header("anthropic-version", config.apiVersion)
+                    header("content-type", "application/json")
+                    setBody(claudeRequest)
+                }
 
-            // Обработка ошибок
-            if (!httpResponse.status.isSuccess()) {
-                val errorBody = httpResponse.bodyAsText()
-                logger.error("Claude API error response: $errorBody")
+                logger.info("Claude API response status: ${httpResponse.status}")
 
-                return try {
-                    val errorResponse: ClaudeApiError = Json.decodeFromString(errorBody)
-                    Result.failure(
-                        AIError.NetworkException("Claude API Error: ${errorResponse.error.message}")
-                    )
-                } catch (e: Exception) {
-                    Result.failure(
-                        AIError.NetworkException("Claude API Error (${httpResponse.status}): $errorBody")
+                // Обработка ошибок 529 (Overloaded) - throw to trigger retry
+                if (httpResponse.status.value == 529) {
+                    val errorBody = httpResponse.bodyAsText()
+                    throw java.io.IOException("Claude API overloaded: $errorBody")
+                }
+
+                // Обработка других ошибок - не retry
+                if (!httpResponse.status.isSuccess()) {
+                    val errorBody = httpResponse.bodyAsText()
+                    logger.error("Claude API error response: $errorBody")
+
+                    val errorResponse = try {
+                        Json.decodeFromString<ClaudeApiError>(errorBody)
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                    throw AIError.NetworkException(
+                        errorResponse?.error?.message ?: "Claude API Error (${httpResponse.status}): $errorBody"
                     )
                 }
+
+                // Success response
+                val claudeResponse: ClaudeApiResponse = httpResponse.body()
+
+                // Маппинг обратно в domain модель
+                val aiResponse = mapper.fromClaudeResponse(claudeResponse, request.parameters.responseFormat, formatter)
+
+                // Подсчёт выходных токенов локально (приблизительная оценка)
+                val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
+
+                // Добавляем локально подсчитанные токены
+                aiResponse.copy(
+                    estimatedInputTokens = estimatedInputTokens,
+                    estimatedOutputTokens = estimatedOutputTokens
+                )
             }
-
-            val claudeResponse: ClaudeApiResponse = httpResponse.body()
-
-            // Маппинг обратно в domain модель
-            val aiResponse = mapper.fromClaudeResponse(claudeResponse, request.parameters.responseFormat, formatter)
-
-            // Подсчёт выходных токенов локально (приблизительная оценка)
-            val estimatedOutputTokens = tokenCounter.countTokens(aiResponse.content)
-
-            // Добавляем локально подсчитанные токены
-            val finalResponse = aiResponse.copy(
-                estimatedInputTokens = estimatedInputTokens,
-                estimatedOutputTokens = estimatedOutputTokens
-            )
 
             logger.info("Successfully received response from Claude API")
             logger.info("Actual tokens - Input: ${finalResponse.usage.inputTokens}, Output: ${finalResponse.usage.outputTokens}")
-            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: $estimatedOutputTokens (diff: ${finalResponse.usage.outputTokens - estimatedOutputTokens})")
+            logger.info("Estimated tokens - Input: $estimatedInputTokens (diff: ${finalResponse.usage.inputTokens - estimatedInputTokens}), Output: ${finalResponse.estimatedOutputTokens} (diff: ${finalResponse.usage.outputTokens - finalResponse.estimatedOutputTokens})")
 
             Result.success(finalResponse)
 
         } catch (e: Exception) {
             logger.error("Exception in ClaudeProvider: ${e.message}", e)
-            Result.failure(AIError.NetworkException("Claude API error", e))
+            Result.failure(AIError.fromException(e))
         }
     }
 
