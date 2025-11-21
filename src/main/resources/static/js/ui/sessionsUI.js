@@ -87,6 +87,7 @@ export const sessionsUI = {
         sessionItem.dataset.sessionId = session.id;
         sessionItem.dataset.assistantId = session.assistantId || 'null';
         sessionItem.dataset.scheduledTaskId = session.scheduledTaskId || 'null';
+        sessionItem.dataset.pipelineId = session.pipelineId || 'null';
 
         if (session.id === currentSessionId) {
             sessionItem.classList.add('active');
@@ -96,6 +97,7 @@ export const sessionsUI = {
         const timeAgo = getTimeAgo(session.lastAccessedAt);
         const isScheduledTask = session.scheduledTaskId && session.scheduledTaskId !== 'null';
         const isAssistantChat = session.assistantId && session.assistantId !== 'null';
+        const isPipelineChat = session.pipelineId && session.pipelineId !== 'null';
 
         // Choose icon based on chat type
         let chatIcon;
@@ -111,6 +113,12 @@ export const sessionsUI = {
             // Assistant icon (user)
             chatIcon = `<svg class="session-icon session-icon-assistant" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path>
+              </svg>`;
+        } else if (isPipelineChat) {
+            // Pipeline icon (chain/link)
+            chatIcon = `<svg class="session-icon session-icon-pipeline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
               </svg>`;
         } else {
             // Simple chat icon (message bubble)
@@ -206,7 +214,7 @@ export const sessionsUI = {
 
     /**
      * Filter sessions by category
-     * @param {string} category - Category to filter by ('all', 'simple', 'agents', 'tasks')
+     * @param {string} category - Category to filter by ('all', 'simple', 'agents', 'tasks', 'pipelines')
      * @param {Array} sessions - Array of all sessions
      */
     filterSessions(category, sessions) {
@@ -224,6 +232,7 @@ export const sessionsUI = {
         sessionItems.forEach(item => {
             const assistantId = item.dataset.assistantId;
             const scheduledTaskId = item.dataset.scheduledTaskId;
+            const pipelineId = item.dataset.pipelineId;
             let shouldShow = false;
 
             switch (category) {
@@ -232,13 +241,17 @@ export const sessionsUI = {
                     break;
                 case 'simple':
                     shouldShow = (!assistantId || assistantId === 'null') &&
-                                 (!scheduledTaskId || scheduledTaskId === 'null');
+                                 (!scheduledTaskId || scheduledTaskId === 'null') &&
+                                 (!pipelineId || pipelineId === 'null');
                     break;
                 case 'agents':
                     shouldShow = assistantId && assistantId !== 'null';
                     break;
                 case 'tasks':
                     shouldShow = scheduledTaskId && scheduledTaskId !== 'null';
+                    break;
+                case 'pipelines':
+                    shouldShow = pipelineId && pipelineId !== 'null';
                     break;
             }
 
@@ -258,19 +271,22 @@ export const sessionsUI = {
         if (!sessions) return;
 
         const allCount = sessions.length;
-        const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId).length;
+        const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId).length;
         const assistantsCount = sessions.filter(s => s.assistantId).length;
         const tasksCount = sessions.filter(s => s.scheduledTaskId).length;
+        const pipelinesCount = sessions.filter(s => s.pipelineId).length;
 
         const allCountEl = document.getElementById('allCount');
         const simpleCountEl = document.getElementById('simpleCount');
         const assistantsCountEl = document.getElementById('assistantsCount');
         const tasksCountEl = document.getElementById('tasksCount');
+        const pipelinesCountEl = document.getElementById('pipelinesCount');
 
         if (allCountEl) allCountEl.textContent = allCount;
         if (simpleCountEl) simpleCountEl.textContent = simpleCount;
         if (assistantsCountEl) assistantsCountEl.textContent = assistantsCount;
         if (tasksCountEl) tasksCountEl.textContent = tasksCount;
+        if (pipelinesCountEl) pipelinesCountEl.textContent = pipelinesCount;
     },
 
     /**
@@ -312,6 +328,8 @@ export const sessionsUI = {
                 return 'Нет чатов с ассистентами';
             case 'tasks':
                 return 'Нет запланированных задач';
+            case 'pipelines':
+                return 'Нет пайплайнов';
             default:
                 return 'Нет активных чатов';
         }

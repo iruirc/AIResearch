@@ -5,7 +5,7 @@
 .sessions-list {
     flex: 1;
     overflow-y: auto;
-    padding: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-xl);
     z-index: var(--z-base);
 }
 
@@ -66,6 +66,11 @@
 
 .session-icon-task {
     color: #ea8b33;
+    opacity: 0.8;
+}
+
+.session-icon-pipeline {
+    color: #667eea;
     opacity: 0.8;
 }
 

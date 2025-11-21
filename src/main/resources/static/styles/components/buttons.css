@@ -132,6 +132,35 @@ button:disabled {
     flex-shrink: 0;
 }
 
+/* Pipelines button (sidebar) */
+.pipelines-button-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    background: var(--bg-white);
+    color: inherit;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pipelines-button-sidebar:hover {
+    background: var(--bg-gray);
+    transform: translateX(2px);
+}
+
+.pipelines-button-sidebar:active {
+    background: var(--bg-gray);
+}
+
+.pipelines-button-sidebar svg {
+    flex-shrink: 0;
+}
+
 /* Settings button */
 .settings-button {
     display: flex;

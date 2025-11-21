@@ -21,6 +21,7 @@ import { sessionsUI, initSessionsUI } from './ui/sessionsUI.js';
 import { modalsUI } from './ui/modalsUI.js?v=3';
 import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
+import { initializePipelinesModal } from './ui/pipelinesModal.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -50,6 +51,9 @@ async function initApp() {
 
     // Initialize scheduler modal
     const schedulerModal = new SchedulerModal();
+
+    // Initialize pipelines modal
+    await initializePipelinesModal();
 
     // Setup event listeners
     setupEventListeners();
