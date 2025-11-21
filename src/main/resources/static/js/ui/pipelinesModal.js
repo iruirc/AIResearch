@@ -187,12 +187,6 @@ async function selectPipeline(pipelineId) {
     try {
         console.log(`🚀 Executing pipeline: ${pipelineId}`);
 
-        // Prompt for initial message
-        const initialMessage = prompt('Введите начальное сообщение для пайплайна:');
-        if (!initialMessage || !initialMessage.trim()) {
-            return;
-        }
-
         // Close modal
         modalsUI.closeModal('pipelineModal');
 
@@ -200,14 +194,11 @@ async function selectPipeline(pipelineId) {
         messagesUI.clearMessages();
         messagePollingService.stopPolling();
 
-        // Add user message to UI
-        messagesUI.addMessage(initialMessage, 'user', null, Date.now());
-
         // Set loading state
         appState.setState({ loading: true });
 
-        // Execute pipeline (this will take time, but we need the sessionId)
-        const result = await pipelinesApi.executePipeline(pipelineId, initialMessage);
+        // Execute pipeline with empty initial message (first assistant will work with system prompt only)
+        const result = await pipelinesApi.executePipeline(pipelineId, '');
 
         console.log('✅ Pipeline execution completed:', result);
 

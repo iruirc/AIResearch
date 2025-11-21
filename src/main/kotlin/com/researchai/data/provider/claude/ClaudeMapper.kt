@@ -49,6 +49,17 @@ class ClaudeMapper {
             )
         }.toMutableList()
 
+        // Claude API requires at least one message, even if only system prompt is provided
+        // If messages is empty and systemPrompt exists, add a minimal trigger message
+        if (messages.isEmpty() && !request.systemPrompt.isNullOrBlank()) {
+            messages.add(
+                ClaudeApiMessage(
+                    role = "user",
+                    content = ClaudeApiMessageContent.Text(".")
+                )
+            )
+        }
+
         // Применяем форматирование только для текстового содержимого последнего пользовательского сообщения
         // Structured content (например, tool_result) не должен форматироваться
         if (messages.isNotEmpty() && messages.last().role == "user") {

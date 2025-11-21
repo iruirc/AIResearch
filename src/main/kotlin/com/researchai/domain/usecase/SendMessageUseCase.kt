@@ -37,7 +37,8 @@ class SendMessageUseCase(
         sessionId: String? = null,
         providerId: ProviderType = ProviderType.CLAUDE,
         model: String? = null,
-        parameters: RequestParameters = RequestParameters()
+        parameters: RequestParameters = RequestParameters(),
+        skipUserMessage: Boolean = false
     ): Result<MessageResult> {
         return try {
             logger.info("SendMessageUseCase: Processing message for provider $providerId")
@@ -64,14 +65,17 @@ class SendMessageUseCase(
             // 3. Создаем провайдера
             val provider = providerFactory.create(providerId, config)
 
-            // 4. Добавляем пользовательское сообщение в историю
-            val userMessage = Message(
-                role = MessageRole.USER,
-                content = MessageContent.Text(message)
-            )
-            sessionRepository.addMessage(session.id, userMessage).getOrThrow()
-
-            logger.info("User message added to session")
+            // 4. Добавляем пользовательское сообщение в историю (если не пропущено)
+            if (!skipUserMessage) {
+                val userMessage = Message(
+                    role = MessageRole.USER,
+                    content = MessageContent.Text(message)
+                )
+                sessionRepository.addMessage(session.id, userMessage).getOrThrow()
+                logger.info("User message added to session")
+            } else {
+                logger.info("Skipping user message - will use system prompt only")
+            }
 
             // 5. Получаем обновленную историю
             val messages = sessionRepository.getMessages(session.id).getOrThrow()

@@ -220,12 +220,19 @@ class AssistantPipelineUseCase(
             logger.info("   Session after update - assistantId: $assistantId ✅")
 
             // Execute via SendMessageUseCase
+            // For the first step with empty input, skip user message - only system prompt will be used
+            val skipUserMessage = (stepIndex == 0 && input.isBlank())
+            if (skipUserMessage) {
+                logger.info("   First step with empty input: skipping user message, using system prompt only")
+            }
+
             val result = sendMessageUseCase(
                 message = input,
                 sessionId = execution.sessionId,
                 providerId = request.providerId,
                 model = request.model,
-                parameters = request.parameters
+                parameters = request.parameters,
+                skipUserMessage = skipUserMessage
             ).getOrElse { error ->
                 return StepResult.Failure(
                     step = createErrorStep(assistantId, input, stepIndex, error.message ?: "Unknown error"),
