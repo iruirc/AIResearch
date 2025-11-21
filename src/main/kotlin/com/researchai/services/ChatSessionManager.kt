@@ -125,6 +125,25 @@ class ChatSessionManager(
     }
 
     /**
+     * Обновляет assistantId для сессии
+     * @param sessionId ID сессии
+     * @param assistantId ID ассистента
+     * @return true если обновлено, false если сессия не найдена
+     */
+    fun updateSessionAssistant(sessionId: String, assistantId: String?): Boolean {
+        val session = sessions[sessionId]
+        return if (session != null) {
+            session.assistantId = assistantId
+            persistenceManager?.markDirty(session)
+            logger.info("Updated assistantId for session $sessionId: $assistantId")
+            true
+        } else {
+            logger.warn("Session not found: $sessionId")
+            false
+        }
+    }
+
+    /**
      * Добавляет сообщение в сессию
      * @param sessionId ID сессии
      * @param role роль отправителя (USER или ASSISTANT)

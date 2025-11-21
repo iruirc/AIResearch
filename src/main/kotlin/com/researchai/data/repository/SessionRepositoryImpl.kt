@@ -88,7 +88,12 @@ class SessionRepositoryImpl(
             val legacySession = sessionManager.getSession(session.id)
                 ?: return Result.failure(AIError.NotFoundException("Session not found: ${session.id}"))
 
-            // Обновляем lastAccessedAt через повторное получение сессии
+            // Update assistantId if changed
+            if (session.assistantId != legacySession.assistantId) {
+                sessionManager.updateSessionAssistant(session.id, session.assistantId)
+            }
+
+            // Touch session to update lastAccessedAt
             sessionManager.getSession(session.id)
 
             Result.success(Unit)

@@ -16,7 +16,7 @@ export const messagePollingService = {
     _pollingInterval: null,
     _currentSessionId: null,
     _lastMessageCount: 0,
-    _pollingIntervalMs: 3000, // Poll every 3 seconds
+    _pollingIntervalMs: 1000, // Poll every 1 second
 
     /**
      * Start polling for new messages in the specified session

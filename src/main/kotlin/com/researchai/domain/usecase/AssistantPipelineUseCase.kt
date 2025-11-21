@@ -31,7 +31,8 @@ class AssistantPipelineUseCase(
         return try {
             val startTime = System.currentTimeMillis()
 
-            logger.info("Starting pipeline execution")
+            logger.info("🚀 ============ PIPELINE EXECUTION STARTED ============")
+            logger.info("   Request: pipelineId=${request.pipelineId}, message='${request.initialMessage}'")
 
             // 1. Resolve pipeline configuration
             val (assistantIds, pipelineId, pipelineName) = resolvePipelineConfig(request)
@@ -206,7 +207,17 @@ class AssistantPipelineUseCase(
                     error = "Assistant '$assistantId' not found"
                 )
 
-            logger.debug("Executing step $stepIndex: ${assistant.name}")
+            logger.info("🔹 Executing step $stepIndex: ${assistant.name} (ID: $assistantId)")
+            logger.info("   System prompt preview: ${assistant.systemPrompt.take(100)}...")
+
+            // Update session with current assistant ID to apply system prompt
+            val session = sessionRepository.getSession(execution.sessionId).getOrThrow()
+            logger.info("   Session before update - assistantId: ${session.assistantId}")
+
+            val updatedSession = session.copy(assistantId = assistantId)
+            sessionRepository.updateSession(updatedSession).getOrThrow()
+
+            logger.info("   Session after update - assistantId: $assistantId ✅")
 
             // Execute via SendMessageUseCase
             val result = sendMessageUseCase(

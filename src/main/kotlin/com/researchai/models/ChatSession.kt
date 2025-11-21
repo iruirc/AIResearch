@@ -18,7 +18,7 @@ data class ChatSession(
     private val _messages: MutableList<Message> = mutableListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     var lastAccessedAt: Long = System.currentTimeMillis(),
-    val assistantId: String? = null, // ID ассистента, если сессия связана с ассистентом
+    var assistantId: String? = null, // ID ассистента, если сессия связана с ассистентом
     val scheduledTaskId: String? = null, // ID задачи планировщика, если сессия связана с задачей
     val pipelineId: String? = null, // ID пайплайна, если сессия связана с пайплайном
 

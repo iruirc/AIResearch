@@ -5,6 +5,7 @@
 
 import { pipelinesApi } from '../api/pipelinesApi.js';
 import { assistantsApi } from '../api/assistantsApi.js';
+import { sessionsApi } from '../api/sessionsApi.js';
 import { modalsUI } from './modalsUI.js';
 import { sessionService } from '../services/sessionService.js';
 import { appState } from '../state/appState.js';
@@ -205,33 +206,40 @@ async function selectPipeline(pipelineId) {
         // Set loading state
         appState.setState({ loading: true });
 
-        // Execute pipeline
+        // Execute pipeline (this will take time, but we need the sessionId)
         const result = await pipelinesApi.executePipeline(pipelineId, initialMessage);
 
-        console.log('✅ Pipeline execution result:', result);
+        console.log('✅ Pipeline execution completed:', result);
 
-        // Set the session ID from result
+        // The pipeline has already executed by this point
+        // All intermediate messages are already in the session
+        // We need to load and display them
+
         if (result.sessionId) {
             appState.setState({ currentSessionId: result.sessionId });
-        }
 
-        // Add final result to messages
-        if (result.finalOutput) {
-            messagesUI.addMessage(result.finalOutput, 'assistant', {
-                model: result.model,
-                tokens: result.totalTokensUsed,
-                executionTimeMs: result.totalDurationMs,
-                pipelineSteps: result.results?.length || 0
-            }, Date.now());
+            // Load the session to get all messages (including intermediate ones)
+            try {
+                const sessionData = await sessionsApi.getSession(result.sessionId);
+
+                if (sessionData && sessionData.messages) {
+                    // Add all messages to UI (they include all pipeline steps)
+                    sessionData.messages.forEach(message => {
+                        messagesUI.addMessage(
+                            message.content,
+                            message.role.toLowerCase(),
+                            message.metadata,
+                            message.timestamp
+                        );
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Failed to load session messages:', error);
+            }
         }
 
         // Reload sessions list
         await sessionService.loadSessions();
-
-        // Start polling for the new session
-        if (result.sessionId) {
-            messagePollingService.startPolling(result.sessionId);
-        }
 
         appState.setState({ loading: false });
     } catch (error) {
