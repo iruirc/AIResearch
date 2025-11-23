@@ -101,7 +101,7 @@ data class OpenAIApiErrorDetails(
  */
 @Serializable
 data class OpenAITool(
-    val type: String = "function",
+    val type: String,
     val function: OpenAIFunction
 )
 
