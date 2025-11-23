@@ -56,6 +56,24 @@ dependencies {
     // Kotlinx-IO for MCP STDIO transport
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.6.0")
 
+    // PostgreSQL + Exposed ORM
+    implementation("org.jetbrains.exposed:exposed-core:0.55.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.55.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.55.0")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:0.55.0")
+    implementation("org.jetbrains.exposed:exposed-json:0.55.0")
+    implementation("org.postgresql:postgresql:42.7.4")
+    implementation("com.zaxxer:HikariCP:6.2.1")
+
+    // Flyway migrations
+    implementation("org.flywaydb:flyway-core:11.1.0")
+    implementation("org.flywaydb:flyway-database-postgresql:11.1.0")
+
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+
+    // Testing with H2 in-memory and Testcontainers
+    testImplementation("com.h2database:h2:2.2.224")
+    testImplementation("org.testcontainers:postgresql:1.19.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
 }

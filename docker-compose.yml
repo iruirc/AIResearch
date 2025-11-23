@@ -1,6 +1,37 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: researchai-postgres
+    restart: unless-stopped
+
+    # Порты
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+
+    # Переменные окружения
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-researchai}
+      POSTGRES_USER: ${DATABASE_USER:-researchai}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-researchai_dev_password}
+
+    # Volumes для персистентности
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # Healthcheck
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-researchai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # Сеть
+    networks:
+      - claude-network
+
   claude-chat:
     build:
       context: .
@@ -8,6 +39,11 @@ services:
     image: claude-chat:latest
     container_name: claude-chat-app
     restart: unless-stopped
+
+    # Зависимости
+    depends_on:
+      postgres:
+        condition: service_healthy
 
     # Порты
     ports:
@@ -19,6 +55,10 @@ services:
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-haiku-4-5-20251001}
       - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-1024}
       - CLAUDE_TEMPERATURE=${CLAUDE_TEMPERATURE:-1.0}
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/${DATABASE_NAME:-researchai}
+      - DATABASE_USER=${DATABASE_USER:-researchai}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-researchai_dev_password}
+      - ENABLE_POSTGRES=${ENABLE_POSTGRES:-true}
 
     # Healthcheck
     healthcheck:
@@ -48,6 +88,10 @@ services:
     # Сеть
     networks:
       - claude-network
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   claude-network:
