@@ -57,18 +57,30 @@ fun Route.pipelineRoutes(
                 @kotlinx.serialization.Serializable
                 data class ExecuteSavedPipelineRequest(
                     val initialMessage: String,
+                    val providerId: ProviderType? = null,
                     val model: String? = null,
                     val parameters: RequestParameters? = null
                 )
 
                 val body = call.receive<ExecuteSavedPipelineRequest>()
 
+                logger.info("📥 Received execute pipeline request:")
+                logger.info("   pipelineId: $pipelineId")
+                logger.info("   body.providerId: ${body.providerId}")
+                logger.info("   body.model: ${body.model}")
+                logger.info("   body.initialMessage: '${body.initialMessage}'")
+
                 val request = ExecutePipelineRequest(
                     initialMessage = body.initialMessage,
                     pipelineId = pipelineId,
+                    providerId = body.providerId ?: ProviderType.CLAUDE,
                     model = body.model,
                     parameters = body.parameters ?: RequestParameters()
                 )
+
+                logger.info("📤 Created ExecutePipelineRequest:")
+                logger.info("   providerId: ${request.providerId}")
+                logger.info("   model: ${request.model}")
 
                 val result = pipelineUseCase(request).getOrElse { error ->
                     logger.error("Pipeline execution failed", error)

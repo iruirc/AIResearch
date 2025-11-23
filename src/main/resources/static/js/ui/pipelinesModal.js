@@ -197,8 +197,26 @@ async function selectPipeline(pipelineId) {
         // Set loading state
         appState.setState({ loading: true });
 
+        // Get current settings to pass provider and model
+        const currentSettings = appState.getState().settings;
+
+        // Convert provider to uppercase to match backend enum (huggingface -> HUGGINGFACE)
+        const providerIdUppercase = currentSettings.providerId ? currentSettings.providerId.toUpperCase() : null;
+
+        console.log('🔍 Current settings:', currentSettings);
+        console.log('📤 Sending to API:');
+        console.log('   pipelineId:', pipelineId);
+        console.log('   providerId:', providerIdUppercase);
+        console.log('   model:', currentSettings.model);
+
         // Execute pipeline with empty initial message (first assistant will work with system prompt only)
-        const result = await pipelinesApi.executePipeline(pipelineId, '');
+        // Use current user settings for provider and model
+        const result = await pipelinesApi.executePipeline(
+            pipelineId,
+            '',
+            providerIdUppercase,
+            currentSettings.model
+        );
 
         console.log('✅ Pipeline execution completed:', result);
 

@@ -39,6 +39,17 @@ class HuggingFaceMapper {
                 },
                 content = content
             )
+        }.toMutableList()
+
+        // HuggingFace API требует минимум 1 сообщение
+        // Если messages пустой, добавляем user message с system prompt
+        if (messages.isEmpty() && request.systemPrompt != null) {
+            messages.add(
+                HuggingFaceApiMessage(
+                    role = "user",
+                    content = request.systemPrompt
+                )
+            )
         }
 
         return HuggingFaceApiRequest(

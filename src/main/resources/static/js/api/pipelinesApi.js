@@ -166,11 +166,12 @@ export const pipelinesApi = {
      * @async
      * @param {string} pipelineId - Pipeline ID to execute
      * @param {string} initialMessage - Initial user message
+     * @param {string} providerId - AI provider ID (e.g., 'HuggingFace', 'CLAUDE')
      * @param {string} model - Optional model override
      * @returns {Promise<Object>} Execution result
      * @throws {Error} If the HTTP request fails
      */
-    async executePipeline(pipelineId, initialMessage, model = null) {
+    async executePipeline(pipelineId, initialMessage, providerId = null, model = null) {
         const response = await fetchWithTimeout(
             `${API_CONFIG.PIPELINES}/execute/${pipelineId}`,
             {
@@ -180,6 +181,7 @@ export const pipelinesApi = {
                 },
                 body: JSON.stringify({
                     initialMessage,
+                    providerId,
                     model,
                 }),
             },
