@@ -129,6 +129,7 @@ function setupEventListeners() {
     // Settings modal events
     document.getElementById('saveSettingsButton').addEventListener('click', handleSaveSettings);
     document.getElementById('cancelSettingsButton').addEventListener('click', () => modalsUI.closeModal('settingsModal'));
+    document.getElementById('resetSettingsButton').addEventListener('click', handleResetSettings);
     document.getElementById('modalProviderSelect').addEventListener('change', handleProviderChange);
 
     // Settings sliders
@@ -621,11 +622,37 @@ async function handleProviderChange(providerId) {
 async function handleSaveSettings() {
     try {
         const newSettings = modalsUI.getSettingsFromModal();
+        const autoSave = document.getElementById('autoSavePreferences').checked;
+
+        // Update settings in memory
         await settingsService.updateSettings(newSettings);
+
+        // Save to database if checkbox is checked
+        if (autoSave) {
+            await settingsService.savePreferences(newSettings, true);
+        }
+
         modalsUI.closeModal('settingsModal');
     } catch (error) {
         console.error('Error saving settings:', error);
         alert('Ошибка при сохранении настроек');
+    }
+}
+
+/**
+ * Handle reset settings to defaults
+ */
+async function handleResetSettings() {
+    try {
+        const defaults = await settingsService.resetToDefaults();
+
+        // Update UI with defaults
+        await handleOpenSettings();
+
+        console.log('Settings reset to defaults');
+    } catch (error) {
+        console.error('Error resetting settings:', error);
+        alert('Ошибка при сбросе настроек');
     }
 }
 

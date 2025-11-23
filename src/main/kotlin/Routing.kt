@@ -10,6 +10,7 @@ import com.researchai.routes.mcpRoutes
 import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.routes.schedulerRoutes
+import com.researchai.routes.preferencesRoutes
 import com.researchai.services.ClaudeService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -53,6 +54,9 @@ fun Application.configureRouting(
 
         // API роуты для ассистентов
         assistantRoutes(appModule.assistantManager)
+
+        // API роуты для пользовательских настроек
+        preferencesRoutes(appModule.preferencesManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static")

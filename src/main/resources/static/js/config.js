@@ -28,6 +28,7 @@ export const API_CONFIG = {
     COMPRESSION: '/compression',
     MCP_SERVERS: '/mcp/servers',
     PIPELINES: '/api/v2/pipeline',
+    PREFERENCES: '/preferences',
     REQUEST_TIMEOUT: 300000, // 5 minutes
 };
 

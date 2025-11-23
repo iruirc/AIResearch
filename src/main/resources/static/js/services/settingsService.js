@@ -1,5 +1,6 @@
 // Settings Service - manages application settings and configuration
 import { settingsApi } from '../api/settingsApi.js';
+import { preferencesApi } from '../api/preferencesApi.js';
 import { assistantsApi } from '../api/assistantsApi.js';
 import { mcpApi } from '../api/mcpApi.js';
 import { appState } from '../state/appState.js';
@@ -11,34 +12,105 @@ import { detectProviderFromModel } from '../utils/helpers.js';
  */
 export const settingsService = {
     /**
-     * Load and apply application configuration
+     * Load and apply application configuration (from preferences or defaults)
      * @returns {Promise<void>}
      */
     async loadConfig() {
         try {
-            const config = await settingsApi.loadConfig();
+            // Try to load user preferences first
+            const preferences = await preferencesApi.getPreferences();
 
-            // Detect and set provider
-            const provider = detectProviderFromModel(config.model);
-            appState.currentProvider = provider;
-
-            // Update application state with config
+            // Update application state with preferences
             appState.setCurrentSettings({
-                model: config.model,
-                temperature: config.temperature,
-                maxTokens: config.maxTokens,
-                format: config.format,
-                providerId: provider // Add providerId to settings
+                model: preferences.model,
+                temperature: preferences.temperature,
+                maxTokens: preferences.maxTokens,
+                format: preferences.format,
+                providerId: preferences.providerId
             });
 
-            // Load context window for the current model
-            await this.updateContextWindow(config.model);
+            appState.currentProvider = preferences.providerId;
 
-            console.log('Configuration loaded:', config);
+            // Load context window for the current model
+            await this.updateContextWindow(preferences.model);
+
+            console.log('Preferences loaded:', preferences);
         } catch (error) {
-            console.error('Error loading config:', error);
-            // If config loading fails, use default settings (already in state)
+            console.error('Error loading preferences:', error);
+            // If preferences loading fails, use default settings (already in state)
         }
+    },
+
+    /**
+     * Save current settings to preferences
+     * @param {Object} settings - Settings to save
+     * @param {boolean} showIndicator - Show success indicator
+     * @returns {Promise<boolean>} Success status
+     */
+    async savePreferences(settings, showIndicator = true) {
+        try {
+            const result = await preferencesApi.savePreferences({
+                providerId: settings.providerId,
+                model: settings.model,
+                temperature: settings.temperature,
+                maxTokens: settings.maxTokens,
+                format: settings.format
+            });
+
+            if (showIndicator) {
+                this.showSuccessIndicator();
+            }
+
+            console.log('Preferences saved successfully');
+            return true;
+        } catch (error) {
+            console.error('Error saving preferences:', error);
+            return false;
+        }
+    },
+
+    /**
+     * Reset preferences to defaults
+     * @returns {Promise<Object>} Default preferences
+     */
+    async resetToDefaults() {
+        try {
+            const result = await preferencesApi.resetToDefaults();
+
+            if (result.preferences) {
+                // Update application state with defaults
+                appState.setCurrentSettings({
+                    model: result.preferences.model,
+                    temperature: result.preferences.temperature,
+                    maxTokens: result.preferences.maxTokens,
+                    format: result.preferences.format,
+                    providerId: result.preferences.providerId
+                });
+
+                appState.currentProvider = result.preferences.providerId;
+                await this.updateContextWindow(result.preferences.model);
+
+                this.showSuccessIndicator();
+                console.log('Preferences reset to defaults');
+                return result.preferences;
+            }
+        } catch (error) {
+            console.error('Error resetting preferences:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Show success indicator
+     */
+    showSuccessIndicator() {
+        const indicator = document.getElementById('settingsStatus');
+        if (!indicator) return;
+
+        indicator.style.display = 'flex';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 3000);
     },
 
     /**

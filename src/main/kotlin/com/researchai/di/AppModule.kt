@@ -28,10 +28,13 @@ import com.researchai.persistence.MCPPreferencesStorage
 import com.researchai.persistence.ScheduledTaskStorage
 import com.researchai.persistence.AssistantStorage
 import com.researchai.persistence.JsonAssistantStorage
+import com.researchai.persistence.PreferencesStorage
+import com.researchai.persistence.JsonPreferencesStorage
 import com.researchai.services.AssistantManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
 import com.researchai.services.SchedulerManager
+import com.researchai.services.PreferencesManager
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -88,6 +91,11 @@ class AppModule(
         JsonAssistantStorage()
     }
 
+    // Preferences Storage
+    val preferencesStorage: PreferencesStorage by lazy {
+        JsonPreferencesStorage()
+    }
+
     // Legacy services
     val chatSessionManager: ChatSessionManager by lazy {
         ChatSessionManager(persistenceManager)
@@ -95,6 +103,10 @@ class AppModule(
 
     val assistantManager: AssistantManager by lazy {
         AssistantManager(assistantStorage)
+    }
+
+    val preferencesManager: PreferencesManager by lazy {
+        PreferencesManager(preferencesStorage)
     }
 
     // Repositories

@@ -244,9 +244,23 @@
                         <option value="XML">XML</option>
                     </select>
                 </div>
+                <div class="settings-preferences">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="autoSavePreferences" checked>
+                        <span>Сохранять настройки по умолчанию</span>
+                    </label>
+                    <small class="settings-hint">При включении настройки автоматически сохраняются в базу данных</small>
+                </div>
+                <div class="settings-status" id="settingsStatus" style="display: none;">
+                    <span class="status-icon">✓</span>
+                    <span class="status-text">Настройки сохранены</span>
+                </div>
                 <div class="settings-actions">
-                    <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
-                    <button id="saveSettingsButton" class="save-button">Сохранить</button>
+                    <button id="resetSettingsButton" class="reset-button">Сбросить к дефолтным</button>
+                    <div class="settings-actions-right">
+                        <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
+                        <button id="saveSettingsButton" class="save-button">Сохранить</button>
+                    </div>
                 </div>
             </div>
         </div>

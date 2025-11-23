@@ -211,12 +211,14 @@ export const modalsUI = {
      * @returns {Object} Settings object
      */
     getSettingsFromModal() {
+        const providerSelect = document.getElementById('modalProviderSelect');
         const modelSelect = document.getElementById('modalModelSelect');
         const temperatureSlider = document.getElementById('modalTemperatureSlider');
         const maxTokensSlider = document.getElementById('modalMaxTokensSlider');
         const formatSelect = document.getElementById('modalFormatSelect');
 
         return {
+            providerId: providerSelect?.value,
             model: modelSelect?.value,
             temperature: parseFloat(temperatureSlider?.value),
             maxTokens: parseInt(maxTokensSlider?.value),
