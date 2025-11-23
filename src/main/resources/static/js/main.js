@@ -513,6 +513,16 @@ function handleDeleteAssistant(assistant) {
             // Reload assistants list
             await settingsService.loadAssistants();
 
+            // Re-render assistants modal with updated list
+            const state = appState.getState();
+            modalsUI.renderAssistantsList(
+                state.assistants,
+                handleAssistantSelect,
+                handleCreateAssistant,
+                handleEditAssistant,
+                handleDeleteAssistant
+            );
+
             console.log(`Assistant ${assistantId} deleted successfully`);
             alert('Ассистент успешно удалён');
         } catch (error) {
@@ -567,6 +577,16 @@ async function handleSaveAssistantForm(e) {
 
         // Reload assistants list
         await settingsService.loadAssistants();
+
+        // Re-render assistants modal with updated list
+        const state = appState.getState();
+        modalsUI.renderAssistantsList(
+            state.assistants,
+            handleAssistantSelect,
+            handleCreateAssistant,
+            handleEditAssistant,
+            handleDeleteAssistant
+        );
 
         // Close form modal
         modalsUI.closeModal('assistantFormModal');
