@@ -252,6 +252,11 @@ async function openPipelineFormModal(pipelineId = null) {
     try {
         modalsUI.closeModal('pipelineModal');
 
+        // Reload assistants to ensure we have the latest list
+        console.log('🔄 Reloading assistants list...');
+        availableAssistants = await assistantsApi.loadAssistants();
+        console.log(`✅ Reloaded ${availableAssistants.length} assistants`);
+
         if (pipelineId) {
             // Edit mode
             console.log(`📝 Editing pipeline: ${pipelineId}`);
