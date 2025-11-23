@@ -39,12 +39,14 @@ class ChatSessionManager(
      * Создает новую сессию чата
      * @param assistantId ID ассистента (опционально)
      * @param scheduledTaskId ID задачи планировщика (опционально)
+     * @param pipelineId ID пайплайна (опционально)
      * @return ID новой сессии
      */
-    fun createSession(assistantId: String? = null, scheduledTaskId: String? = null): String {
+    fun createSession(assistantId: String? = null, scheduledTaskId: String? = null, pipelineId: String? = null): String {
         val session = ChatSession(
             assistantId = assistantId,
-            scheduledTaskId = scheduledTaskId
+            scheduledTaskId = scheduledTaskId,
+            pipelineId = pipelineId
         )
         sessions[session.id] = session
 
@@ -54,6 +56,7 @@ class ChatSessionManager(
         when {
             assistantId != null -> logger.info("Created new session with assistant: ${session.id}, assistantId=$assistantId")
             scheduledTaskId != null -> logger.info("Created new session with scheduled task: ${session.id}, scheduledTaskId=$scheduledTaskId")
+            pipelineId != null -> logger.info("Created new session with pipeline: ${session.id}, pipelineId=$pipelineId")
             else -> logger.info("Created new session: ${session.id}")
         }
         return session.id
@@ -279,7 +282,8 @@ class ChatSessionManager(
                 createdAt = session.createdAt,
                 lastAccessedAt = session.lastAccessedAt,
                 assistantId = session.assistantId,
-                scheduledTaskId = session.scheduledTaskId
+                scheduledTaskId = session.scheduledTaskId,
+                pipelineId = session.pipelineId
             )
         }
     }
@@ -304,5 +308,6 @@ data class SessionInfo(
     val createdAt: Long,
     val lastAccessedAt: Long,
     val assistantId: String? = null,
-    val scheduledTaskId: String? = null
+    val scheduledTaskId: String? = null,
+    val pipelineId: String? = null
 )

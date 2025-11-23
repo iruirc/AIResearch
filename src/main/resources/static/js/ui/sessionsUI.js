@@ -245,13 +245,19 @@ export const sessionsUI = {
                                  (!pipelineId || pipelineId === 'null');
                     break;
                 case 'agents':
-                    shouldShow = assistantId && assistantId !== 'null';
+                    shouldShow = assistantId && assistantId !== 'null' &&
+                                 (!pipelineId || pipelineId === 'null') &&
+                                 (!scheduledTaskId || scheduledTaskId === 'null');
                     break;
                 case 'tasks':
-                    shouldShow = scheduledTaskId && scheduledTaskId !== 'null';
+                    shouldShow = scheduledTaskId && scheduledTaskId !== 'null' &&
+                                 (!pipelineId || pipelineId === 'null') &&
+                                 (!assistantId || assistantId === 'null');
                     break;
                 case 'pipelines':
-                    shouldShow = pipelineId && pipelineId !== 'null';
+                    shouldShow = pipelineId && pipelineId !== 'null' &&
+                                 (!assistantId || assistantId === 'null') &&
+                                 (!scheduledTaskId || scheduledTaskId === 'null');
                     break;
             }
 
@@ -272,9 +278,9 @@ export const sessionsUI = {
 
         const allCount = sessions.length;
         const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId).length;
-        const assistantsCount = sessions.filter(s => s.assistantId).length;
-        const tasksCount = sessions.filter(s => s.scheduledTaskId).length;
-        const pipelinesCount = sessions.filter(s => s.pipelineId).length;
+        const assistantsCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId).length;
+        const tasksCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId).length;
+        const pipelinesCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId).length;
 
         const allCountEl = document.getElementById('allCount');
         const simpleCountEl = document.getElementById('simpleCount');

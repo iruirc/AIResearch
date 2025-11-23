@@ -151,7 +151,8 @@ fun Route.chatRoutes(
                         createdAt = info.createdAt,
                         lastAccessedAt = info.lastAccessedAt,
                         assistantId = info.assistantId,
-                        scheduledTaskId = info.scheduledTaskId
+                        scheduledTaskId = info.scheduledTaskId,
+                        pipelineId = info.pipelineId
                     )
                 }.sortedByDescending { it.lastAccessedAt }
 

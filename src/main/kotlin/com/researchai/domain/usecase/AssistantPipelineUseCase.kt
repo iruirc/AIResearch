@@ -47,14 +47,15 @@ class AssistantPipelineUseCase(
             val executionId = UUID.randomUUID().toString()
             val session = sessionRepository.createSession(request.providerId).getOrThrow()
 
-            // Update session with pipeline info
+            // Update session with pipeline info - set pipelineId to mark this as a pipeline session
             val updatedSession = session.copy(
                 pipelineExecutionId = executionId,
-                currentPipelineStep = 0
+                currentPipelineStep = 0,
+                pipelineId = pipelineId  // Set pipelineId to categorize session correctly
             )
             sessionRepository.updateSession(updatedSession).getOrThrow()
 
-            logger.info("Created session ${session.id} for pipeline execution")
+            logger.info("Created session ${session.id} for pipeline execution (pipelineId: $pipelineId)")
 
             // 4. Create execution object
             val execution = PipelineExecution(
@@ -180,6 +181,15 @@ class AssistantPipelineUseCase(
         }
 
         // All steps completed successfully
+        // Clear assistantId from session to ensure it's categorized as pipeline, not assistant
+        val session = sessionRepository.getSession(execution.sessionId).getOrNull()
+        session?.let {
+            val clearedSession = it.copy(assistantId = null)
+            sessionRepository.updateSession(clearedSession).onFailure { err ->
+                logger.warn("Failed to clear assistantId after pipeline completion", err)
+            }
+        }
+
         return currentExecution.copy(
             steps = steps,
             status = PipelineExecutionStatus.COMPLETED,

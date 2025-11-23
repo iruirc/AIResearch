@@ -64,5 +64,6 @@ data class ChatSession(
     val lastAccessedAt: Long = System.currentTimeMillis(),
     val metadata: Map<String, String> = emptyMap(),
     val pipelineExecutionId: String? = null, // ID выполнения pipeline
-    val currentPipelineStep: Int? = null // Текущий шаг в pipeline
+    val currentPipelineStep: Int? = null, // Текущий шаг в pipeline
+    val pipelineId: String? = null // ID пайплайна, если сессия связана с пайплайном
 )

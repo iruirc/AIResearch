@@ -20,7 +20,7 @@ data class ChatSession(
     var lastAccessedAt: Long = System.currentTimeMillis(),
     var assistantId: String? = null, // ID ассистента, если сессия связана с ассистентом
     val scheduledTaskId: String? = null, // ID задачи планировщика, если сессия связана с задачей
-    val pipelineId: String? = null, // ID пайплайна, если сессия связана с пайплайном
+    var pipelineId: String? = null, // ID пайплайна, если сессия связана с пайплайном
 
     // Поля для сжатия диалогов
     private val _archivedMessages: MutableList<Message> = mutableListOf(), // Архив сжатых сообщений

@@ -52,7 +52,8 @@ class SessionRepositoryImpl(
                 assistantId = legacySession.assistantId,
                 messages = messages,
                 createdAt = legacySession.createdAt,
-                lastAccessedAt = legacySession.lastAccessedAt
+                lastAccessedAt = legacySession.lastAccessedAt,
+                pipelineId = legacySession.pipelineId
             )
 
             Result.success(session)
@@ -73,7 +74,8 @@ class SessionRepositoryImpl(
                     assistantId = info.assistantId,
                     messages = legacySession.messages, // ChatSession теперь использует domain.Message напрямую
                     createdAt = info.createdAt,
-                    lastAccessedAt = info.lastAccessedAt
+                    lastAccessedAt = info.lastAccessedAt,
+                    pipelineId = info.pipelineId
                 )
             }
 
@@ -91,6 +93,12 @@ class SessionRepositoryImpl(
             // Update assistantId if changed
             if (session.assistantId != legacySession.assistantId) {
                 sessionManager.updateSessionAssistant(session.id, session.assistantId)
+            }
+
+            // Update pipelineId if changed
+            if (session.pipelineId != legacySession.pipelineId) {
+                legacySession.pipelineId = session.pipelineId
+                sessionManager.markSessionDirty(session.id)
             }
 
             // Touch session to update lastAccessedAt

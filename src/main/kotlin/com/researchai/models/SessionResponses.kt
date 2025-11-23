@@ -13,7 +13,8 @@ data class SessionListItem(
     val createdAt: Long,
     val lastAccessedAt: Long,
     val assistantId: String? = null,
-    val scheduledTaskId: String? = null
+    val scheduledTaskId: String? = null,
+    val pipelineId: String? = null
 )
 
 /**
