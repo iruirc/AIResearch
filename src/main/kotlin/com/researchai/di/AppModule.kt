@@ -30,6 +30,10 @@ import com.researchai.persistence.AssistantStorage
 import com.researchai.persistence.JsonAssistantStorage
 import com.researchai.persistence.PreferencesStorage
 import com.researchai.persistence.JsonPreferencesStorage
+import com.researchai.persistence.sql.DatabaseConfig
+import com.researchai.persistence.sql.DatabaseFactory
+import com.researchai.persistence.sql.FlywayMigrator
+import com.researchai.persistence.sql.StorageFactory
 import com.researchai.services.AssistantManager
 import com.researchai.services.ChatCompressionService
 import com.researchai.services.ChatSessionManager
@@ -43,6 +47,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 
 /**
  * Dependency Injection контейнер для приложения
@@ -53,8 +58,30 @@ class AppModule(
     private val huggingFaceConfig: HuggingFaceConfig? = null,
     private val jwtConfig: JWTConfig,
     private val googleOAuthConfig: GoogleOAuthConfig? = null,
-    private val allowedEmails: String? = null
+    private val allowedEmails: String? = null,
+    private val enablePostgres: Boolean = false
 ) {
+    private val logger = LoggerFactory.getLogger(AppModule::class.java)
+
+    // Database initialization
+    init {
+        if (enablePostgres) {
+            try {
+                logger.info("Initializing PostgreSQL database...")
+                val dbConfig = DatabaseConfig.fromEnv()
+                DatabaseFactory.init(dbConfig)
+
+                logger.info("Running Flyway migrations...")
+                FlywayMigrator.migrate(DatabaseFactory.dataSource)
+
+                logger.info("PostgreSQL initialized successfully")
+            } catch (e: Exception) {
+                logger.error("Failed to initialize PostgreSQL, will use JSON storage as fallback", e)
+            }
+        } else {
+            logger.info("PostgreSQL disabled, using JSON storage")
+        }
+    }
     // HTTP Client
     val httpClient: HttpClient by lazy {
         HttpClient(CIO) {
@@ -78,7 +105,7 @@ class AppModule(
 
     // Persistence
     val persistenceManager: PersistenceManager by lazy {
-        val storage = JsonPersistenceStorage()
+        val storage = StorageFactory.createPersistenceStorage(enablePostgres)
         PersistenceManager(
             storage = storage,
             saveDelayMs = 1000,  // 1 секунда задержка перед сохранением
@@ -88,12 +115,12 @@ class AppModule(
 
     // Assistant Storage
     val assistantStorage: AssistantStorage by lazy {
-        JsonAssistantStorage()
+        StorageFactory.createAssistantStorage(enablePostgres)
     }
 
     // Preferences Storage
     val preferencesStorage: PreferencesStorage by lazy {
-        JsonPreferencesStorage()
+        JsonPreferencesStorage() // TODO: Migrate to PostgreSQL (requires schema alignment)
     }
 
     // Legacy services

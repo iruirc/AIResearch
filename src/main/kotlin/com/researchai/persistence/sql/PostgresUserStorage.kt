@@ -2,7 +2,9 @@ package com.researchai.persistence.sql
 
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.UsersTable
+import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.slf4j.LoggerFactory
 
 /**
@@ -38,8 +40,8 @@ class PostgresUserStorage {
                 it[provider] = user.provider
                 it[providerId] = user.providerId
                 it[avatar] = user.avatar
-                it[createdAt] = java.time.Instant.ofEpochMilli(user.createdAt)
-                it[lastLoginAt] = java.time.Instant.ofEpochMilli(user.lastLoginAt)
+                it[createdAt] = Instant.fromEpochMilliseconds(user.createdAt)
+                it[lastLoginAt] = Instant.fromEpochMilliseconds(user.lastLoginAt)
             }
 
             logger.debug("Saved user: ${user.id}")
@@ -67,8 +69,8 @@ class PostgresUserStorage {
                     provider = it[UsersTable.provider],
                     providerId = it[UsersTable.providerId],
                     avatar = it[UsersTable.avatar],
-                    createdAt = it[UsersTable.createdAt].toEpochMilli(),
-                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilli()
+                    createdAt = it[UsersTable.createdAt].toEpochMilliseconds(),
+                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilliseconds()
                 )
             }
 
@@ -97,8 +99,8 @@ class PostgresUserStorage {
                     provider = it[UsersTable.provider],
                     providerId = it[UsersTable.providerId],
                     avatar = it[UsersTable.avatar],
-                    createdAt = it[UsersTable.createdAt].toEpochMilli(),
-                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilli()
+                    createdAt = it[UsersTable.createdAt].toEpochMilliseconds(),
+                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilliseconds()
                 )
             }
 
@@ -127,8 +129,8 @@ class PostgresUserStorage {
                     provider = it[UsersTable.provider],
                     providerId = it[UsersTable.providerId],
                     avatar = it[UsersTable.avatar],
-                    createdAt = it[UsersTable.createdAt].toEpochMilli(),
-                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilli()
+                    createdAt = it[UsersTable.createdAt].toEpochMilliseconds(),
+                    lastLoginAt = it[UsersTable.lastLoginAt].toEpochMilliseconds()
                 )
             }
 
@@ -146,7 +148,7 @@ class PostgresUserStorage {
     suspend fun updateLastLogin(userId: String): Result<Unit> = dbQuery {
         try {
             UsersTable.update({ UsersTable.id eq userId }) {
-                it[lastLoginAt] = java.time.Instant.now()
+                it[lastLoginAt] = kotlinx.datetime.Clock.System.now()
             }
 
             logger.debug("Updated last login for user: $userId")

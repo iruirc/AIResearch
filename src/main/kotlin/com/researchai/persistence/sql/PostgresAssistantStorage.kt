@@ -4,7 +4,9 @@ import com.researchai.models.Assistant
 import com.researchai.persistence.AssistantStorage
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.AssistantsTable
+import kotlinx.datetime.Clock
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.slf4j.LoggerFactory
 
 /**
@@ -22,7 +24,7 @@ class PostgresAssistantStorage : AssistantStorage {
                 it[systemPrompt] = assistant.systemPrompt
                 it[description] = assistant.description
                 it[isSystem] = assistant.isSystem
-                it[createdAt] = java.time.Instant.now()
+                it[createdAt] = Clock.System.now()
             }
             logger.debug("Saved assistant: ${assistant.id}")
             Result.success(Unit)

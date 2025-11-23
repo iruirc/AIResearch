@@ -1,15 +1,15 @@
 package com.researchai.persistence.sql
 
-import com.researchai.domain.models.PipelineExecution
-import com.researchai.domain.models.PipelineStatus
-import com.researchai.domain.models.ProviderType
+import com.researchai.domain.models.*
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.PipelineExecutionsTable
-import org.jetbrains.exposed.sql.*
-import org.slf4j.LoggerFactory
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.slf4j.LoggerFactory
 
 /**
  * PostgreSQL implementation for PipelineExecution storage
@@ -29,9 +29,11 @@ class PostgresExecutionStorage {
     suspend fun saveExecution(execution: PipelineExecution): Result<Unit> = dbQuery {
         try {
             // Convert complex objects to JSONB-compatible Maps
-            val parametersJson = json.encodeToString(execution.parameters)
-            val stepsJson = json.encodeToString(execution.steps)
-            val errorJson = execution.error?.let { json.encodeToString(it) }
+            val parametersMap = json.decodeFromString<Map<String, Any>>(json.encodeToString(execution.parameters))
+            val stepsMap = json.decodeFromString<List<Map<String, Any>>>(json.encodeToString(execution.steps))
+            val errorMap = execution.error?.let { err ->
+                json.decodeFromString<Map<String, Any>>(json.encodeToString(err))
+            }
 
             PipelineExecutionsTable.upsert {
                 it[id] = execution.id
@@ -42,12 +44,12 @@ class PostgresExecutionStorage {
                 it[assistantIds] = execution.assistantIds
                 it[providerId] = execution.providerId.toString()
                 it[model] = execution.model
-                it[parameters] = json.decodeFromString<Map<String, Any>>(parametersJson)
-                it[steps] = json.decodeFromString<List<Map<String, Any>>>(stepsJson)
+                it[parameters] = parametersMap
+                it[steps] = stepsMap
                 it[status] = execution.status.toString()
-                it[startTime] = java.time.Instant.ofEpochMilli(execution.startTime)
-                it[endTime] = execution.endTime?.let { time -> java.time.Instant.ofEpochMilli(time) }
-                it[error] = errorJson?.let { errJson -> json.decodeFromString<Map<String, Any>>(errJson) }
+                it[startTime] = Instant.fromEpochMilliseconds(execution.startTime)
+                it[endTime] = execution.endTime?.let { time -> Instant.fromEpochMilliseconds(time) }
+                it[error] = errorMap
             }
 
             logger.debug("Saved execution: ${execution.id}")
@@ -71,16 +73,16 @@ class PostgresExecutionStorage {
                 // Reconstruct complex objects from JSONB
                 val parametersData = it[PipelineExecutionsTable.parameters]
                 val parametersJson = json.encodeToString(parametersData)
-                val parameters = json.decodeFromString<Map<String, Any>>(parametersJson)
+                val parameters = json.decodeFromString<RequestParameters>(parametersJson)
 
                 val stepsData = it[PipelineExecutionsTable.steps]
                 val stepsJson = json.encodeToString(stepsData)
-                val steps = json.decodeFromString<List<Map<String, Any>>>(stepsJson)
+                val steps = json.decodeFromString<List<AssistantStep>>(stepsJson)
 
                 val errorData = it[PipelineExecutionsTable.error]
                 val error = errorData?.let { errData ->
                     val errorJson = json.encodeToString(errData)
-                    json.decodeFromString<Map<String, String>>(errorJson)
+                    json.decodeFromString<PipelineError>(errorJson)
                 }
 
                 PipelineExecution(
@@ -94,9 +96,9 @@ class PostgresExecutionStorage {
                     model = it[PipelineExecutionsTable.model],
                     parameters = parameters,
                     steps = steps,
-                    status = PipelineStatus.valueOf(it[PipelineExecutionsTable.status]),
-                    startTime = it[PipelineExecutionsTable.startTime].toEpochMilli(),
-                    endTime = it[PipelineExecutionsTable.endTime]?.toEpochMilli(),
+                    status = PipelineExecutionStatus.valueOf(it[PipelineExecutionsTable.status]),
+                    startTime = it[PipelineExecutionsTable.startTime].toEpochMilliseconds(),
+                    endTime = it[PipelineExecutionsTable.endTime]?.toEpochMilliseconds(),
                     error = error
                 )
             }
@@ -121,16 +123,16 @@ class PostgresExecutionStorage {
                     // Reconstruct complex objects from JSONB
                     val parametersData = row[PipelineExecutionsTable.parameters]
                     val parametersJson = json.encodeToString(parametersData)
-                    val parameters = json.decodeFromString<Map<String, Any>>(parametersJson)
+                    val parameters = json.decodeFromString<RequestParameters>(parametersJson)
 
                     val stepsData = row[PipelineExecutionsTable.steps]
                     val stepsJson = json.encodeToString(stepsData)
-                    val steps = json.decodeFromString<List<Map<String, Any>>>(stepsJson)
+                    val steps = json.decodeFromString<List<AssistantStep>>(stepsJson)
 
                     val errorData = row[PipelineExecutionsTable.error]
                     val error = errorData?.let { errData ->
                         val errorJson = json.encodeToString(errData)
-                        json.decodeFromString<Map<String, String>>(errorJson)
+                        json.decodeFromString<PipelineError>(errorJson)
                     }
 
                     PipelineExecution(
@@ -144,9 +146,9 @@ class PostgresExecutionStorage {
                         model = row[PipelineExecutionsTable.model],
                         parameters = parameters,
                         steps = steps,
-                        status = PipelineStatus.valueOf(row[PipelineExecutionsTable.status]),
-                        startTime = row[PipelineExecutionsTable.startTime].toEpochMilli(),
-                        endTime = row[PipelineExecutionsTable.endTime]?.toEpochMilli(),
+                        status = PipelineExecutionStatus.valueOf(row[PipelineExecutionsTable.status]),
+                        startTime = row[PipelineExecutionsTable.startTime].toEpochMilliseconds(),
+                        endTime = row[PipelineExecutionsTable.endTime]?.toEpochMilliseconds(),
                         error = error
                     )
                 }
@@ -171,16 +173,16 @@ class PostgresExecutionStorage {
                     // Reconstruct complex objects from JSONB
                     val parametersData = row[PipelineExecutionsTable.parameters]
                     val parametersJson = json.encodeToString(parametersData)
-                    val parameters = json.decodeFromString<Map<String, Any>>(parametersJson)
+                    val parameters = json.decodeFromString<RequestParameters>(parametersJson)
 
                     val stepsData = row[PipelineExecutionsTable.steps]
                     val stepsJson = json.encodeToString(stepsData)
-                    val steps = json.decodeFromString<List<Map<String, Any>>>(stepsJson)
+                    val steps = json.decodeFromString<List<AssistantStep>>(stepsJson)
 
                     val errorData = row[PipelineExecutionsTable.error]
                     val error = errorData?.let { errData ->
                         val errorJson = json.encodeToString(errData)
-                        json.decodeFromString<Map<String, String>>(errorJson)
+                        json.decodeFromString<PipelineError>(errorJson)
                     }
 
                     PipelineExecution(
@@ -194,9 +196,9 @@ class PostgresExecutionStorage {
                         model = row[PipelineExecutionsTable.model],
                         parameters = parameters,
                         steps = steps,
-                        status = PipelineStatus.valueOf(row[PipelineExecutionsTable.status]),
-                        startTime = row[PipelineExecutionsTable.startTime].toEpochMilli(),
-                        endTime = row[PipelineExecutionsTable.endTime]?.toEpochMilli(),
+                        status = PipelineExecutionStatus.valueOf(row[PipelineExecutionsTable.status]),
+                        startTime = row[PipelineExecutionsTable.startTime].toEpochMilliseconds(),
+                        endTime = row[PipelineExecutionsTable.endTime]?.toEpochMilliseconds(),
                         error = error
                     )
                 }

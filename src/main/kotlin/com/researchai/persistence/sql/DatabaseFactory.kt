@@ -13,13 +13,19 @@ import org.slf4j.LoggerFactory
  */
 object DatabaseFactory {
     private val logger = LoggerFactory.getLogger(DatabaseFactory::class.java)
-    private var dataSource: HikariDataSource? = null
+    private var _dataSource: HikariDataSource? = null
+
+    /**
+     * Access to the underlying HikariDataSource
+     */
+    val dataSource: HikariDataSource
+        get() = _dataSource ?: throw IllegalStateException("Database not initialized. Call init() first.")
 
     /**
      * Initialize database connection pool and run migrations
      */
     fun init(config: DatabaseConfig = DatabaseConfig.fromEnv()) {
-        if (dataSource != null) {
+        if (_dataSource != null) {
             logger.warn("Database already initialized")
             return
         }
@@ -47,21 +53,18 @@ object DatabaseFactory {
             validate()
         }
 
-        dataSource = HikariDataSource(hikariConfig)
-        Database.connect(dataSource!!)
+        _dataSource = HikariDataSource(hikariConfig)
+        Database.connect(_dataSource!!)
 
         logger.info("Database connection pool initialized successfully")
-
-        // Run Flyway migrations
-        FlywayMigrator.migrate(dataSource!!)
     }
 
     /**
      * Close database connection pool
      */
     fun close() {
-        dataSource?.close()
-        dataSource = null
+        _dataSource?.close()
+        _dataSource = null
         logger.info("Database connection pool closed")
     }
 

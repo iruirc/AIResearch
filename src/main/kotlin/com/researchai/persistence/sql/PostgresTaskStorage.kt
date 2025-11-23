@@ -1,9 +1,13 @@
 package com.researchai.persistence.sql
 
+import com.researchai.domain.models.ProviderType
 import com.researchai.scheduler.ScheduledChatTask
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.ScheduledTasksTable
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.slf4j.LoggerFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,10 +30,10 @@ class PostgresTaskStorage {
                 it[taskRequest] = task.taskRequest
                 it[intervalSeconds] = task.intervalSeconds
                 it[executeImmediately] = task.executeImmediately
-                it[providerId] = task.providerId
+                it[providerId] = task.providerId?.toString()
                 it[model] = task.model
-                it[createdAt] = java.time.Instant.ofEpochMilli(task.createdAt)
-                it[updatedAt] = java.time.Instant.now()
+                it[createdAt] = Instant.fromEpochMilliseconds(task.createdAt)
+                it[updatedAt] = Clock.System.now()
             }
 
             logger.debug("Saved task: ${task.id}")
@@ -59,9 +63,9 @@ class PostgresTaskStorage {
                 taskRequest = row[ScheduledTasksTable.taskRequest],
                 intervalSeconds = row[ScheduledTasksTable.intervalSeconds],
                 executeImmediately = row[ScheduledTasksTable.executeImmediately],
-                providerId = row[ScheduledTasksTable.providerId],
+                providerId = row[ScheduledTasksTable.providerId]?.let { ProviderType.valueOf(it) },
                 model = row[ScheduledTasksTable.model],
-                createdAt = row[ScheduledTasksTable.createdAt].toEpochMilli(),
+                createdAt = row[ScheduledTasksTable.createdAt].toEpochMilliseconds(),
                 sessionId = "" // Will be set by scheduler
             )
 
@@ -86,9 +90,9 @@ class PostgresTaskStorage {
                         taskRequest = row[ScheduledTasksTable.taskRequest],
                         intervalSeconds = row[ScheduledTasksTable.intervalSeconds],
                         executeImmediately = row[ScheduledTasksTable.executeImmediately],
-                        providerId = row[ScheduledTasksTable.providerId],
+                        providerId = row[ScheduledTasksTable.providerId]?.let { ProviderType.valueOf(it) },
                         model = row[ScheduledTasksTable.model],
-                        createdAt = row[ScheduledTasksTable.createdAt].toEpochMilli(),
+                        createdAt = row[ScheduledTasksTable.createdAt].toEpochMilliseconds(),
                         sessionId = "" // Will be set by scheduler
                     )
                 }

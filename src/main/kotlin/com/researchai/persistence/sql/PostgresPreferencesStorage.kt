@@ -2,7 +2,9 @@ package com.researchai.persistence.sql
 
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.UserPreferencesTable
+import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.slf4j.LoggerFactory
 
 /**
@@ -38,7 +40,7 @@ class PostgresPreferencesStorage {
                 it[temperature] = preferences.temperature
                 it[maxTokens] = preferences.maxTokens
                 it[format] = preferences.format
-                it[updatedAt] = java.time.Instant.ofEpochMilli(preferences.updatedAt)
+                it[updatedAt] = Instant.fromEpochMilliseconds(preferences.updatedAt)
             }
 
             logger.debug("Saved preferences for user: ${preferences.userId}")
@@ -67,7 +69,7 @@ class PostgresPreferencesStorage {
                     temperature = it[UserPreferencesTable.temperature],
                     maxTokens = it[UserPreferencesTable.maxTokens],
                     format = it[UserPreferencesTable.format],
-                    updatedAt = it[UserPreferencesTable.updatedAt].toEpochMilli()
+                    updatedAt = it[UserPreferencesTable.updatedAt].toEpochMilliseconds()
                 )
             }
 
@@ -101,7 +103,7 @@ class PostgresPreferencesStorage {
             UserPreferencesTable.update({ UserPreferencesTable.userId eq userId }) {
                 it[UserPreferencesTable.providerId] = providerId
                 it[UserPreferencesTable.model] = model
-                it[updatedAt] = java.time.Instant.now()
+                it[updatedAt] = kotlinx.datetime.Clock.System.now()
             }
 
             logger.debug("Updated provider preferences for user: $userId")
@@ -120,7 +122,7 @@ class PostgresPreferencesStorage {
             UserPreferencesTable.update({ UserPreferencesTable.userId eq userId }) {
                 it[UserPreferencesTable.temperature] = temperature
                 it[UserPreferencesTable.maxTokens] = maxTokens
-                it[updatedAt] = java.time.Instant.now()
+                it[updatedAt] = kotlinx.datetime.Clock.System.now()
             }
 
             logger.debug("Updated parameters for user: $userId")

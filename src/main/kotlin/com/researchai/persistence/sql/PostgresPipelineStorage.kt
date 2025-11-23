@@ -1,9 +1,17 @@
 package com.researchai.persistence.sql
 
 import com.researchai.domain.models.AssistantPipeline
+import com.researchai.domain.models.ProviderType
+import com.researchai.domain.models.RequestParameters
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.AssistantPipelinesTable
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.slf4j.LoggerFactory
 
 /**
@@ -13,11 +21,18 @@ import org.slf4j.LoggerFactory
 class PostgresPipelineStorage {
     private val logger = LoggerFactory.getLogger(PostgresPipelineStorage::class.java)
 
+    private val json = Json {
+        prettyPrint = false
+        ignoreUnknownKeys = true
+    }
+
     /**
      * Saves a pipeline to the database
      */
     suspend fun savePipeline(pipeline: AssistantPipeline): Result<Unit> = dbQuery {
         try {
+            val parametersMap = json.decodeFromString<Map<String, Any>>(json.encodeToString(pipeline.defaultParameters))
+
             AssistantPipelinesTable.upsert {
                 it[id] = pipeline.id
                 it[name] = pipeline.name
@@ -25,9 +40,9 @@ class PostgresPipelineStorage {
                 it[assistantIds] = pipeline.assistantIds
                 it[providerId] = pipeline.providerId.toString()
                 it[model] = pipeline.model
-                it[defaultParameters] = pipeline.defaultParameters
-                it[createdAt] = java.time.Instant.ofEpochMilli(pipeline.createdAt)
-                it[updatedAt] = java.time.Instant.now()
+                it[defaultParameters] = parametersMap
+                it[createdAt] = Instant.fromEpochMilliseconds(pipeline.createdAt)
+                it[updatedAt] = Clock.System.now()
             }
 
             logger.debug("Saved pipeline: ${pipeline.id}")
@@ -53,13 +68,13 @@ class PostgresPipelineStorage {
                     name = it[AssistantPipelinesTable.name],
                     description = it[AssistantPipelinesTable.description],
                     assistantIds = it[AssistantPipelinesTable.assistantIds],
-                    providerId = com.researchai.domain.models.ProviderType.valueOf(
-                        it[AssistantPipelinesTable.providerId]
-                    ),
+                    providerId = ProviderType.valueOf(it[AssistantPipelinesTable.providerId]),
                     model = it[AssistantPipelinesTable.model],
-                    defaultParameters = it[AssistantPipelinesTable.defaultParameters],
-                    createdAt = it[AssistantPipelinesTable.createdAt].toEpochMilli(),
-                    updatedAt = it[AssistantPipelinesTable.updatedAt].toEpochMilli()
+                    defaultParameters = json.decodeFromString<RequestParameters>(
+                        json.encodeToString(it[AssistantPipelinesTable.defaultParameters])
+                    ),
+                    createdAt = it[AssistantPipelinesTable.createdAt].toEpochMilliseconds(),
+                    updatedAt = it[AssistantPipelinesTable.updatedAt].toEpochMilliseconds()
                 )
             }
 
@@ -83,13 +98,13 @@ class PostgresPipelineStorage {
                         name = row[AssistantPipelinesTable.name],
                         description = row[AssistantPipelinesTable.description],
                         assistantIds = row[AssistantPipelinesTable.assistantIds],
-                        providerId = com.researchai.domain.models.ProviderType.valueOf(
-                            row[AssistantPipelinesTable.providerId]
-                        ),
+                        providerId = ProviderType.valueOf(row[AssistantPipelinesTable.providerId]),
                         model = row[AssistantPipelinesTable.model],
-                        defaultParameters = row[AssistantPipelinesTable.defaultParameters],
-                        createdAt = row[AssistantPipelinesTable.createdAt].toEpochMilli(),
-                        updatedAt = row[AssistantPipelinesTable.updatedAt].toEpochMilli()
+                        defaultParameters = json.decodeFromString<RequestParameters>(
+                            json.encodeToString(row[AssistantPipelinesTable.defaultParameters])
+                        ),
+                        createdAt = row[AssistantPipelinesTable.createdAt].toEpochMilliseconds(),
+                        updatedAt = row[AssistantPipelinesTable.updatedAt].toEpochMilliseconds()
                     )
                 }
 

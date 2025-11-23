@@ -61,6 +61,9 @@ fun Application.module() {
     // Email whitelist конфигурация
     val allowedEmails = getEnv("ALLOWED_EMAILS")
 
+    // PostgreSQL конфигурация
+    val enablePostgres = getEnv("ENABLE_POSTGRES")?.toBoolean() ?: false
+
     // Вывод информации о доступных провайдерах
     println("✅ Claude API: Configured")
     if (openAIConfig != null) {
@@ -88,9 +91,14 @@ fun Application.module() {
     } else {
         println("⚠️  Email Whitelist: Disabled (all emails allowed)")
     }
+    if (enablePostgres) {
+        println("✅ PostgreSQL: Enabled")
+    } else {
+        println("⚠️  PostgreSQL: Disabled (set ENABLE_POSTGRES=true to enable)")
+    }
 
     // Инициализация DI контейнера
-    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, jwtConfig, googleOAuthConfig, allowedEmails)
+    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, jwtConfig, googleOAuthConfig, allowedEmails, enablePostgres)
 
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)

@@ -6,11 +6,13 @@ import com.researchai.models.ChatSession
 import com.researchai.persistence.PersistenceStorage
 import com.researchai.persistence.sql.DatabaseFactory.dbQuery
 import com.researchai.persistence.sql.tables.ChatSessionsTable
-import org.jetbrains.exposed.sql.*
-import org.slf4j.LoggerFactory
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.slf4j.LoggerFactory
 
 /**
  * PostgreSQL implementation of PersistenceStorage for ChatSession
@@ -42,8 +44,8 @@ class PostgresPersistenceStorage : PersistenceStorage {
                     @Suppress("UNCHECKED_CAST")
                     json.decodeFromString<Map<String, Any>>(msgJson)
                 }
-                it[createdAt] = java.time.Instant.ofEpochMilli(session.createdAt)
-                it[lastAccessedAt] = java.time.Instant.ofEpochMilli(session.lastAccessedAt)
+                it[createdAt] = Instant.fromEpochMilliseconds(session.createdAt)
+                it[lastAccessedAt] = Instant.fromEpochMilliseconds(session.lastAccessedAt)
                 it[assistantId] = session.assistantId
                 it[scheduledTaskId] = session.scheduledTaskId
                 it[pipelineId] = session.pipelineId
@@ -93,8 +95,8 @@ class PostgresPersistenceStorage : PersistenceStorage {
                     id = it[ChatSessionsTable.id],
                     title = it[ChatSessionsTable.title],
                     _messages = messages,
-                    createdAt = it[ChatSessionsTable.createdAt].toEpochMilli(),
-                    lastAccessedAt = it[ChatSessionsTable.lastAccessedAt].toEpochMilli(),
+                    createdAt = it[ChatSessionsTable.createdAt].toEpochMilliseconds(),
+                    lastAccessedAt = it[ChatSessionsTable.lastAccessedAt].toEpochMilliseconds(),
                     assistantId = it[ChatSessionsTable.assistantId],
                     scheduledTaskId = it[ChatSessionsTable.scheduledTaskId],
                     pipelineId = it[ChatSessionsTable.pipelineId],
@@ -140,8 +142,8 @@ class PostgresPersistenceStorage : PersistenceStorage {
                         id = row[ChatSessionsTable.id],
                         title = row[ChatSessionsTable.title],
                         _messages = messages,
-                        createdAt = row[ChatSessionsTable.createdAt].toEpochMilli(),
-                        lastAccessedAt = row[ChatSessionsTable.lastAccessedAt].toEpochMilli(),
+                        createdAt = row[ChatSessionsTable.createdAt].toEpochMilliseconds(),
+                        lastAccessedAt = row[ChatSessionsTable.lastAccessedAt].toEpochMilliseconds(),
                         assistantId = row[ChatSessionsTable.assistantId],
                         scheduledTaskId = row[ChatSessionsTable.scheduledTaskId],
                         pipelineId = row[ChatSessionsTable.pipelineId],
