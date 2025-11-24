@@ -604,7 +604,7 @@ All endpoints are defined in `SchedulerRoutes.kt`.
   ```json
   {
     "success": false,
-    "message": "Invalid provider: INVALID. Valid providers: CLAUDE, OPENAI, HUGGINGFACE, GEMINI, CUSTOM"
+    "message": "Invalid provider: INVALID. Valid providers: CLAUDE, OPENAI, HUGGINGFACE, OLLAMA"
   }
   ```
 - `500 Internal Server Error`: Creation failed

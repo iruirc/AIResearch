@@ -61,7 +61,7 @@ The codebase uses a **Strategy Pattern** with Clean Architecture principles to s
 1. **Domain Layer** (`com.researchai.domain`):
    - `AIProvider` interface - Base contract for all AI providers
    - `AIProviderFactory` - Factory for creating provider instances
-   - `ProviderType` enum - Defines supported providers (CLAUDE, OPENAI, HUGGINGFACE, GEMINI, CUSTOM)
+   - `ProviderType` enum - Defines supported providers (CLAUDE, OPENAI, HUGGINGFACE, OLLAMA)
    - `AIRequest`/`AIResponse` - Provider-agnostic request/response models
    - Use cases: `SendMessageUseCase`, `GetModelsUseCase`
 

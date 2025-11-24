@@ -27,13 +27,6 @@ sealed class ProviderConfig {
         val defaultModel: String = "gpt-4-turbo"
     ) : ProviderConfig()
 
-    data class GeminiConfig(
-        override val apiKey: String,
-        override val baseUrl: String = "https://generativelanguage.googleapis.com/v1",
-        override val timeout: TimeoutConfig = TimeoutConfig(),
-        val defaultModel: String = "gemini-pro"
-    ) : ProviderConfig()
-
     data class HuggingFaceConfig(
         override val apiKey: String,
         override val baseUrl: String = "https://router.huggingface.co/v1/chat/completions",
@@ -46,13 +39,6 @@ sealed class ProviderConfig {
         override val baseUrl: String,
         override val timeout: TimeoutConfig = TimeoutConfig(),
         val keepAlive: String = "5m"
-    ) : ProviderConfig()
-
-    data class CustomConfig(
-        override val apiKey: String,
-        override val baseUrl: String,
-        val headers: Map<String, String> = emptyMap(),
-        override val timeout: TimeoutConfig = TimeoutConfig()
     ) : ProviderConfig()
 }
 

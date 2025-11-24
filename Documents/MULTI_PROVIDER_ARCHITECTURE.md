@@ -8,8 +8,8 @@ ResearchAI теперь поддерживает множественные AI-�
 
 1. **Claude (Anthropic)** - настроен по умолчанию через `.env`
 2. **OpenAI (GPT)** - требует настройки через API
-3. **Google Gemini** - требует настройки через API
-4. **Custom** - возможность добавления собственных провайдеров
+3. **HuggingFace** - требует настройки через API
+4. **Ollama (Local)** - локальные модели через Ollama
 
 ## Архитектура
 
@@ -27,7 +27,8 @@ ResearchAI теперь поддерживает множественные AI-�
                            ↓ ↑
 ┌─────────────────────────────────────────────────────────┐
 │              Provider Factory (Strategy Pattern)         │
-│  ClaudeProvider | OpenAIProvider | GeminiProvider        │
+│  ClaudeProvider | OpenAIProvider | HuggingFaceProvider  │
+│  OllamaProvider                                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -40,7 +41,7 @@ ResearchAI теперь поддерживает множественные AI-�
 ```json
 {
   "message": "Explain quantum computing",
-  "provider": "claude",  // или "openai", "gemini"
+  "provider": "claude",  // или "openai", "huggingface", "ollama"
   "sessionId": "optional-session-id",
   "model": "claude-sonnet-4-5-20250929",  // опционально
   "temperature": 0.7,
@@ -74,15 +75,6 @@ ResearchAI теперь поддерживает множественные AI-�
   "apiKey": "sk-...",
   "organization": "org-...",  // опционально
   "defaultModel": "gpt-4-turbo"
-}
-```
-
-**Request для Gemini:**
-```json
-{
-  "provider": "gemini",
-  "apiKey": "AIza...",
-  "defaultModel": "gemini-pro"
 }
 ```
 
@@ -137,8 +129,12 @@ GET /api/v2/providers/openai/models
       "displayName": "OpenAI"
     },
     {
-      "id": "gemini",
-      "displayName": "Google Gemini"
+      "id": "huggingface",
+      "displayName": "HuggingFace"
+    },
+    {
+      "id": "ollama",
+      "displayName": "Ollama (Local)"
     }
   ]
 }
@@ -209,43 +205,6 @@ curl http://localhost:8080/api/v2/providers/openai/models
 - `com.researchai.routes.ProviderRoutes` - новые API endpoints
 - `com.researchai.routes.ChatRoutes` - legacy endpoints (сохранены для обратной совместимости)
 - `com.researchai.di.AppModule` - Dependency Injection
-
-## Добавление нового провайдера
-
-### 1. Создайте реализацию AIProvider
-
-```kotlin
-class CustomProvider(
-    private val httpClient: HttpClient,
-    override val config: ProviderConfig.CustomConfig
-) : AIProvider {
-    override val providerId = ProviderType.CUSTOM
-
-    override suspend fun sendMessage(request: AIRequest): Result<AIResponse> {
-        // Ваша реализация
-    }
-
-    override suspend fun getModels(): Result<List<AIModel>> {
-        // Ваша реализация
-    }
-
-    override fun validateConfig(): ValidationResult {
-        // Ваша реализация
-    }
-}
-```
-
-### 2. Зарегистрируйте провайдера в фабрике
-
-Добавьте в `AIProviderFactoryImpl.kt`:
-
-```kotlin
-init {
-    register(ProviderType.CUSTOM) { config ->
-        CustomProvider(httpClient, config as ProviderConfig.CustomConfig)
-    }
-}
-```
 
 ## Обратная совместимость
 

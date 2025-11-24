@@ -100,10 +100,6 @@ fun Route.providerRoutes(appModule: AppModule) {
                         apiKey = request.apiKey,
                         defaultModel = request.defaultModel ?: "deepseek-ai/DeepSeek-R1:fastest"
                     )
-                    ProviderType.GEMINI -> ProviderConfig.GeminiConfig(
-                        apiKey = request.apiKey,
-                        defaultModel = request.defaultModel ?: "gemini-pro"
-                    )
                     ProviderType.CLAUDE -> {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Claude is already configured via environment"))
                         return@post
@@ -112,11 +108,6 @@ fun Route.providerRoutes(appModule: AppModule) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Ollama is managed through connection manager, use /api/v2/providers/ollama/connections instead"))
                         return@post
                     }
-                    ProviderType.CUSTOM -> ProviderConfig.CustomConfig(
-                        apiKey = request.apiKey,
-                        baseUrl = request.baseUrl ?: "",
-                        headers = request.headers ?: emptyMap()
-                    )
                 }
 
                 val result = appModule.configRepository.saveProviderConfig(providerId, config)
@@ -210,7 +201,7 @@ fun Route.providerRoutes(appModule: AppModule) {
 @Serializable
 data class ChatRequestV2(
     val message: String,
-    val provider: String = "claude", // "claude", "openai", "gemini"
+    val provider: String = "claude", // "claude", "openai", "huggingface", "ollama"
     val sessionId: String? = null,
     val model: String? = null,
     val temperature: Double = 1.0,

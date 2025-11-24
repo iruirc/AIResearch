@@ -51,8 +51,6 @@ class AIProviderFactoryImpl(
             is ProviderConfig.OpenAIConfig -> config.defaultModel
             is ProviderConfig.HuggingFaceConfig -> config.defaultModel
             is ProviderConfig.OllamaConfig -> "llama3.2" // Ollama models use similar tokenization
-            is ProviderConfig.GeminiConfig -> "gpt-4" // fallback for Gemini
-            is ProviderConfig.CustomConfig -> "gpt-4" // fallback
         }
         return JTokkitTokenCounter.forModel(modelName)
     }

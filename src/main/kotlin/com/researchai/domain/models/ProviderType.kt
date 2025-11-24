@@ -10,9 +10,7 @@ enum class ProviderType(val id: String, val displayName: String) {
     CLAUDE("claude", "Anthropic Claude"),
     OPENAI("openai", "OpenAI"),
     HUGGINGFACE("huggingface", "HuggingFace"),
-    GEMINI("gemini", "Google Gemini"),
-    OLLAMA("ollama", "Ollama (Local)"),
-    CUSTOM("custom", "Custom Provider");
+    OLLAMA("ollama", "Ollama (Local)");
 
     companion object {
         fun fromId(id: String): ProviderType? {

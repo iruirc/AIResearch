@@ -5,7 +5,7 @@
 ## Возможности
 
 - ✅ **Веб-интерфейс чата** - красивый UI для общения с AI
-- ✅ **Мульти-провайдер поддержка** - Claude, OpenAI, Gemini
+- ✅ **Мульти-провайдер поддержка** - Claude, OpenAI, HuggingFace, Ollama
 - ✅ REST API для чата с AI провайдерами
 - ✅ Поддержка JSON запросов/ответов
 - ✅ CORS для фронтенд-приложений
@@ -23,7 +23,8 @@
 |-----------|---------|--------------|
 | **Claude (Anthropic)** | ✅ Активен | [Claude API](https://docs.anthropic.com/claude/reference/getting-started-with-the-api) |
 | **OpenAI** | ✅ Активен | [OPENAI_INTEGRATION.md](OPENAI_INTEGRATION.md) |
-| **Gemini** | 🚧 В разработке | - |
+| **HuggingFace** | ✅ Активен | - |
+| **Ollama (Local)** | ✅ Активен | - |
 
 ### Быстрая настройка OpenAI
 

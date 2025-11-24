@@ -25,7 +25,7 @@ Function Calling - это возможность AI моделей (Claude, Open
 | **Claude** (Anthropic) | ✅ Полная поддержка | Messages API v1 |
 | **OpenAI** | ✅ Полная поддержка | Chat Completions API |
 | **HuggingFace** | ❌ Не поддерживается | N/A |
-| **Gemini** | ⚠️ Не реализовано | Planned |
+| **Ollama** | ❌ Не поддерживается | N/A |
 
 ---
 
