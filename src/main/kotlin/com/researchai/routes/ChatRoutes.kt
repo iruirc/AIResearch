@@ -2,6 +2,7 @@ package com.researchai.routes
 
 import com.researchai.config.ClaudeConfig
 import com.researchai.di.AppModule
+import com.researchai.domain.provider.ModelsResponse
 import com.researchai.models.*
 import com.researchai.services.AssistantManager
 import com.researchai.services.ChatSessionManager
@@ -457,15 +458,6 @@ fun Route.chatRoutes(
                 // Получаем query параметр provider (опционально)
                 val providerFilter = call.request.queryParameters["provider"]
 
-                // Конвертация AIModel -> LLMModel для legacy API
-                fun convertToLegacyModel(aiModel: com.researchai.domain.provider.AIModel): LLMModel {
-                    return LLMModel(
-                        id = aiModel.id,
-                        displayName = aiModel.name,
-                        createdAt = "" // Legacy field, not used
-                    )
-                }
-
                 // Фильтруем по провайдеру, если указан
                 val filteredModels = when (providerFilter?.lowercase()) {
                     "claude" -> {
@@ -480,7 +472,7 @@ fun Route.chatRoutes(
                             call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
                             return@get
                         }
-                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                        modelsResult.getOrThrow()
                     }
                     "openai" -> {
                         val configResult = appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.OPENAI)
@@ -494,7 +486,7 @@ fun Route.chatRoutes(
                             call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
                             return@get
                         }
-                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                        modelsResult.getOrThrow()
                     }
                     "huggingface" -> {
                         val configResult = appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.HUGGINGFACE)
@@ -508,7 +500,7 @@ fun Route.chatRoutes(
                             call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
                             return@get
                         }
-                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                        modelsResult.getOrThrow()
                     }
                     "ollama" -> {
                         // Для Ollama получаем модели через OllamaConnectionManager
@@ -527,18 +519,17 @@ fun Route.chatRoutes(
                             return@get
                         }
 
-                        // Конвертируем AIModel в LLMModel для совместимости с legacy API
-                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                        modelsResult.getOrThrow()
                     }
                     null -> {
                         // Все модели, если фильтр не указан
-                        val allModels = mutableListOf<LLMModel>()
+                        val allModels = mutableListOf<com.researchai.domain.provider.AIModel>()
 
                         // Claude models
                         appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.CLAUDE).getOrNull()?.let { config ->
                             val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.CLAUDE, config)
                             provider.getModels().onSuccess { models ->
-                                allModels.addAll(models.map(::convertToLegacyModel))
+                                allModels.addAll(models)
                             }
                         }
 
@@ -546,7 +537,7 @@ fun Route.chatRoutes(
                         appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.OPENAI).getOrNull()?.let { config ->
                             val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.OPENAI, config)
                             provider.getModels().onSuccess { models ->
-                                allModels.addAll(models.map(::convertToLegacyModel))
+                                allModels.addAll(models)
                             }
                         }
 
@@ -554,7 +545,14 @@ fun Route.chatRoutes(
                         appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.HUGGINGFACE).getOrNull()?.let { config ->
                             val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.HUGGINGFACE, config)
                             provider.getModels().onSuccess { models ->
-                                allModels.addAll(models.map(::convertToLegacyModel))
+                                allModels.addAll(models)
+                            }
+                        }
+
+                        // Ollama models (если есть активное подключение)
+                        appModule.ollamaConnectionManager.getActiveProvider()?.let { provider ->
+                            provider.getModels().onSuccess { models ->
+                                allModels.addAll(models)
                             }
                         }
 
@@ -566,7 +564,7 @@ fun Route.chatRoutes(
                     }
                 }
 
-                call.respond(ModelsListResponse(models = filteredModels))
+                call.respond(ModelsResponse(models = filteredModels))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,

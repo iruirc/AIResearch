@@ -1,6 +1,7 @@
 package com.researchai.domain.provider
 
 import com.researchai.domain.models.*
+import kotlinx.serialization.Serializable
 
 /**
  * Базовый интерфейс для всех AI-провайдеров
@@ -29,6 +30,7 @@ interface AIProvider {
 /**
  * Информация о модели AI
  */
+@Serializable
 data class AIModel(
     val id: String,
     val name: String,
@@ -39,9 +41,18 @@ data class AIModel(
 /**
  * Возможности модели
  */
+@Serializable
 data class ModelCapabilities(
     val supportsVision: Boolean = false,
     val supportsStreaming: Boolean = true,
     val maxTokens: Int = 4096,
     val contextWindow: Int = 8192
+)
+
+/**
+ * Ответ со списком моделей для API
+ */
+@Serializable
+data class ModelsResponse(
+    val models: List<AIModel>
 )

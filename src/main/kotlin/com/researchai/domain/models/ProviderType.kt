@@ -1,8 +1,11 @@
 package com.researchai.domain.models
 
+import kotlinx.serialization.Serializable
+
 /**
  * Типы AI-провайдеров
  */
+@Serializable
 enum class ProviderType(val id: String, val displayName: String) {
     CLAUDE("claude", "Anthropic Claude"),
     OPENAI("openai", "OpenAI"),
