@@ -8,6 +8,7 @@ enum class ProviderType(val id: String, val displayName: String) {
     OPENAI("openai", "OpenAI"),
     HUGGINGFACE("huggingface", "HuggingFace"),
     GEMINI("gemini", "Google Gemini"),
+    OLLAMA("ollama", "Ollama (Local)"),
     CUSTOM("custom", "Custom Provider");
 
     companion object {

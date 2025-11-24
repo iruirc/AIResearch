@@ -101,6 +101,7 @@ class SendMessageUseCase(
                 is ProviderConfig.OpenAIConfig -> config.defaultModel
                 is ProviderConfig.HuggingFaceConfig -> config.defaultModel
                 is ProviderConfig.GeminiConfig -> config.defaultModel
+                is ProviderConfig.OllamaConfig -> "llama3.2"
                 is ProviderConfig.CustomConfig -> "default"
             }
 

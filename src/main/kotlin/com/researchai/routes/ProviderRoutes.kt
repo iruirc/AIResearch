@@ -108,6 +108,10 @@ fun Route.providerRoutes(appModule: AppModule) {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Claude is already configured via environment"))
                         return@post
                     }
+                    ProviderType.OLLAMA -> {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Ollama is managed through connection manager, use /api/v2/providers/ollama/connections instead"))
+                        return@post
+                    }
                     ProviderType.CUSTOM -> ProviderConfig.CustomConfig(
                         apiKey = request.apiKey,
                         baseUrl = request.baseUrl ?: "",

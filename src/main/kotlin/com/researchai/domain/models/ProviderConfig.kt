@@ -41,6 +41,13 @@ sealed class ProviderConfig {
         val defaultModel: String = "deepseek-ai/DeepSeek-R1:fastest"
     ) : ProviderConfig()
 
+    data class OllamaConfig(
+        override val apiKey: String = "",  // Не используется для Ollama
+        override val baseUrl: String,
+        override val timeout: TimeoutConfig = TimeoutConfig(),
+        val keepAlive: String = "5m"
+    ) : ProviderConfig()
+
     data class CustomConfig(
         override val apiKey: String,
         override val baseUrl: String,

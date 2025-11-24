@@ -1,5 +1,6 @@
 package com.researchai.models
 
+import com.researchai.domain.models.OllamaConnection
 import kotlinx.serialization.Serializable
 
 /**
@@ -13,6 +14,8 @@ data class UserPreferences(
     val temperature: Double = 1.0,
     val maxTokens: Int = 4096,
     val format: ResponseFormat = ResponseFormat.PLAIN_TEXT,
+    val ollamaConnections: List<OllamaConnection> = emptyList(),
+    val activeOllamaConnectionId: String? = null,
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     companion object {
