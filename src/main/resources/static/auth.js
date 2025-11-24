@@ -6,7 +6,25 @@ class AuthManager {
     constructor() {
         this.jwtToken = null;
         this.user = null;
+        this.authEnabled = null; // null означает "еще не проверили"
         this.loadTokenFromStorage();
+    }
+
+    /**
+     * Проверить, включена ли аутентификация на сервере
+     */
+    async checkAuthStatus() {
+        try {
+            const response = await fetch('/auth/status');
+            const data = await response.json();
+            this.authEnabled = data.enabled;
+            return this.authEnabled;
+        } catch (error) {
+            console.error('Ошибка проверки статуса аутентификации:', error);
+            // По умолчанию предполагаем, что аутентификация включена
+            this.authEnabled = true;
+            return true;
+        }
     }
 
     /**
@@ -38,6 +56,17 @@ class AuthManager {
      * Проверить, аутентифицирован ли пользователь
      */
     async isAuthenticated() {
+        // Сначала проверяем, включена ли аутентификация
+        if (this.authEnabled === null) {
+            await this.checkAuthStatus();
+        }
+
+        // Если аутентификация отключена, всегда возвращаем true
+        if (!this.authEnabled) {
+            return true;
+        }
+
+        // Если аутентификация включена, проверяем токен
         if (!this.jwtToken) {
             return false;
         }
@@ -156,13 +185,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // На других страницах (index.html) - требуем авторизацию
+    // На других страницах (index.html) - требуем авторизацию (если включена)
     const isAuth = await window.authManager.isAuthenticated();
     if (!isAuth) {
         window.authManager.redirectToLogin();
     } else {
-        // Показываем информацию о пользователе
-        displayUserInfo();
+        // Показываем информацию о пользователе только если аутентификация включена
+        if (window.authManager.authEnabled) {
+            displayUserInfo();
+        }
     }
 });
 

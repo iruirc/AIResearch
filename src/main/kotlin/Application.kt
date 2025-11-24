@@ -42,17 +42,22 @@ fun Application.module() {
     // Вспомогательная функция для получения env переменных (поддерживает .env загрузку)
     fun getEnv(key: String): String? = System.getenv(key) ?: System.getProperty(key)
 
-    // JWT конфигурация
-    val jwtConfig = JWTConfig(
-        secret = getEnv("JWT_SECRET") ?: throw IllegalStateException("JWT_SECRET not set"),
-        issuer = getEnv("JWT_ISSUER") ?: "researchai",
-        audience = getEnv("JWT_AUDIENCE") ?: "researchai-users",
-        realm = getEnv("JWT_REALM") ?: "ResearchAI",
-        expirationMs = getEnv("JWT_EXPIRATION_MS")?.toLongOrNull() ?: 3600000
-    )
+    // Authentication configuration
+    val enableAuth = getEnv("ENABLE_AUTH")?.toBoolean() ?: false
 
-    // Google OAuth конфигурация
-    val googleOAuthConfig = if (getEnv("GOOGLE_CLIENT_ID") != null) {
+    // JWT конфигурация (опциональная, только если ENABLE_AUTH=true)
+    val jwtConfig = if (enableAuth) {
+        JWTConfig(
+            secret = getEnv("JWT_SECRET") ?: throw IllegalStateException("JWT_SECRET not set (required when ENABLE_AUTH=true)"),
+            issuer = getEnv("JWT_ISSUER") ?: "researchai",
+            audience = getEnv("JWT_AUDIENCE") ?: "researchai-users",
+            realm = getEnv("JWT_REALM") ?: "ResearchAI",
+            expirationMs = getEnv("JWT_EXPIRATION_MS")?.toLongOrNull() ?: 3600000
+        )
+    } else null
+
+    // Google OAuth конфигурация (только если authentication включен)
+    val googleOAuthConfig = if (enableAuth && getEnv("GOOGLE_CLIENT_ID") != null) {
         GoogleOAuthConfig(
             clientId = getEnv("GOOGLE_CLIENT_ID")!!,
             clientSecret = getEnv("GOOGLE_CLIENT_SECRET")!!,
@@ -89,16 +94,21 @@ fun Application.module() {
     } else {
         println("⚠️  Ollama: Not configured (optional, defaults to http://localhost:11434)")
     }
-    if (googleOAuthConfig != null) {
-        println("✅ Google OAuth: Configured")
+    if (enableAuth) {
+        println("✅ Authentication: Enabled")
+        if (googleOAuthConfig != null) {
+            println("   ✅ Google OAuth: Configured")
+        } else {
+            println("   ⚠️  Google OAuth: Not configured (add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env)")
+        }
+        if (allowedEmails != null) {
+            val emailCount = allowedEmails.split(',').filter { it.isNotBlank() }.size
+            println("   ✅ Email Whitelist: Enabled ($emailCount allowed emails)")
+        } else {
+            println("   ⚠️  Email Whitelist: Disabled (all emails allowed)")
+        }
     } else {
-        println("⚠️  Google OAuth: Not configured (add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env)")
-    }
-    if (allowedEmails != null) {
-        val emailCount = allowedEmails.split(',').filter { it.isNotBlank() }.size
-        println("✅ Email Whitelist: Enabled ($emailCount allowed emails)")
-    } else {
-        println("⚠️  Email Whitelist: Disabled (all emails allowed)")
+        println("⚠️  Authentication: Disabled (set ENABLE_AUTH=true to enable)")
     }
     if (enablePostgres) {
         println("✅ PostgreSQL: Enabled")
@@ -166,35 +176,37 @@ fun Application.module() {
         allowHeader("Authorization")
     }
 
-    // Сессии
-    install(Sessions) {
-        cookie<AuthSession>("auth_session") {
-            cookie.path = "/"
-            cookie.maxAgeInSeconds = jwtConfig.expirationMs / 1000
-            cookie.httpOnly = true
-            cookie.secure = false // true в production с HTTPS
+    // Сессии (только если authentication включен)
+    if (enableAuth && jwtConfig != null) {
+        install(Sessions) {
+            cookie<AuthSession>("auth_session") {
+                cookie.path = "/"
+                cookie.maxAgeInSeconds = jwtConfig.expirationMs / 1000
+                cookie.httpOnly = true
+                cookie.secure = false // true в production с HTTPS
+            }
+            cookie<String>("oauth_state") {
+                cookie.path = "/"
+                cookie.maxAgeInSeconds = 300 // 5 минут для OAuth state
+                cookie.httpOnly = true
+            }
         }
-        cookie<String>("oauth_state") {
-            cookie.path = "/"
-            cookie.maxAgeInSeconds = 300 // 5 минут для OAuth state
-            cookie.httpOnly = true
-        }
-    }
 
-    // JWT Authentication
-    install(Authentication) {
-        jwt("jwt-auth") {
-            realm = jwtConfig.realm
-            verifier(
-                JWT.require(Algorithm.HMAC256(jwtConfig.secret))
-                    .withAudience(jwtConfig.audience)
-                    .withIssuer(jwtConfig.issuer)
-                    .build()
-            )
-            validate { credential ->
-                if (credential.payload.audience.contains(jwtConfig.audience)) {
-                    JWTPrincipal(credential.payload)
-                } else null
+        // JWT Authentication
+        install(Authentication) {
+            jwt("jwt-auth") {
+                realm = jwtConfig.realm
+                verifier(
+                    JWT.require(Algorithm.HMAC256(jwtConfig.secret))
+                        .withAudience(jwtConfig.audience)
+                        .withIssuer(jwtConfig.issuer)
+                        .build()
+                )
+                validate { credential ->
+                    if (credential.payload.audience.contains(jwtConfig.audience)) {
+                        JWTPrincipal(credential.payload)
+                    } else null
+                }
             }
         }
     }

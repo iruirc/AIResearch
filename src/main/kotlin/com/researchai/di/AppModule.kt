@@ -60,7 +60,7 @@ class AppModule(
     private val openAIConfig: OpenAIConfig? = null,
     private val huggingFaceConfig: HuggingFaceConfig? = null,
     private val ollamaConfig: OllamaConfig? = null,
-    private val jwtConfig: JWTConfig,
+    private val jwtConfig: JWTConfig? = null,
     private val googleOAuthConfig: GoogleOAuthConfig? = null,
     private val allowedEmails: String? = null,
     private val enablePostgres: Boolean = false
@@ -215,21 +215,23 @@ class AppModule(
         )
     }
 
-    // Authentication
-    val userRepository: UserRepository by lazy {
-        UserRepositoryImpl()
+    // Authentication (только если jwtConfig не null)
+    val userRepository: UserRepository? by lazy {
+        if (jwtConfig != null) UserRepositoryImpl() else null
     }
 
-    val jwtService: JWTService by lazy {
-        JWTService(jwtConfig)
+    val jwtService: JWTService? by lazy {
+        jwtConfig?.let { JWTService(it) }
     }
 
-    val whitelistService: WhitelistService by lazy {
-        WhitelistService.fromCommaSeparatedString(allowedEmails)
+    val whitelistService: WhitelistService? by lazy {
+        if (jwtConfig != null) WhitelistService.fromCommaSeparatedString(allowedEmails) else null
     }
 
-    val authService: AuthService by lazy {
-        AuthService(userRepository, jwtService, whitelistService)
+    val authService: AuthService? by lazy {
+        if (jwtConfig != null && jwtService != null && whitelistService != null && userRepository != null) {
+            AuthService(userRepository!!, jwtService!!, whitelistService!!)
+        } else null
     }
 
     val googleAuthProvider: GoogleAuthProvider? by lazy {

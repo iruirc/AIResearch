@@ -30,9 +30,14 @@ fun Application.configureRouting(
             call.respondRedirect("/index.html")
         }
 
-        // Authentication routes
-        if (appModule.googleAuthProvider != null) {
-            authRoutes(appModule.googleAuthProvider!!, appModule.authService)
+        // Публичный endpoint для проверки статуса аутентификации
+        get("/auth/status") {
+            call.respond(mapOf("enabled" to (appModule.authService != null)))
+        }
+
+        // Authentication routes (только если authService и googleAuthProvider не null)
+        if (appModule.googleAuthProvider != null && appModule.authService != null) {
+            authRoutes(appModule.googleAuthProvider!!, appModule.authService!!)
         }
 
         // API роуты для чата (legacy + новая архитектура)
