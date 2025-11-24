@@ -32,6 +32,11 @@ class AppState {
         this.isSidebarCollapsed = false;
         this.currentSettings = { ...DEFAULT_SETTINGS };
 
+        // Ollama-specific state
+        this.ollamaConnections = [];
+        this.activeOllamaConnectionId = null;
+        this.ollamaModels = [];
+
         /**
          * Event listeners for state changes
          * @type {Object.<string, Function[]>}
@@ -72,7 +77,10 @@ class AppState {
             'mcpServers': 'mcpServers',
             'currentSessionId': 'currentSessionId',
             'currentSettings': 'currentSettings',
-            'sessionTotalTokens': 'sessionTotalTokens'
+            'sessionTotalTokens': 'sessionTotalTokens',
+            'ollamaConnections': 'ollamaConnections',
+            'activeOllamaConnectionId': 'activeOllamaConnectionId',
+            'ollamaModels': 'ollamaModels'
         };
 
         const propertyName = propertyMap[key] || key;
@@ -101,7 +109,10 @@ class AppState {
             currentContextWindow: this.currentContextWindow,
             isSidebarCollapsed: this.isSidebarCollapsed,
             settings: this.currentSettings,
-            loadingMessageId: this.loadingMessageId
+            loadingMessageId: this.loadingMessageId,
+            ollamaConnections: this.ollamaConnections,
+            activeOllamaConnectionId: this.activeOllamaConnectionId,
+            ollamaModels: this.ollamaModels
         };
     }
 
@@ -215,6 +226,33 @@ class AppState {
         this.sessionTotalTokens = 0;
         this.notify('currentSessionId');
         this.notify('sessionTotalTokens');
+    }
+
+    /**
+     * Set Ollama connections list and notify subscribers
+     * @param {Array} value - Array of Ollama connection objects
+     */
+    setOllamaConnections(value) {
+        this.ollamaConnections = value;
+        this.notify('ollamaConnections');
+    }
+
+    /**
+     * Set active Ollama connection ID and notify subscribers
+     * @param {string|null} value - Active connection ID
+     */
+    setActiveOllamaConnectionId(value) {
+        this.activeOllamaConnectionId = value;
+        this.notify('activeOllamaConnectionId');
+    }
+
+    /**
+     * Set Ollama models list and notify subscribers
+     * @param {Array} value - Array of Ollama model objects
+     */
+    setOllamaModels(value) {
+        this.ollamaModels = value;
+        this.notify('ollamaModels');
     }
 }
 
