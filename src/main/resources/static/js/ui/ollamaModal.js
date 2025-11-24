@@ -61,19 +61,19 @@ function setupEventListeners() {
     }
 
     // Cancel buttons
-    const cancelOllamaButton = document.getElementById('cancelOllamaButton');
-    if (cancelOllamaButton) {
-        cancelOllamaButton.addEventListener('click', closeFormModal);
+    const cancelOllamaFormButton = document.getElementById('cancelOllamaFormButton');
+    if (cancelOllamaFormButton) {
+        cancelOllamaFormButton.addEventListener('click', closeFormModal);
     }
 
     // Form submit
-    const ollamaForm = document.getElementById('ollamaForm');
-    if (ollamaForm) {
-        ollamaForm.addEventListener('submit', handleFormSubmit);
+    const ollamaConnectionForm = document.getElementById('ollamaConnectionForm');
+    if (ollamaConnectionForm) {
+        ollamaConnectionForm.addEventListener('submit', handleFormSubmit);
     }
 
     // Test connection button
-    const testConnectionButton = document.getElementById('testOllamaConnection');
+    const testConnectionButton = document.getElementById('testConnectionButton');
     if (testConnectionButton) {
         testConnectionButton.addEventListener('click', handleTestConnection);
     }
@@ -140,7 +140,7 @@ function closeFormModal() {
     }
 
     // Reset form
-    const form = document.getElementById('ollamaForm');
+    const form = document.getElementById('ollamaConnectionForm');
     if (form) {
         form.reset();
     }
@@ -150,6 +150,16 @@ function closeFormModal() {
 
     // Reset current connection
     currentConnection = null;
+
+    // Reopen settings modal on the Ollama tab
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal) {
+        settingsModal.classList.add('active');
+        // Switch to add-model tab
+        import('./settingsModal.js').then(module => {
+            module.switchTab('add-model');
+        });
+    }
 }
 
 /**
@@ -307,11 +317,11 @@ function createConnectionItem(connection, activeConnectionId) {
  * Open form modal for create or edit
  * @param {Object|null} connection - Connection to edit (null for create)
  */
-function openFormModal(connection) {
+export function openFormModal(connection) {
     currentConnection = connection;
 
     const modal = document.getElementById('ollamaFormModal');
-    const form = document.getElementById('ollamaForm');
+    const form = document.getElementById('ollamaConnectionForm');
     const title = document.getElementById('ollamaFormTitle');
     const submitButton = form.querySelector('button[type="submit"]');
 
@@ -374,11 +384,8 @@ async function handleFormSubmit(e) {
             showSuccess('Подключение создано успешно');
         }
 
-        // Close form modal
+        // Close form modal and reopen settings
         closeFormModal();
-
-        // Reload connections list
-        renderConnectionsList(appState.ollamaConnections);
 
     } catch (error) {
         console.error('Failed to save connection:', error);
@@ -393,8 +400,8 @@ async function handleFormSubmit(e) {
  * Handle connection testing from form
  */
 async function handleTestConnection() {
-    const button = document.getElementById('testOllamaConnection');
-    const resultDiv = document.getElementById('ollamaTestResult');
+    const button = document.getElementById('testConnectionButton');
+    const resultDiv = document.getElementById('testConnectionResult');
 
     try {
         // Get form data
@@ -521,7 +528,7 @@ async function handleDeleteConnection(connectionId, connectionName) {
  * @param {string} message - Result message
  */
 function showTestResult(success, message) {
-    const resultDiv = document.getElementById('ollamaTestResult');
+    const resultDiv = document.getElementById('testConnectionResult');
     if (!resultDiv) return;
 
     resultDiv.className = 'test-result ' + (success ? 'success' : 'error');
@@ -533,7 +540,7 @@ function showTestResult(success, message) {
  * Clear test result
  */
 function clearTestResult() {
-    const resultDiv = document.getElementById('ollamaTestResult');
+    const resultDiv = document.getElementById('testConnectionResult');
     if (resultDiv) {
         resultDiv.style.display = 'none';
         resultDiv.textContent = '';

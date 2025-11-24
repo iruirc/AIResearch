@@ -24,6 +24,7 @@ import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
 import { initializePipelinesModal } from './ui/pipelinesModal.js';
 import { initializeOllamaModal } from './ui/ollamaModal.js';
+import { initializeSettingsModal } from './ui/settingsModal.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -59,6 +60,9 @@ async function initApp() {
 
     // Initialize Ollama modal
     await initializeOllamaModal();
+
+    // Initialize settings modal with tabs
+    await initializeSettingsModal();
 
     // Setup event listeners
     setupEventListeners();

@@ -68,15 +68,6 @@
                     </svg>
                     MCP-серверы
                 </button>
-                <button id="ollamaButton" class="ollama-button-sidebar" title="Ollama подключения">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 1v6m0 6v6M1 12h6m6 0h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
-                              stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    Ollama
-                </button>
                 <button id="settingsButton" class="settings-button" title="Настройки">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -197,80 +188,97 @@
                 <h3>Настройки</h3>
                 <button id="closeSettingsModal" class="close-button">&times;</button>
             </div>
-            <div class="settings-content">
-                <div class="format-selector">
-                    <label for="modalProviderSelect">Провайдер:</label>
-                    <select id="modalProviderSelect" class="format-select">
-                        <!-- Список провайдеров загружается динамически с бэкенда -->
-                    </select>
-                </div>
-                <div class="format-selector">
-                    <label for="modalModelSelect">Модель:</label>
-                    <select id="modalModelSelect" class="format-select">
-                        <!-- Список моделей загружается динамически с бэкенда -->
-                    </select>
-                </div>
-                <div class="temperature-slider">
-                    <label for="modalTemperatureSlider">
-                        Температура: <span id="modalTemperatureValue">1.0</span>
-                    </label>
-                    <input
-                        type="range"
-                        id="modalTemperatureSlider"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value="1.0"
-                        class="slider"
-                    >
-                    <div class="temperature-labels">
-                        <span>Точный</span>
-                        <span>Креативный</span>
+
+            <!-- Tabs navigation -->
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="model-selection">Выбор модели</button>
+                <button class="settings-tab" data-tab="add-model">Добавить модель</button>
+            </div>
+
+            <!-- Tab content: Model Selection -->
+            <div class="settings-tab-content active" id="tab-model-selection">
+                <div class="settings-content">
+                    <div class="format-selector">
+                        <label for="modalProviderSelect">Провайдер:</label>
+                        <select id="modalProviderSelect" class="format-select">
+                            <!-- Список провайдеров загружается динамически с бэкенда -->
+                        </select>
+                    </div>
+                    <div class="format-selector">
+                        <label for="modalModelSelect">Модель:</label>
+                        <select id="modalModelSelect" class="format-select">
+                            <!-- Список моделей загружается динамически с бэкенда -->
+                        </select>
+                    </div>
+                    <div class="temperature-slider">
+                        <label for="modalTemperatureSlider">
+                            Температура: <span id="modalTemperatureValue">1.0</span>
+                        </label>
+                        <input
+                            type="range"
+                            id="modalTemperatureSlider"
+                            min="0"
+                            max="1"
+                            step="0.1"
+                            value="1.0"
+                            class="slider"
+                        >
+                        <div class="temperature-labels">
+                            <span>Точный</span>
+                            <span>Креативный</span>
+                        </div>
+                    </div>
+                    <div class="max-tokens-input">
+                        <label for="modalMaxTokensInput">
+                            Максимальное кол-во токенов: <span id="modalMaxTokensValue">4096</span>
+                        </label>
+                        <input
+                            type="range"
+                            id="modalMaxTokensSlider"
+                            min="1024"
+                            max="65536"
+                            step="1024"
+                            value="4096"
+                            class="slider"
+                        >
+                        <div class="max-tokens-labels">
+                            <span>1024</span>
+                            <span>65536</span>
+                        </div>
+                    </div>
+                    <div class="format-selector">
+                        <label for="modalFormatSelect">Формат ответа:</label>
+                        <select id="modalFormatSelect" class="format-select">
+                            <option value="PLAIN_TEXT" selected>Обычный текст</option>
+                            <option value="JSON">JSON</option>
+                            <option value="XML">XML</option>
+                        </select>
+                    </div>
+                    <div class="settings-preferences">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoSavePreferences" checked>
+                            <span>Сохранять настройки по умолчанию</span>
+                        </label>
+                        <small class="settings-hint">При включении настройки автоматически сохраняются в базу данных</small>
+                    </div>
+                    <div class="settings-status" id="settingsStatus" style="display: none;">
+                        <span class="status-icon">✓</span>
+                        <span class="status-text">Настройки сохранены</span>
+                    </div>
+                    <div class="settings-actions">
+                        <button id="resetSettingsButton" class="reset-button">Сбросить к дефолтным</button>
+                        <div class="settings-actions-right">
+                            <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
+                            <button id="saveSettingsButton" class="save-button">Сохранить</button>
+                        </div>
                     </div>
                 </div>
-                <div class="max-tokens-input">
-                    <label for="modalMaxTokensInput">
-                        Максимальное кол-во токенов: <span id="modalMaxTokensValue">4096</span>
-                    </label>
-                    <input
-                        type="range"
-                        id="modalMaxTokensSlider"
-                        min="1024"
-                        max="65536"
-                        step="1024"
-                        value="4096"
-                        class="slider"
-                    >
-                    <div class="max-tokens-labels">
-                        <span>1024</span>
-                        <span>65536</span>
-                    </div>
-                </div>
-                <div class="format-selector">
-                    <label for="modalFormatSelect">Формат ответа:</label>
-                    <select id="modalFormatSelect" class="format-select">
-                        <option value="PLAIN_TEXT" selected>Обычный текст</option>
-                        <option value="JSON">JSON</option>
-                        <option value="XML">XML</option>
-                    </select>
-                </div>
-                <div class="settings-preferences">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="autoSavePreferences" checked>
-                        <span>Сохранять настройки по умолчанию</span>
-                    </label>
-                    <small class="settings-hint">При включении настройки автоматически сохраняются в базу данных</small>
-                </div>
-                <div class="settings-status" id="settingsStatus" style="display: none;">
-                    <span class="status-icon">✓</span>
-                    <span class="status-text">Настройки сохранены</span>
-                </div>
-                <div class="settings-actions">
-                    <button id="resetSettingsButton" class="reset-button">Сбросить к дефолтным</button>
-                    <div class="settings-actions-right">
-                        <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
-                        <button id="saveSettingsButton" class="save-button">Сохранить</button>
-                    </div>
+            </div>
+
+            <!-- Tab content: Add Model (Ollama) -->
+            <div class="settings-tab-content" id="tab-add-model">
+                <div id="ollamaConnectionsList" class="ollama-connections-list">
+                    <div class="ollama-connections-loading">Загрузка подключений...</div>
                 </div>
             </div>
         </div>
