@@ -59,6 +59,8 @@ fun Application.configureRouting(
         preferencesRoutes(appModule.preferencesManager)
 
         // Статические файлы (HTML, CSS, JS)
-        staticResources("/", "static")
+        staticResources("/", "static") {
+            default("index.html")
+        }
     }
 }
