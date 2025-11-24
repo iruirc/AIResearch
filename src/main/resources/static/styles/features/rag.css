@@ -1,0 +1,321 @@
+/* RAG (Retrieval-Augmented Generation) Feature Styles */
+
+/* RAG Sidebar Button */
+.rag-button-sidebar {
+    width: 100%;
+    padding: 12px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.rag-button-sidebar:hover {
+    background: var(--bg-hover);
+}
+
+.rag-button-sidebar svg {
+    flex-shrink: 0;
+}
+
+/* RAG Documents List */
+.rag-documents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.rag-documents-loading,
+.rag-documents-empty,
+.rag-documents-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.rag-documents-error {
+    color: var(--error);
+}
+
+/* Add Document Button */
+.rag-add-document-button {
+    padding: 12px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.rag-add-document-button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.rag-add-document-button svg {
+    flex-shrink: 0;
+}
+
+/* Document Item */
+.rag-document-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.rag-document-item:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rag-document-item.disabled {
+    opacity: 0.6;
+}
+
+.rag-document-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.rag-document-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rag-document-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.rag-document-meta span {
+    white-space: nowrap;
+}
+
+.rag-document-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.rag-document-status.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.rag-document-status.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Document Actions */
+.rag-document-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.rag-action-button {
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-primary);
+}
+
+.rag-action-button:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+}
+
+.rag-action-button.toggle-button:hover {
+    border-color: var(--primary);
+}
+
+.rag-action-button.edit-button:hover {
+    border-color: #ffc107;
+}
+
+.rag-action-button.delete-button:hover {
+    border-color: var(--error);
+    background: #fff5f5;
+}
+
+.rag-action-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* RAG Form */
+.rag-form-content {
+    padding: 20px;
+}
+
+.rag-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.rag-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rag-form label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.rag-form .required {
+    color: var(--error);
+}
+
+.rag-form .form-input,
+.rag-form .form-textarea,
+.rag-form .form-select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    transition: all 0.2s;
+}
+
+.rag-form .form-input:focus,
+.rag-form .form-textarea:focus,
+.rag-form .form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.rag-form .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: monospace;
+}
+
+.rag-form .form-textarea:disabled {
+    background: var(--bg-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.rag-form .form-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.rag-form .checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.rag-form .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.rag-form .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.rag-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.rag-form-actions .cancel-button,
+.rag-form-actions .save-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rag-form-actions .cancel-button {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.rag-form-actions .cancel-button:hover {
+    background: var(--bg-hover);
+}
+
+.rag-form-actions .save-button {
+    background: var(--primary);
+    color: white;
+}
+
+.rag-form-actions .save-button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .rag-document-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rag-document-actions {
+        justify-content: flex-end;
+    }
+
+    .rag-documents-list {
+        padding: 12px;
+    }
+}

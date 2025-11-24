@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="styles/features/compression.css">
     <link rel="stylesheet" href="styles/features/mcp-servers.css">
     <link rel="stylesheet" href="styles/features/ollama.css">
+    <link rel="stylesheet" href="styles/features/rag.css">
 </head>
 <body>
     <div class="app-container">
@@ -56,6 +57,16 @@
                               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     Пайплайны
+                </button>
+                <button id="ragButton" class="rag-button-sidebar" title="Управление знаниями RAG">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="10" y1="8" x2="16" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="10" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Знания RAG
                 </button>
                 <button id="mcpServersButton" class="mcp-servers-button-sidebar" title="MCP-серверы">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -589,6 +600,62 @@
     <div id="compressionIndicator" class="compression-indicator" style="display: none;">
         <div class="compression-spinner"></div>
         <p>Сжатие диалога...</p>
+    </div>
+
+    <!-- Модальное окно для RAG документов -->
+    <div id="ragModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Управление знаниями RAG</h3>
+                <button id="closeRagModal" class="close-button">&times;</button>
+            </div>
+            <div id="ragDocumentsList" class="rag-documents-list">
+                <div class="rag-documents-loading">Загрузка документов...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования RAG документа -->
+    <div id="ragFormModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ragFormTitle">Добавить документ</h3>
+                <button id="closeRagFormModal" class="close-button">&times;</button>
+            </div>
+            <div class="rag-form-content">
+                <form id="ragDocumentForm" class="rag-form">
+                    <div class="form-group">
+                        <label for="ragDocumentName">Название <span class="required">*</span></label>
+                        <input type="text" id="ragDocumentName" class="form-input" placeholder="Например: Документация API" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ragDocumentContent">Содержимое <span class="required">*</span></label>
+                        <textarea id="ragDocumentContent" class="form-textarea" rows="10" placeholder="Вставьте текст документа..." required></textarea>
+                        <small class="form-hint">Поддерживаются форматы: txt, md, json, xml, log</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="ragChunkingStrategy">Стратегия разбиения</label>
+                        <select id="ragChunkingStrategy" class="form-select">
+                            <option value="FIXED_SIZE">Фиксированный размер</option>
+                            <option value="RECURSIVE">Рекурсивное разбиение</option>
+                            <option value="SEMANTIC">Семантическое разбиение</option>
+                        </select>
+                        <small class="form-hint">Определяет, как текст будет разбит на части для векторного поиска</small>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="ragDocumentEnabled" checked>
+                            <span>Использовать в RAG-контексте</span>
+                        </label>
+                        <small class="form-hint">Включенные документы используются для генерации контекста в чате</small>
+                    </div>
+                    <div class="rag-form-actions">
+                        <button type="button" id="cancelRagFormButton" class="cancel-button">Отменить</button>
+                        <button type="submit" class="save-button">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="auth.js"></script>

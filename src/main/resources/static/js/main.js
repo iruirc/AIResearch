@@ -25,6 +25,7 @@ import { SchedulerModal } from './ui/schedulerModal.js';
 import { initializePipelinesModal } from './ui/pipelinesModal.js';
 import { initializeOllamaModal } from './ui/ollamaModal.js';
 import { initializeSettingsModal } from './ui/settingsModal.js';
+import { initializeRAGModal } from './ui/ragModal.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -63,6 +64,9 @@ async function initApp() {
 
     // Initialize settings modal with tabs
     await initializeSettingsModal();
+
+    // Initialize RAG modal
+    await initializeRAGModal();
 
     // Setup event listeners
     setupEventListeners();
@@ -137,6 +141,7 @@ function setupEventListeners() {
     document.getElementById('closeMcpServersModal').addEventListener('click', () => modalsUI.closeModal('mcpServersModal'));
     document.getElementById('closeAssistantFormModal').addEventListener('click', () => modalsUI.closeModal('assistantFormModal'));
     document.getElementById('closeDeleteAssistantModal').addEventListener('click', () => modalsUI.closeModal('deleteAssistantModal'));
+    document.getElementById('closeRagFormModal').addEventListener('click', () => modalsUI.closeModal('ragFormModal'));
 
     // Settings modal events
     document.getElementById('saveSettingsButton').addEventListener('click', handleSaveSettings);

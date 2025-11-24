@@ -32,6 +32,7 @@ export const API_CONFIG = {
     PIPELINES: '/api/v2/pipeline',
     PREFERENCES: '/preferences',
     OLLAMA: '/api/v2/providers/ollama',
+    RAG: '/rag',
     REQUEST_TIMEOUT: 300000, // 5 minutes
 };
 
