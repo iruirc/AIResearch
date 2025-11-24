@@ -9,6 +9,7 @@ import { chatService } from './services/chatService.js';
 import { settingsService } from './services/settingsService.js';
 import { compressionService } from './services/compressionService.js';
 import { messagePollingService } from './services/messagePollingService.js';
+import { ollamaService } from './services/ollamaService.js';
 
 // Import API modules
 import { sessionsApi } from './api/sessionsApi.js';
@@ -22,6 +23,7 @@ import { modalsUI } from './ui/modalsUI.js?v=3';
 import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
 import { initializePipelinesModal } from './ui/pipelinesModal.js';
+import { initializeOllamaModal } from './ui/ollamaModal.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -55,6 +57,9 @@ async function initApp() {
     // Initialize pipelines modal
     await initializePipelinesModal();
 
+    // Initialize Ollama modal
+    await initializeOllamaModal();
+
     // Setup event listeners
     setupEventListeners();
 
@@ -77,6 +82,9 @@ async function initApp() {
 
         console.log('📥 Loading MCP servers...');
         await settingsService.loadMcpServers();
+
+        console.log('📥 Loading Ollama connections...');
+        await ollamaService.initialize();
 
         console.log('✅ Application initialized successfully');
 

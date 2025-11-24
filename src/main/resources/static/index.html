@@ -19,6 +19,7 @@
     <!-- Features -->
     <link rel="stylesheet" href="styles/features/compression.css">
     <link rel="stylesheet" href="styles/features/mcp-servers.css">
+    <link rel="stylesheet" href="styles/features/ollama.css">
 </head>
 <body>
     <div class="app-container">
@@ -66,6 +67,15 @@
                         <circle cx="6" cy="19" r="0.5" fill="currentColor"/>
                     </svg>
                     MCP-серверы
+                </button>
+                <button id="ollamaButton" class="ollama-button-sidebar" title="Ollama подключения">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 1v6m0 6v6M1 12h6m6 0h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
+                              stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Ollama
                 </button>
                 <button id="settingsButton" class="settings-button" title="Настройки">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -509,6 +519,60 @@
                     <button id="cancelDeletePipelineButton" class="cancel-button">Отмена</button>
                     <button id="confirmDeletePipelineButton" class="delete-button">Удалить</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ollama Connections Modal -->
+    <div id="ollamaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ollama подключения</h3>
+                <button id="closeOllamaModal" class="close-button">&times;</button>
+            </div>
+            <div id="ollamaConnectionsList" class="ollama-connections-list">
+                <div class="ollama-connections-loading">Загрузка подключений...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ollama Connection Form Modal (Create/Edit) -->
+    <div id="ollamaFormModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ollamaFormTitle">Создать подключение Ollama</h3>
+                <button id="closeOllamaFormModal" class="close-button">&times;</button>
+            </div>
+            <div class="ollama-form-content">
+                <form id="ollamaConnectionForm" class="ollama-form">
+                    <div class="form-group">
+                        <label for="ollamaConnectionName">Название <span class="required">*</span></label>
+                        <input type="text" id="ollamaConnectionName" class="form-input" placeholder="Например: Local Ollama" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ollamaConnectionUrl">Base URL <span class="required">*</span></label>
+                        <input type="text" id="ollamaConnectionUrl" class="form-input" placeholder="http://localhost:11434" required>
+                        <small class="form-hint">URL Ollama сервера (должен начинаться с http:// или https://)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="ollamaConnectionKeepAlive">Keep Alive</label>
+                        <input type="text" id="ollamaConnectionKeepAlive" class="form-input" placeholder="5m" value="5m">
+                        <small class="form-hint">Как долго держать модель в памяти (например: 5m, 1h)</small>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="testConnectionButton" class="test-connection-button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                            </svg>
+                            Проверить подключение
+                        </button>
+                        <div id="testConnectionResult" class="test-result" style="display: none;"></div>
+                    </div>
+                    <div class="ollama-form-actions">
+                        <button type="button" id="cancelOllamaFormButton" class="cancel-button">Отменить</button>
+                        <button type="submit" class="save-button">Сохранить</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
