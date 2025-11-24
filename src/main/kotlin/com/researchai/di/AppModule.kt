@@ -184,7 +184,8 @@ class AppModule(
             configRepository = configRepository,
             assistantManager = assistantManager,
             mcpOrchestrationService = mcpOrchestrationService,
-            ollamaConnectionManager = ollamaConnectionManager
+            ollamaConnectionManager = ollamaConnectionManager,
+            ragManager = ragManager
         )
     }
 
@@ -265,6 +266,57 @@ class AppModule(
             sessionRepository = sessionRepository,
             pipelineStorage = pipelineStorage
         )
+    }
+
+    // ============================================
+    // RAG Components
+    // ============================================
+
+    /**
+     * RAG Configuration
+     */
+    val ragConfig: com.researchai.domain.models.RAGConfig by lazy {
+        com.researchai.domain.models.RAGConfig()
+    }
+
+    /**
+     * RAG Document Storage (JSON-based)
+     */
+    val ragDocumentStorage: com.researchai.persistence.RAGDocumentStorage by lazy {
+        com.researchai.persistence.JsonRAGDocumentStorage()
+    }
+
+    /**
+     * Ollama Embedding Service
+     */
+    val embeddingService: com.researchai.domain.rag.EmbeddingService by lazy {
+        com.researchai.data.rag.OllamaEmbeddingService(httpClient, ragConfig)
+    }
+
+    /**
+     * In-Memory Vector Search
+     */
+    val vectorSearchService: com.researchai.domain.rag.VectorSearchService by lazy {
+        com.researchai.data.rag.InMemoryVectorSearch()
+    }
+
+    /**
+     * RAG Manager - Main orchestrator for RAG operations
+     */
+    val ragManager: com.researchai.services.RAGManager by lazy {
+        com.researchai.services.RAGManager(
+            embeddingService = embeddingService,
+            vectorSearch = vectorSearchService,
+            storage = ragDocumentStorage,
+            config = ragConfig
+        )
+    }
+
+    /**
+     * Initialize RAG system
+     */
+    suspend fun initializeRAG() {
+        ragManager.initialize()
     }
 
     /**

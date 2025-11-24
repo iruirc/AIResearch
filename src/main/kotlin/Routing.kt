@@ -10,6 +10,7 @@ import com.researchai.routes.mcpRoutes
 import com.researchai.routes.ollamaRoutes
 import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.providerRoutes
+import com.researchai.routes.ragRoutes
 import com.researchai.routes.schedulerRoutes
 import com.researchai.routes.preferencesRoutes
 import com.researchai.services.ClaudeService
@@ -66,6 +67,9 @@ fun Application.configureRouting(
 
         // API роуты для пользовательских настроек
         preferencesRoutes(appModule.preferencesManager)
+
+        // API роуты для RAG (Retrieval-Augmented Generation)
+        ragRoutes(appModule.ragManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

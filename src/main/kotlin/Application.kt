@@ -143,6 +143,17 @@ fun Application.module() {
         }
     }
 
+    // Инициализация RAG в фоне
+    launch {
+        try {
+            appModule.initializeRAG()
+            val documents = appModule.ragManager.getAllDocuments()
+            println("✅ RAG System: Initialized (${documents.size} documents loaded)")
+        } catch (e: Exception) {
+            println("⚠️  RAG System: Failed to initialize - ${e.message}")
+        }
+    }
+
     // Закрытие ресурсов при остановке приложения
     monitor.subscribe(ApplicationStopped) {
         claudeService.close()

@@ -25,7 +25,8 @@ class SendMessageUseCase(
     private val configRepository: ConfigRepository,
     private val assistantManager: AssistantManager,
     private val mcpOrchestrationService: MCPOrchestrationService? = null,
-    private val ollamaConnectionManager: OllamaConnectionManager? = null
+    private val ollamaConnectionManager: OllamaConnectionManager? = null,
+    private val ragManager: com.researchai.services.RAGManager? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
     private val claudeMapper = ClaudeMapper()
@@ -106,6 +107,44 @@ class SendMessageUseCase(
                 }
             }
 
+            // 6.5. Получаем RAG контекст если доступен
+            val ragContext = ragManager?.let { manager ->
+                try {
+                    // Проверяем есть ли включенные документы
+                    val documents = manager.getAllDocuments()
+                    val enabledDocs = documents.filter { it.enabled }
+
+                    if (enabledDocs.isEmpty()) {
+                        logger.info("RAG: No enabled documents found")
+                        null
+                    } else {
+                        logger.info("RAG: Searching context from ${enabledDocs.size} enabled documents")
+                        val context = manager.getContextForChat(message)
+                        if (context.isNotBlank()) {
+                            logger.info("RAG: Found relevant context (${context.length} characters)")
+                            context
+                        } else {
+                            logger.info("RAG: No relevant context found")
+                            null
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.error("RAG: Error retrieving context: ${e.message}", e)
+                    null
+                }
+            }
+
+            // 6.6. Объединяем системный промпт и RAG контекст
+            val finalSystemPrompt = buildString {
+                if (ragContext != null) {
+                    append(ragContext)
+                    append("\n\n")
+                }
+                if (systemPrompt != null) {
+                    append(systemPrompt)
+                }
+            }.takeIf { it.isNotBlank() }
+
             // 7. Определяем модель
             val selectedModel: String = when {
                 // Для Ollama модель должна быть явно указана
@@ -148,7 +187,7 @@ class SendMessageUseCase(
                 messages = messages,
                 model = selectedModel,
                 parameters = parameters,
-                systemPrompt = systemPrompt,
+                systemPrompt = finalSystemPrompt,
                 sessionId = session.id,
                 tools = mcpTools
             )
