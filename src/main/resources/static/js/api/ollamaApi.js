@@ -85,7 +85,7 @@ export const ollamaApi = {
      * @example
      * const connection = await ollamaApi.createOllamaConnection({
      *     name: 'Remote Ollama',
-     *     baseUrl: 'http://192.168.1.100:11434',
+     *     baseUrl: 'http://127.0.0.1:11434',
      *     keepAlive: '10m'
      * });
      */

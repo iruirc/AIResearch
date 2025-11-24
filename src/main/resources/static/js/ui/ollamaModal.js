@@ -341,6 +341,7 @@ export function openFormModal(connection) {
 
         // Set defaults
         form.reset();
+        document.getElementById('ollamaConnectionUrl').value = 'http://127.0.0.1:11434';
         document.getElementById('ollamaConnectionKeepAlive').value = '5m';
     }
 
