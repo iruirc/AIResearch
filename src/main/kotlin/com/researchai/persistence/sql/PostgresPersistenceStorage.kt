@@ -28,32 +28,26 @@ class PostgresPersistenceStorage : PersistenceStorage {
 
     override suspend fun saveSession(session: ChatSession): Result<Unit> = dbQuery {
         try {
-            // Convert messages and archivedMessages to Map<String, Any> for JSONB storage
+            // Convert messages and archivedMessages to JsonElement for JSONB storage
             val messagesJson = session.messages.map { message ->
-                json.encodeToString(message)
+                json.parseToJsonElement(json.encodeToString(message))
             }
             val archivedMessagesJson = session.archivedMessages.map { message ->
-                json.encodeToString(message)
+                json.parseToJsonElement(json.encodeToString(message))
             }
-            val compressionConfigJson = json.encodeToString(session.compressionConfig)
+            val compressionConfigJson = json.parseToJsonElement(json.encodeToString(session.compressionConfig))
 
             ChatSessionsTable.upsert {
                 it[id] = session.id
                 it[title] = session.title
-                it[messages] = messagesJson.map { msgJson ->
-                    @Suppress("UNCHECKED_CAST")
-                    json.decodeFromString<Map<String, Any>>(msgJson)
-                }
+                it[messages] = messagesJson
                 it[createdAt] = Instant.fromEpochMilliseconds(session.createdAt)
                 it[lastAccessedAt] = Instant.fromEpochMilliseconds(session.lastAccessedAt)
                 it[assistantId] = session.assistantId
                 it[scheduledTaskId] = session.scheduledTaskId
                 it[pipelineId] = session.pipelineId
-                it[archivedMessages] = archivedMessagesJson.map { msgJson ->
-                    @Suppress("UNCHECKED_CAST")
-                    json.decodeFromString<Map<String, Any>>(msgJson)
-                }
-                it[compressionConfig] = json.decodeFromString<Map<String, Any>>(compressionConfigJson)
+                it[archivedMessages] = archivedMessagesJson
+                it[compressionConfig] = compressionConfigJson
                 it[compressionCount] = session.compressionCount
             }
 
@@ -74,22 +68,19 @@ class PostgresPersistenceStorage : PersistenceStorage {
             val session = row?.let {
                 // Reconstruct messages from JSONB
                 val messagesData = it[ChatSessionsTable.messages]
-                val messages = messagesData.map { messageMap ->
-                    val messageJson = json.encodeToString(messageMap)
-                    json.decodeFromString<Message>(messageJson)
+                val messages = messagesData.map { messageElement ->
+                    json.decodeFromJsonElement(Message.serializer(), messageElement)
                 }.toMutableList()
 
                 // Reconstruct archived messages
                 val archivedData = it[ChatSessionsTable.archivedMessages]
-                val archivedMessages = archivedData.map { messageMap ->
-                    val messageJson = json.encodeToString(messageMap)
-                    json.decodeFromString<Message>(messageJson)
+                val archivedMessages = archivedData.map { messageElement ->
+                    json.decodeFromJsonElement(Message.serializer(), messageElement)
                 }.toMutableList()
 
                 // Reconstruct compression config
                 val compressionConfigData = it[ChatSessionsTable.compressionConfig]
-                val compressionConfigJson = json.encodeToString(compressionConfigData)
-                val compressionConfig = json.decodeFromString<CompressionConfig>(compressionConfigJson)
+                val compressionConfig = json.decodeFromJsonElement(CompressionConfig.serializer(), compressionConfigData)
 
                 ChatSession(
                     id = it[ChatSessionsTable.id],
@@ -121,22 +112,19 @@ class PostgresPersistenceStorage : PersistenceStorage {
                 .map { row ->
                     // Reconstruct messages from JSONB
                     val messagesData = row[ChatSessionsTable.messages]
-                    val messages = messagesData.map { messageMap ->
-                        val messageJson = json.encodeToString(messageMap)
-                        json.decodeFromString<Message>(messageJson)
+                    val messages = messagesData.map { messageElement ->
+                        json.decodeFromJsonElement(Message.serializer(), messageElement)
                     }.toMutableList()
 
                     // Reconstruct archived messages
                     val archivedData = row[ChatSessionsTable.archivedMessages]
-                    val archivedMessages = archivedData.map { messageMap ->
-                        val messageJson = json.encodeToString(messageMap)
-                        json.decodeFromString<Message>(messageJson)
+                    val archivedMessages = archivedData.map { messageElement ->
+                        json.decodeFromJsonElement(Message.serializer(), messageElement)
                     }.toMutableList()
 
                     // Reconstruct compression config
                     val compressionConfigData = row[ChatSessionsTable.compressionConfig]
-                    val compressionConfigJson = json.encodeToString(compressionConfigData)
-                    val compressionConfig = json.decodeFromString<CompressionConfig>(compressionConfigJson)
+                    val compressionConfig = json.decodeFromJsonElement(CompressionConfig.serializer(), compressionConfigData)
 
                     ChatSession(
                         id = row[ChatSessionsTable.id],

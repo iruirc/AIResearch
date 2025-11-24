@@ -31,7 +31,7 @@ class PostgresPipelineStorage {
      */
     suspend fun savePipeline(pipeline: AssistantPipeline): Result<Unit> = dbQuery {
         try {
-            val parametersMap = json.decodeFromString<Map<String, Any>>(json.encodeToString(pipeline.defaultParameters))
+            val parametersElement = json.parseToJsonElement(json.encodeToString(pipeline.defaultParameters))
 
             AssistantPipelinesTable.upsert {
                 it[id] = pipeline.id
@@ -40,7 +40,7 @@ class PostgresPipelineStorage {
                 it[assistantIds] = pipeline.assistantIds
                 it[providerId] = pipeline.providerId.toString()
                 it[model] = pipeline.model
-                it[defaultParameters] = parametersMap
+                it[defaultParameters] = parametersElement
                 it[createdAt] = Instant.fromEpochMilliseconds(pipeline.createdAt)
                 it[updatedAt] = Clock.System.now()
             }
@@ -70,8 +70,9 @@ class PostgresPipelineStorage {
                     assistantIds = it[AssistantPipelinesTable.assistantIds],
                     providerId = ProviderType.valueOf(it[AssistantPipelinesTable.providerId]),
                     model = it[AssistantPipelinesTable.model],
-                    defaultParameters = json.decodeFromString<RequestParameters>(
-                        json.encodeToString(it[AssistantPipelinesTable.defaultParameters])
+                    defaultParameters = json.decodeFromJsonElement(
+                        RequestParameters.serializer(),
+                        it[AssistantPipelinesTable.defaultParameters]
                     ),
                     createdAt = it[AssistantPipelinesTable.createdAt].toEpochMilliseconds(),
                     updatedAt = it[AssistantPipelinesTable.updatedAt].toEpochMilliseconds()
@@ -100,8 +101,9 @@ class PostgresPipelineStorage {
                         assistantIds = row[AssistantPipelinesTable.assistantIds],
                         providerId = ProviderType.valueOf(row[AssistantPipelinesTable.providerId]),
                         model = row[AssistantPipelinesTable.model],
-                        defaultParameters = json.decodeFromString<RequestParameters>(
-                            json.encodeToString(row[AssistantPipelinesTable.defaultParameters])
+                        defaultParameters = json.decodeFromJsonElement(
+                            RequestParameters.serializer(),
+                            row[AssistantPipelinesTable.defaultParameters]
                         ),
                         createdAt = row[AssistantPipelinesTable.createdAt].toEpochMilliseconds(),
                         updatedAt = row[AssistantPipelinesTable.updatedAt].toEpochMilliseconds()

@@ -3,6 +3,7 @@ package com.researchai.persistence.sql.tables
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.json.jsonb
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
@@ -20,7 +21,7 @@ object AssistantPipelinesTable : Table("assistant_pipelines") {
     val assistantIds = jsonb<List<String>>("assistant_ids", json)
     val providerId = text("provider_id")
     val model = text("model").nullable()
-    val defaultParameters = jsonb<Map<String, Any>>("default_parameters", json).default(emptyMap())
+    val defaultParameters = jsonb<JsonElement>("default_parameters", json).default(Json.parseToJsonElement("{}"))
     val createdAt = timestamp("created_at").default(Clock.System.now())
     val updatedAt = timestamp("updated_at").default(Clock.System.now())
 
