@@ -16,6 +16,8 @@
  * @property {string} COMPRESSION - Compression endpoint for chat history compression
  * @property {string} MCP_SERVERS - Model Context Protocol servers endpoint
  * @property {string} PIPELINES - Pipeline configurations endpoint
+ * @property {string} PREFERENCES - User preferences endpoint
+ * @property {string} OLLAMA - Ollama provider management endpoint
  * @property {number} REQUEST_TIMEOUT - Request timeout in milliseconds (5 minutes)
  */
 export const API_CONFIG = {
@@ -29,6 +31,7 @@ export const API_CONFIG = {
     MCP_SERVERS: '/mcp/servers',
     PIPELINES: '/api/v2/pipeline',
     PREFERENCES: '/preferences',
+    OLLAMA: '/api/v2/providers/ollama',
     REQUEST_TIMEOUT: 300000, // 5 minutes
 };
 
