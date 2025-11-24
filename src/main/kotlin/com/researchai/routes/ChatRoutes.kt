@@ -37,6 +37,7 @@ fun Route.chatRoutes(
                     request.model?.startsWith("gpt-") == true -> com.researchai.domain.models.ProviderType.OPENAI
                     request.model?.contains("deepseek", ignoreCase = true) == true -> com.researchai.domain.models.ProviderType.HUGGINGFACE
                     request.model?.contains("/") == true -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                    request.model?.contains(":") == true && !request.model.startsWith("gpt-") -> com.researchai.domain.models.ProviderType.OLLAMA
                     else -> com.researchai.domain.models.ProviderType.CLAUDE
                 }
 
@@ -583,28 +584,40 @@ fun Route.chatRoutes(
                 }
 
                 // Определяем провайдер по модели
-                val providerId = when {
-                    modelId.startsWith("gpt-") -> com.researchai.domain.models.ProviderType.OPENAI
-                    modelId.contains("deepseek", ignoreCase = true) -> com.researchai.domain.models.ProviderType.HUGGINGFACE
-                    modelId.contains("/") -> com.researchai.domain.models.ProviderType.HUGGINGFACE
-                    else -> com.researchai.domain.models.ProviderType.CLAUDE
-                }
+                val isOllamaModel = modelId.contains(":") && !modelId.startsWith("gpt-")
 
-                // Получаем конфигурацию провайдера
-                val configResult = appModule.configRepository.getProviderConfig(providerId)
-                if (configResult.isFailure) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
-                    return@get
-                }
+                val provider = if (isOllamaModel) {
+                    // Для Ollama получаем провайдер через OllamaConnectionManager
+                    appModule.ollamaConnectionManager.getActiveProvider()
+                        ?: run {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "No active Ollama connection"))
+                            return@get
+                        }
+                } else {
+                    // Для других провайдеров используем существующую логику
+                    val providerId = when {
+                        modelId.startsWith("gpt-") -> com.researchai.domain.models.ProviderType.OPENAI
+                        modelId.contains("deepseek", ignoreCase = true) -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                        modelId.contains("/") -> com.researchai.domain.models.ProviderType.HUGGINGFACE
+                        else -> com.researchai.domain.models.ProviderType.CLAUDE
+                    }
 
-                val config = configResult.getOrNull()
-                if (config == null) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
-                    return@get
-                }
+                    // Получаем конфигурацию провайдера
+                    val configResult = appModule.configRepository.getProviderConfig(providerId)
+                    if (configResult.isFailure) {
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
+                        return@get
+                    }
 
-                // Создаем провайдер
-                val provider = appModule.providerFactory.create(providerId, config)
+                    val config = configResult.getOrNull()
+                    if (config == null) {
+                        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Provider not configured: $providerId"))
+                        return@get
+                    }
+
+                    // Создаем провайдер
+                    appModule.providerFactory.create(providerId, config)
+                }
 
                 // Получаем список моделей от провайдера
                 val modelsResult = provider.getModels()

@@ -1,5 +1,6 @@
 package com.researchai.domain.usecase
 
+import com.researchai.data.provider.ollama.OllamaConnectionManager
 import com.researchai.domain.mcp.MCPOrchestrationService
 import com.researchai.domain.models.*
 import com.researchai.domain.provider.AIProviderFactory
@@ -23,7 +24,8 @@ class SendMessageUseCase(
     private val sessionRepository: SessionRepository,
     private val configRepository: ConfigRepository,
     private val assistantManager: AssistantManager,
-    private val mcpOrchestrationService: MCPOrchestrationService? = null
+    private val mcpOrchestrationService: MCPOrchestrationService? = null,
+    private val ollamaConnectionManager: OllamaConnectionManager? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
     private val claudeMapper = ClaudeMapper()
@@ -54,16 +56,25 @@ class SendMessageUseCase(
 
             logger.info("Using session: ${session.id}")
 
-            // 2. Получаем конфигурацию провайдера
-            val config = configRepository.getProviderConfig(providerId)
-                .getOrNull() ?: return Result.failure(
-                    AIError.ConfigurationException("Provider $providerId not configured")
-                )
+            // 2. Получаем провайдера
+            val provider = if (providerId == ProviderType.OLLAMA) {
+                // Для Ollama получаем провайдер через OllamaConnectionManager
+                ollamaConnectionManager?.getActiveProvider()
+                    ?: return Result.failure(
+                        AIError.ConfigurationException("No active Ollama connection. Please create and activate an Ollama connection first.")
+                    )
+            } else {
+                // Для других провайдеров используем configRepository + providerFactory
+                val config = configRepository.getProviderConfig(providerId)
+                    .getOrNull() ?: return Result.failure(
+                        AIError.ConfigurationException("Provider $providerId not configured")
+                    )
 
-            logger.info("Provider config loaded for: $providerId")
+                logger.info("Provider config loaded for: $providerId")
+                providerFactory.create(providerId, config)
+            }
 
-            // 3. Создаем провайдера
-            val provider = providerFactory.create(providerId, config)
+            logger.info("Provider created for: $providerId")
 
             // 4. Добавляем пользовательское сообщение в историю (если не пропущено)
             if (!skipUserMessage) {
@@ -96,13 +107,25 @@ class SendMessageUseCase(
             }
 
             // 7. Определяем модель
-            val selectedModel = model ?: when (config) {
-                is ProviderConfig.ClaudeConfig -> config.defaultModel
-                is ProviderConfig.OpenAIConfig -> config.defaultModel
-                is ProviderConfig.HuggingFaceConfig -> config.defaultModel
-                is ProviderConfig.GeminiConfig -> config.defaultModel
-                is ProviderConfig.OllamaConfig -> "llama3.2"
-                is ProviderConfig.CustomConfig -> "default"
+            val selectedModel: String = when {
+                // Для Ollama модель должна быть явно указана
+                providerId == ProviderType.OLLAMA -> {
+                    model ?: throw AIError.ConfigurationException("Model must be specified for Ollama provider")
+                }
+                // Для других провайдеров, если модель не указана, используем defaultModel из конфига
+                model != null -> model
+                else -> {
+                    val config = configRepository.getProviderConfig(providerId).getOrThrow()
+                    when (config) {
+                        is ProviderConfig.ClaudeConfig -> config.defaultModel
+                        is ProviderConfig.OpenAIConfig -> config.defaultModel
+                        is ProviderConfig.HuggingFaceConfig -> config.defaultModel
+                        is ProviderConfig.GeminiConfig -> config.defaultModel
+                        is ProviderConfig.OllamaConfig -> "llama3.2"  // Не должно случиться
+                        is ProviderConfig.CustomConfig -> "default"
+                        else -> throw AIError.ConfigurationException("Unknown provider config type")
+                    }
+                }
             }
 
             // 8. Получаем доступные MCP tools если включена оркестрация

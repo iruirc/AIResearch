@@ -52,12 +52,47 @@ class OllamaProvider(
             }
 
             // Success response
-            val ollamaResponse: OllamaChatResponse = httpResponse.body()
+            // Ollama возвращает NDJSON даже при stream=false, поэтому парсим текст
+            val responseText = httpResponse.bodyAsText()
+            logger.info("Ollama raw response (first 500 chars): ${responseText.take(500)}")
+
+            // Парсим все строки NDJSON и собираем content
+            val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            val contentBuilder = StringBuilder()
+            var lastResponse: OllamaChatResponse? = null
+
+            responseText.lines()
+                .filter { it.isNotBlank() }
+                .forEach { line ->
+                    val response: OllamaChatResponse = json.decodeFromString(line)
+
+                    // Собираем content из каждой строки
+                    if (response.message.content.isNotEmpty()) {
+                        contentBuilder.append(response.message.content)
+                    }
+
+                    // Сохраняем последний ответ для метаданных
+                    if (response.done) {
+                        lastResponse = response
+                    }
+                }
+
+            val finalResponse = lastResponse ?: throw AIError.NetworkException("No final response from Ollama")
+            val fullContent = contentBuilder.toString()
+
+            logger.info("Assembled content from ${responseText.lines().filter { it.isNotBlank() }.size} NDJSON lines")
+            logger.info("Full content: '$fullContent'")
+
+            // Создаем модифицированный ответ с полным content
+            val completeResponse = finalResponse.copy(
+                message = finalResponse.message.copy(content = fullContent)
+            )
 
             // Маппинг обратно в domain модель
-            val aiResponse = mapper.fromOllamaResponse(ollamaResponse)
+            val aiResponse = mapper.fromOllamaResponse(completeResponse)
 
             logger.info("Successfully received response from Ollama API")
+            logger.info("AIResponse content: '${aiResponse.content}'")
             logger.info("Tokens - Input: ${aiResponse.usage.inputTokens}, Output: ${aiResponse.usage.outputTokens}")
 
             Result.success(aiResponse)

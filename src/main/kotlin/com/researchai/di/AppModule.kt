@@ -183,7 +183,8 @@ class AppModule(
             sessionRepository = sessionRepository,
             configRepository = configRepository,
             assistantManager = assistantManager,
-            mcpOrchestrationService = mcpOrchestrationService
+            mcpOrchestrationService = mcpOrchestrationService,
+            ollamaConnectionManager = ollamaConnectionManager
         )
     }
 
