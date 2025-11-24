@@ -6,7 +6,6 @@ import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
 import com.researchai.domain.utils.RetryUtils
-import com.researchai.models.AvailableHuggingFaceModels
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -117,47 +116,64 @@ class HuggingFaceProvider(
     }
 
     override suspend fun getModels(): Result<List<AIModel>> {
-        // HuggingFace возвращает предустановленный список популярных моделей из AvailableHuggingFaceModels
-        val models = AvailableHuggingFaceModels.models.map { llmModel ->
+        // HuggingFace возвращает встроенный список популярных моделей
+        val models = listOf(
             AIModel(
-                id = llmModel.id,
-                name = llmModel.displayName,
+                id = "deepseek-ai/DeepSeek-R1:fastest",
+                name = "DeepSeek R1 (Fastest)",
                 providerId = ProviderType.HUGGINGFACE,
-                capabilities = when (llmModel.id) {
-                    "deepseek-ai/DeepSeek-R1:fastest", "deepseek-ai/DeepSeek-R1" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 32*1024,
-                        contextWindow = 128*1024
-                    )
-                    "meta-llama/Llama-3.3-70B-Instruct" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 8*1024,
-                        contextWindow = 128*1024
-                    )
-                    "Qwen/Qwen2.5-72B-Instruct" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 8*1024,
-                        contextWindow = 32*1024
-                    )
-                    "meta-llama/Llama-3.2-3B-Instruct" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 2*1024,
-                        contextWindow = 128*1024
-                    )
-                    else -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 1*1024,
-                        contextWindow = 8*1024
-                        
-                    )
-                }
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 32*1024,
+                    contextWindow = 128*1024
+                )
+            ),
+            AIModel(
+                id = "deepseek-ai/DeepSeek-R1",
+                name = "DeepSeek R1",
+                providerId = ProviderType.HUGGINGFACE,
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 32*1024,
+                    contextWindow = 128*1024
+                )
+            ),
+            AIModel(
+                id = "meta-llama/Llama-3.3-70B-Instruct",
+                name = "Llama 3.3 70B Instruct",
+                providerId = ProviderType.HUGGINGFACE,
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 8*1024,
+                    contextWindow = 128*1024
+                )
+            ),
+            AIModel(
+                id = "Qwen/Qwen2.5-72B-Instruct",
+                name = "Qwen 2.5 72B Instruct",
+                providerId = ProviderType.HUGGINGFACE,
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 8*1024,
+                    contextWindow = 32*1024
+                )
+            ),
+            AIModel(
+                id = "meta-llama/Llama-3.2-3B-Instruct",
+                name = "Llama 3.2 3B Instruct",
+                providerId = ProviderType.HUGGINGFACE,
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 2*1024,
+                    contextWindow = 128*1024
+                )
             )
-        }
+        )
         return Result.success(models)
     }
 

@@ -6,7 +6,6 @@ import com.researchai.domain.provider.AIProvider
 import com.researchai.domain.provider.ModelCapabilities
 import com.researchai.domain.tokenizer.TokenCounter
 import com.researchai.domain.utils.RetryUtils
-import com.researchai.models.AvailableOpenAIModels
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -118,46 +117,53 @@ class OpenAIProvider(
     }
 
     override suspend fun getModels(): Result<List<AIModel>> {
-        // OpenAI возвращает список моделей из AvailableOpenAIModels
-        val models = AvailableOpenAIModels.models.map { llmModel ->
+        // OpenAI возвращает встроенный список доступных моделей
+        val models = listOf(
             AIModel(
-                id = llmModel.id,
-                name = llmModel.displayName,
+                id = "gpt-5-nano",
+                name = "gpt-5-nano",
                 providerId = ProviderType.OPENAI,
-                capabilities = when (llmModel.id) {
-                    "gpt-5-nano" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 128*1024,
-                        contextWindow = 400*1024
-                    )
-                    "gpt-5-mini" -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 128*1024,
-                        contextWindow = 400*1024
-                    )
-                    "gpt-5" -> ModelCapabilities(
-                        supportsVision = true,
-                        supportsStreaming = true,
-                        maxTokens = 128*1024,
-                        contextWindow = 400*1024
-                    )
-                    "gpt-5-pro" -> ModelCapabilities(
-                        supportsVision = true,
-                        supportsStreaming = true,
-                        maxTokens = 272*1024,
-                        contextWindow = 400*1024
-                    )
-                    else -> ModelCapabilities(
-                        supportsVision = false,
-                        supportsStreaming = true,
-                        maxTokens = 128*1024,
-                        contextWindow = 400*1024
-                    )
-                }
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 128*1024,
+                    contextWindow = 400*1024
+                )
+            ),
+            AIModel(
+                id = "gpt-5-mini",
+                name = "gpt-5-mini",
+                providerId = ProviderType.OPENAI,
+                capabilities = ModelCapabilities(
+                    supportsVision = false,
+                    supportsStreaming = true,
+                    maxTokens = 128*1024,
+                    contextWindow = 400*1024
+                )
+            ),
+            AIModel(
+                id = "gpt-5",
+                name = "gpt-5",
+                providerId = ProviderType.OPENAI,
+                capabilities = ModelCapabilities(
+                    supportsVision = true,
+                    supportsStreaming = true,
+                    maxTokens = 128*1024,
+                    contextWindow = 400*1024
+                )
+            ),
+            AIModel(
+                id = "gpt-5-pro",
+                name = "gpt-5-pro",
+                providerId = ProviderType.OPENAI,
+                capabilities = ModelCapabilities(
+                    supportsVision = true,
+                    supportsStreaming = true,
+                    maxTokens = 272*1024,
+                    contextWindow = 400*1024
+                )
             )
-        }
+        )
         return Result.success(models)
     }
 

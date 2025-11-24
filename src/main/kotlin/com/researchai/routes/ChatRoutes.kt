@@ -427,17 +427,17 @@ fun Route.chatRoutes(
                     ProviderDTO(
                         id = "claude",
                         name = "Claude (Anthropic)",
-                        defaultModel = AvailableClaudeModels.DEFAULT_MODEL
+                        defaultModel = "claude-haiku-4-5-20251001"
                     ),
                     ProviderDTO(
                         id = "openai",
                         name = "OpenAI",
-                        defaultModel = AvailableOpenAIModels.DEFAULT_MODEL
+                        defaultModel = "gpt-5"
                     ),
                     ProviderDTO(
                         id = "huggingface",
                         name = "HuggingFace",
-                        defaultModel = AvailableHuggingFaceModels.DEFAULT_MODEL
+                        defaultModel = "deepseek-ai/DeepSeek-R1:fastest"
                     )
                 )
                 call.respond(ProvidersListResponse(providers = providers))
@@ -457,16 +457,59 @@ fun Route.chatRoutes(
                 // Получаем query параметр provider (опционально)
                 val providerFilter = call.request.queryParameters["provider"]
 
-                // Получаем предустановленные модели Claude, OpenAI и HuggingFace
-                val claudeModels = AvailableClaudeModels.models
-                val openAIModels = AvailableOpenAIModels.models
-                val huggingFaceModels = AvailableHuggingFaceModels.models
+                // Конвертация AIModel -> LLMModel для legacy API
+                fun convertToLegacyModel(aiModel: com.researchai.domain.provider.AIModel): LLMModel {
+                    return LLMModel(
+                        id = aiModel.id,
+                        displayName = aiModel.name,
+                        createdAt = "" // Legacy field, not used
+                    )
+                }
 
                 // Фильтруем по провайдеру, если указан
                 val filteredModels = when (providerFilter?.lowercase()) {
-                    "claude" -> claudeModels
-                    "openai" -> openAIModels
-                    "huggingface" -> huggingFaceModels
+                    "claude" -> {
+                        val configResult = appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.CLAUDE)
+                        val config = configResult.getOrNull() ?: run {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Claude provider not configured"))
+                            return@get
+                        }
+                        val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.CLAUDE, config)
+                        val modelsResult = provider.getModels()
+                        modelsResult.onFailure { error ->
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
+                            return@get
+                        }
+                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                    }
+                    "openai" -> {
+                        val configResult = appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.OPENAI)
+                        val config = configResult.getOrNull() ?: run {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "OpenAI provider not configured"))
+                            return@get
+                        }
+                        val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.OPENAI, config)
+                        val modelsResult = provider.getModels()
+                        modelsResult.onFailure { error ->
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
+                            return@get
+                        }
+                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                    }
+                    "huggingface" -> {
+                        val configResult = appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.HUGGINGFACE)
+                        val config = configResult.getOrNull() ?: run {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "HuggingFace provider not configured"))
+                            return@get
+                        }
+                        val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.HUGGINGFACE, config)
+                        val modelsResult = provider.getModels()
+                        modelsResult.onFailure { error ->
+                            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to error.message))
+                            return@get
+                        }
+                        modelsResult.getOrThrow().map(::convertToLegacyModel)
+                    }
                     "ollama" -> {
                         // Для Ollama получаем модели через OllamaConnectionManager
                         val provider = appModule.ollamaConnectionManager.getActiveProvider()
@@ -485,16 +528,38 @@ fun Route.chatRoutes(
                         }
 
                         // Конвертируем AIModel в LLMModel для совместимости с legacy API
-                        val aiModels = modelsResult.getOrNull() ?: emptyList()
-                        aiModels.map { aiModel ->
-                            LLMModel(
-                                id = aiModel.id,
-                                displayName = aiModel.name,
-                                createdAt = "" // Ollama doesn't provide creation time
-                            )
-                        }
+                        modelsResult.getOrThrow().map(::convertToLegacyModel)
                     }
-                    null -> claudeModels + openAIModels + huggingFaceModels // Все модели, если фильтр не указан
+                    null -> {
+                        // Все модели, если фильтр не указан
+                        val allModels = mutableListOf<LLMModel>()
+
+                        // Claude models
+                        appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.CLAUDE).getOrNull()?.let { config ->
+                            val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.CLAUDE, config)
+                            provider.getModels().onSuccess { models ->
+                                allModels.addAll(models.map(::convertToLegacyModel))
+                            }
+                        }
+
+                        // OpenAI models
+                        appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.OPENAI).getOrNull()?.let { config ->
+                            val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.OPENAI, config)
+                            provider.getModels().onSuccess { models ->
+                                allModels.addAll(models.map(::convertToLegacyModel))
+                            }
+                        }
+
+                        // HuggingFace models
+                        appModule.configRepository.getProviderConfig(com.researchai.domain.models.ProviderType.HUGGINGFACE).getOrNull()?.let { config ->
+                            val provider = appModule.providerFactory.create(com.researchai.domain.models.ProviderType.HUGGINGFACE, config)
+                            provider.getModels().onSuccess { models ->
+                                allModels.addAll(models.map(::convertToLegacyModel))
+                            }
+                        }
+
+                        allModels
+                    }
                     else -> {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Unknown provider: $providerFilter"))
                         return@get
