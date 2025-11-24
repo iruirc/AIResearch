@@ -158,22 +158,33 @@ function createConnectionItem(connection, activeConnectionId) {
     nameDiv.className = 'connection-name';
     nameDiv.textContent = connection.name;
 
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'connection-status';
+    const statusLabel = document.createElement('strong');
+    statusLabel.textContent = 'Статус: ';
+    statusDiv.appendChild(statusLabel);
     if (connection.id === activeConnectionId) {
-        const badge = document.createElement('span');
-        badge.className = 'active-badge';
-        badge.textContent = 'Активно';
-        nameDiv.appendChild(badge);
+        statusDiv.appendChild(document.createTextNode('Активно'));
+    } else {
+        statusDiv.appendChild(document.createTextNode('Неактивно'));
     }
 
     const urlDiv = document.createElement('div');
     urlDiv.className = 'connection-url';
-    urlDiv.textContent = connection.baseUrl;
+    const urlLabel = document.createElement('strong');
+    urlLabel.textContent = 'URL: ';
+    urlDiv.appendChild(urlLabel);
+    urlDiv.appendChild(document.createTextNode(connection.baseUrl));
 
     const metaDiv = document.createElement('div');
     metaDiv.className = 'connection-meta';
-    metaDiv.textContent = `Keep-alive: ${connection.keepAlive}`;
+    const metaLabel = document.createElement('strong');
+    metaLabel.textContent = 'Keep-alive: ';
+    metaDiv.appendChild(metaLabel);
+    metaDiv.appendChild(document.createTextNode(connection.keepAlive));
 
     contentDiv.appendChild(nameDiv);
+    contentDiv.appendChild(statusDiv);
     contentDiv.appendChild(urlDiv);
     contentDiv.appendChild(metaDiv);
 
