@@ -31,9 +31,30 @@ class OllamaConnectionManager(
     suspend fun initialize() {
         try {
             val preferences = preferencesStorage.load() ?: UserPreferences.default()
-            val connections = preferences.ollamaConnections
+            var connections = preferences.ollamaConnections
 
             logger.info("Loading ${connections.size} Ollama connections")
+
+            // Если нет подключений, создать дефолтное
+            if (connections.isEmpty()) {
+                logger.info("No Ollama connections found, creating default connection")
+                val defaultConnection = OllamaConnection(
+                    name = "Local Ollama",
+                    baseUrl = "http://127.0.0.1:11434",
+                    keepAlive = "10m",
+                    isDefault = true
+                )
+
+                // Сохранить дефолтное подключение
+                connections = listOf(defaultConnection)
+                preferencesStorage.save(
+                    preferences.copy(
+                        ollamaConnections = connections,
+                        activeOllamaConnectionId = defaultConnection.id
+                    )
+                )
+                logger.info("Created default Ollama connection: ${defaultConnection.name}")
+            }
 
             // Создать провайдеры для всех подключений
             connections.forEach { connection ->
