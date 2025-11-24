@@ -9,6 +9,7 @@ import com.researchai.config.DotenvLoader
 import com.researchai.config.getClaudeConfig
 import com.researchai.config.getOpenAIConfig
 import com.researchai.config.getHuggingFaceConfig
+import com.researchai.config.getOllamaConfig
 import com.researchai.di.AppModule
 import com.researchai.services.ClaudeService
 import io.ktor.serialization.kotlinx.json.*
@@ -36,6 +37,7 @@ fun Application.module() {
     val claudeConfig = getClaudeConfig()
     val openAIConfig = getOpenAIConfig()
     val huggingFaceConfig = getHuggingFaceConfig()
+    val ollamaConfig = getOllamaConfig()
 
     // Вспомогательная функция для получения env переменных (поддерживает .env загрузку)
     fun getEnv(key: String): String? = System.getenv(key) ?: System.getProperty(key)
@@ -80,6 +82,13 @@ fun Application.module() {
     } else {
         println("⚠️  HuggingFace API: Not configured (add HUGGINGFACE_API_KEY to .env)")
     }
+    if (ollamaConfig != null) {
+        println("✅ Ollama: Configured")
+        println("   - Default Base URL: ${ollamaConfig.defaultBaseUrl}")
+        println("   - Default Model: ${ollamaConfig.defaultModel}")
+    } else {
+        println("⚠️  Ollama: Not configured (optional, defaults to http://localhost:11434)")
+    }
     if (googleOAuthConfig != null) {
         println("✅ Google OAuth: Configured")
     } else {
@@ -98,7 +107,7 @@ fun Application.module() {
     }
 
     // Инициализация DI контейнера
-    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, jwtConfig, googleOAuthConfig, allowedEmails, enablePostgres)
+    val appModule = AppModule(claudeConfig, openAIConfig, huggingFaceConfig, ollamaConfig, jwtConfig, googleOAuthConfig, allowedEmails, enablePostgres)
 
     // Инициализация Legacy ClaudeService (для обратной совместимости)
     val claudeService = ClaudeService(claudeConfig)
@@ -110,6 +119,17 @@ fun Application.module() {
             println("✅ MCP Servers: Initialized")
         } catch (e: Exception) {
             println("⚠️  MCP Servers: Failed to initialize - ${e.message}")
+        }
+    }
+
+    // Инициализация Ollama Connection Manager в фоне
+    launch {
+        try {
+            appModule.ollamaConnectionManager.initialize()
+            val connections = appModule.ollamaConnectionManager.getAllConnections()
+            println("✅ Ollama Connection Manager: Initialized (${connections.size} connections loaded)")
+        } catch (e: Exception) {
+            println("⚠️  Ollama Connection Manager: Failed to initialize - ${e.message}")
         }
     }
 

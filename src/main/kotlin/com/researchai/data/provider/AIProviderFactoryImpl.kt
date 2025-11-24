@@ -3,6 +3,7 @@ package com.researchai.data.provider
 import com.researchai.data.provider.claude.ClaudeProvider
 import com.researchai.data.provider.openai.OpenAIProvider
 import com.researchai.data.provider.huggingface.HuggingFaceProvider
+import com.researchai.data.provider.ollama.OllamaProvider
 import com.researchai.data.tokenizer.JTokkitTokenCounter
 import com.researchai.domain.models.AIError
 import com.researchai.domain.models.ProviderConfig
@@ -35,6 +36,10 @@ class AIProviderFactoryImpl(
             val tokenCounter = createTokenCounter(config)
             HuggingFaceProvider(httpClient, config as ProviderConfig.HuggingFaceConfig, tokenCounter)
         }
+        register(ProviderType.OLLAMA) { config ->
+            val tokenCounter = createTokenCounter(config)
+            OllamaProvider(httpClient, config as ProviderConfig.OllamaConfig, tokenCounter)
+        }
     }
 
     /**
@@ -45,7 +50,9 @@ class AIProviderFactoryImpl(
             is ProviderConfig.ClaudeConfig -> config.defaultModel
             is ProviderConfig.OpenAIConfig -> config.defaultModel
             is ProviderConfig.HuggingFaceConfig -> config.defaultModel
-            else -> "gpt-4" // fallback
+            is ProviderConfig.OllamaConfig -> "llama3.2" // Ollama models use similar tokenization
+            is ProviderConfig.GeminiConfig -> "gpt-4" // fallback for Gemini
+            is ProviderConfig.CustomConfig -> "gpt-4" // fallback
         }
         return JTokkitTokenCounter.forModel(modelName)
     }

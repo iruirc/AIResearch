@@ -11,7 +11,10 @@ import com.researchai.auth.service.WhitelistService
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
+import com.researchai.config.OllamaConfig
 import com.researchai.config.getMCPServers
+import com.researchai.data.provider.ollama.OllamaConnectionManager
+import com.researchai.data.tokenizer.JTokkitTokenCounter
 import com.researchai.data.mcp.MCPServerManager
 import com.researchai.domain.mcp.MCPOrchestrationService
 import com.researchai.data.provider.AIProviderFactoryImpl
@@ -56,6 +59,7 @@ class AppModule(
     private val claudeConfig: ClaudeConfig,
     private val openAIConfig: OpenAIConfig? = null,
     private val huggingFaceConfig: HuggingFaceConfig? = null,
+    private val ollamaConfig: OllamaConfig? = null,
     private val jwtConfig: JWTConfig,
     private val googleOAuthConfig: GoogleOAuthConfig? = null,
     private val allowedEmails: String? = null,
@@ -134,6 +138,12 @@ class AppModule(
 
     val preferencesManager: PreferencesManager by lazy {
         PreferencesManager(preferencesStorage)
+    }
+
+    // Ollama Connection Manager
+    val ollamaConnectionManager: OllamaConnectionManager by lazy {
+        val tokenCounter = JTokkitTokenCounter.forModel("llama3.2")
+        OllamaConnectionManager(httpClient, preferencesStorage, tokenCounter)
     }
 
     // Repositories

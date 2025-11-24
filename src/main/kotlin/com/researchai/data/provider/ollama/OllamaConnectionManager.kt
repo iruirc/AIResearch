@@ -221,6 +221,29 @@ class OllamaConnectionManager(
     }
 
     /**
+     * Alias для listConnections() для обратной совместимости
+     */
+    suspend fun getAllConnections(): List<OllamaConnection> = listConnections()
+
+    /**
+     * Получить подключение по ID
+     */
+    suspend fun getConnection(id: String): OllamaConnection? {
+        return try {
+            val preferences = preferencesStorage.load() ?: UserPreferences.default()
+            preferences.ollamaConnections.find { it.id == id }
+        } catch (e: Exception) {
+            logger.error("Failed to get connection", e)
+            null
+        }
+    }
+
+    /**
+     * Получить ID активного подключения
+     */
+    fun getActiveConnectionId(): String? = activeConnectionId
+
+    /**
      * Получить активное подключение
      */
     suspend fun getActiveConnection(): OllamaConnection? {

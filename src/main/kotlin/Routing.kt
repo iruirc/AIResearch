@@ -7,6 +7,7 @@ import com.researchai.routes.assistantRoutes
 import com.researchai.routes.chatRoutes
 import com.researchai.routes.compressionRoutes
 import com.researchai.routes.mcpRoutes
+import com.researchai.routes.ollamaRoutes
 import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.routes.schedulerRoutes
@@ -39,6 +40,9 @@ fun Application.configureRouting(
 
         // Новые API роуты для работы с провайдерами
         providerRoutes(appModule)
+
+        // API роуты для Ollama подключений
+        ollamaRoutes(appModule.ollamaConnectionManager)
 
         // API роуты для сжатия диалогов
         compressionRoutes(appModule.chatSessionManager, appModule.compressionService)
