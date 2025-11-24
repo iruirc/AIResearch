@@ -467,6 +467,33 @@ fun Route.chatRoutes(
                     "claude" -> claudeModels
                     "openai" -> openAIModels
                     "huggingface" -> huggingFaceModels
+                    "ollama" -> {
+                        // Для Ollama получаем модели через OllamaConnectionManager
+                        val provider = appModule.ollamaConnectionManager.getActiveProvider()
+                        if (provider == null) {
+                            call.respond(HttpStatusCode.NotFound, mapOf("error" to "No active Ollama connection"))
+                            return@get
+                        }
+
+                        val modelsResult = provider.getModels()
+                        modelsResult.onFailure { error ->
+                            call.respond(
+                                HttpStatusCode.InternalServerError,
+                                mapOf("error" to "Failed to get Ollama models: ${error.message}")
+                            )
+                            return@get
+                        }
+
+                        // Конвертируем AIModel в LLMModel для совместимости с legacy API
+                        val aiModels = modelsResult.getOrNull() ?: emptyList()
+                        aiModels.map { aiModel ->
+                            LLMModel(
+                                id = aiModel.id,
+                                displayName = aiModel.name,
+                                createdAt = "" // Ollama doesn't provide creation time
+                            )
+                        }
+                    }
                     null -> claudeModels + openAIModels + huggingFaceModels // Все модели, если фильтр не указан
                     else -> {
                         call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Unknown provider: $providerFilter"))
