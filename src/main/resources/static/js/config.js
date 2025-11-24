@@ -25,7 +25,7 @@ export const API_CONFIG = {
     SESSIONS: '/sessions',
     ASSISTANTS: '/assistants',
     MODELS: '/models',
-    PROVIDERS: '/providers',
+    PROVIDERS: '/api/v2/providers',
     CONFIG: '/config',
     COMPRESSION: '/compression',
     MCP_SERVERS: '/mcp/servers',

@@ -146,7 +146,7 @@ export const modalsUI = {
         providers.forEach(provider => {
             const option = document.createElement('option');
             option.value = provider.id;
-            option.textContent = provider.name;
+            option.textContent = provider.displayName || provider.name;
             if (provider.id === currentProvider) {
                 option.selected = true;
             }

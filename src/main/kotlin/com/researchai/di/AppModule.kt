@@ -152,7 +152,7 @@ class AppModule(
     }
 
     val configRepository: ConfigRepository by lazy {
-        ConfigRepositoryImpl(claudeConfig, openAIConfig, huggingFaceConfig)
+        ConfigRepositoryImpl(claudeConfig, openAIConfig, huggingFaceConfig, ollamaConnectionManager)
     }
 
     // Provider Factory

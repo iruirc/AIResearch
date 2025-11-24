@@ -3,6 +3,7 @@ package com.researchai.data.repository
 import com.researchai.config.ClaudeConfig
 import com.researchai.config.OpenAIConfig
 import com.researchai.config.HuggingFaceConfig
+import com.researchai.data.provider.ollama.OllamaConnectionManager
 import com.researchai.domain.models.AIError
 import com.researchai.domain.models.ProviderConfig
 import com.researchai.domain.models.ProviderType
@@ -15,7 +16,8 @@ import com.researchai.domain.repository.ConfigRepository
 class ConfigRepositoryImpl(
     private val claudeConfig: ClaudeConfig,
     private val openAIConfig: OpenAIConfig? = null,
-    private val huggingFaceConfig: HuggingFaceConfig? = null
+    private val huggingFaceConfig: HuggingFaceConfig? = null,
+    private val ollamaConnectionManager: OllamaConnectionManager? = null
 ) : ConfigRepository {
 
     // In-memory хранилище для других провайдеров
@@ -65,6 +67,19 @@ class ConfigRepositoryImpl(
 
     override suspend fun getProviderConfig(providerType: ProviderType): Result<ProviderConfig?> {
         return try {
+            // Для Ollama получаем конфигурацию активного подключения
+            if (providerType == ProviderType.OLLAMA) {
+                val activeConnection = ollamaConnectionManager?.getActiveConnection()
+                if (activeConnection != null) {
+                    val ollamaConfig = ProviderConfig.OllamaConfig(
+                        baseUrl = activeConnection.baseUrl,
+                        keepAlive = activeConnection.keepAlive
+                    )
+                    return Result.success(ollamaConfig)
+                }
+                return Result.success(null)
+            }
+
             val config = configs[providerType]
             Result.success(config)
         } catch (e: Exception) {
