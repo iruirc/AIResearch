@@ -96,14 +96,14 @@ export class RAGModal {
 
         ragDocumentsList.innerHTML = '';
 
-        // Add "Add Document" button at the top
+        // Add "Add Document" button at the top (gradient style like pipeline)
         const addButton = document.createElement('button');
         addButton.className = 'rag-add-document-button';
         addButton.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span>Добавить документ</span>
+            <span>Добавить знание</span>
         `;
         addButton.addEventListener('click', () => this.openAddDocumentForm());
         ragDocumentsList.appendChild(addButton);
@@ -148,17 +148,21 @@ export class RAGModal {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'rag-document-actions';
 
-            // Toggle button
-            const toggleButton = document.createElement('button');
-            toggleButton.className = 'rag-action-button toggle-button';
-            toggleButton.title = doc.enabled ? 'Отключить' : 'Включить';
-            toggleButton.innerHTML = doc.enabled
-                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2"/></svg>'
-                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2"/></svg>';
-            toggleButton.addEventListener('click', async (e) => {
+            // Toggle switch (ON/OFF)
+            const toggleSwitch = document.createElement('label');
+            toggleSwitch.className = 'rag-toggle-switch';
+            toggleSwitch.title = doc.enabled ? 'Отключить' : 'Включить';
+            const toggleInput = document.createElement('input');
+            toggleInput.type = 'checkbox';
+            toggleInput.checked = doc.enabled;
+            toggleInput.addEventListener('change', async (e) => {
                 e.stopPropagation();
-                await this.handleToggleDocument(doc.id, !doc.enabled);
+                await this.handleToggleDocument(doc.id, e.target.checked);
             });
+            const toggleSlider = document.createElement('span');
+            toggleSlider.className = 'rag-toggle-slider';
+            toggleSwitch.appendChild(toggleInput);
+            toggleSwitch.appendChild(toggleSlider);
 
             // Edit button
             const editButton = document.createElement('button');
@@ -185,7 +189,8 @@ export class RAGModal {
                 await this.handleDeleteDocument(doc.id, doc.name);
             });
 
-            actionsDiv.appendChild(toggleButton);
+            // Order: Toggle, Edit, Delete (right to left means we add in this order)
+            actionsDiv.appendChild(toggleSwitch);
             actionsDiv.appendChild(editButton);
             actionsDiv.appendChild(deleteButton);
 
