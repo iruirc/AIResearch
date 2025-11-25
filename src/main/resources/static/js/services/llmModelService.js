@@ -1,5 +1,5 @@
-// Settings Service - manages application settings and configuration
-import { settingsApi } from '../api/settingsApi.js';
+// LLM Model Service - manages LLM model settings and configuration
+import { llmModelApi } from '../api/llmModelApi.js';
 import { preferencesApi } from '../api/preferencesApi.js';
 import { assistantsApi } from '../api/assistantsApi.js';
 import { mcpApi } from '../api/mcpApi.js';
@@ -7,10 +7,10 @@ import { appState } from '../state/appState.js';
 import { detectProviderFromModel } from '../utils/helpers.js';
 
 /**
- * Service for managing application settings
+ * Service for managing LLM model settings
  * Handles configuration loading, provider/model management, and context window updates
  */
-export const settingsService = {
+export const llmModelService = {
     /**
      * Load and apply application configuration (from preferences or defaults)
      * @returns {Promise<void>}
@@ -104,7 +104,7 @@ export const settingsService = {
      * Show success indicator
      */
     showSuccessIndicator() {
-        const indicator = document.getElementById('settingsStatus');
+        const indicator = document.getElementById('llmModelStatus');
         if (!indicator) return;
 
         indicator.style.display = 'flex';
@@ -120,7 +120,7 @@ export const settingsService = {
      */
     async updateContextWindow(modelId) {
         try {
-            const capabilities = await settingsApi.loadModelCapabilities(modelId);
+            const capabilities = await llmModelApi.loadModelCapabilities(modelId);
             appState.currentContextWindow = capabilities.contextWindow || 200000;
             console.log(`Context window for ${modelId}: ${appState.currentContextWindow}`);
         } catch (error) {
@@ -136,7 +136,7 @@ export const settingsService = {
      */
     async loadProviders() {
         try {
-            const providers = await settingsApi.loadProviders();
+            const providers = await llmModelApi.loadProviders();
             appState.setProviders(providers);
             return providers;
         } catch (error) {
@@ -152,7 +152,7 @@ export const settingsService = {
      */
     async loadModels(providerId) {
         try {
-            const models = await settingsApi.loadModels(providerId);
+            const models = await llmModelApi.loadModels(providerId);
             appState.setModels(models);
             return models;
         } catch (error) {
@@ -168,7 +168,7 @@ export const settingsService = {
      */
     async getModelCapabilities(modelId) {
         try {
-            return await settingsApi.loadModelCapabilities(modelId);
+            return await llmModelApi.loadModelCapabilities(modelId);
         } catch (error) {
             console.error('Error loading model capabilities:', error);
             // Return default capabilities on error

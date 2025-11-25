@@ -161,8 +161,8 @@ button:disabled {
     flex-shrink: 0;
 }
 
-/* Settings button */
-.settings-button {
+/* LLM Model button */
+.llm-model-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -177,16 +177,16 @@ button:disabled {
     font-weight: 600;
 }
 
-.settings-button:hover {
+.llm-model-button:hover {
     background: var(--bg-gray);
     transform: translateX(2px);
 }
 
-.settings-button:active {
+.llm-model-button:active {
     background: var(--bg-gray);
 }
 
-.settings-button svg {
+.llm-model-button svg {
     flex-shrink: 0;
 }
 

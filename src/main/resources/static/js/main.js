@@ -6,7 +6,7 @@ import { appState } from './state/appState.js';
 // Import services
 import { sessionService } from './services/sessionService.js';
 import { chatService } from './services/chatService.js';
-import { settingsService } from './services/settingsService.js';
+import { llmModelService } from './services/llmModelService.js';
 import { compressionService } from './services/compressionService.js';
 import { messagePollingService } from './services/messagePollingService.js';
 import { ollamaService } from './services/ollamaService.js';
@@ -24,7 +24,7 @@ import { sidebarUI, initSidebarUI } from './ui/sidebarUI.js';
 import { SchedulerModal } from './ui/schedulerModal.js';
 import { initializePipelinesModal } from './ui/pipelinesModal.js';
 import { initializeOllamaModal } from './ui/ollamaModal.js';
-import { initializeSettingsModal } from './ui/settingsModal.js';
+import { initializeLlmModelModal } from './ui/llmModelModal.js';
 import { initializeRAGModal } from './ui/ragModal.js';
 
 // Import utilities
@@ -62,8 +62,8 @@ async function initApp() {
     // Initialize Ollama modal
     await initializeOllamaModal();
 
-    // Initialize settings modal with tabs
-    await initializeSettingsModal();
+    // Initialize LLM model modal with tabs
+    await initializeLlmModelModal();
 
     // Initialize RAG modal
     await initializeRAGModal();
@@ -77,19 +77,19 @@ async function initApp() {
     try {
         // Load initial data
         console.log('📥 Loading configuration...');
-        await settingsService.loadConfig();
+        await llmModelService.loadConfig();
 
         console.log('📥 Loading sessions...');
         await sessionService.loadSessions();
 
         console.log('📥 Loading providers...');
-        await settingsService.loadProviders();
+        await llmModelService.loadProviders();
 
         console.log('📥 Loading assistants...');
-        await settingsService.loadAssistants();
+        await llmModelService.loadAssistants();
 
         console.log('📥 Loading MCP servers...');
-        await settingsService.loadMcpServers();
+        await llmModelService.loadMcpServers();
 
         console.log('📥 Loading Ollama connections...');
         await ollamaService.initialize();
@@ -131,25 +131,25 @@ function setupEventListeners() {
 
     // Modal events
     document.getElementById('assistantsButton').addEventListener('click', handleOpenAssistantsModal);
-    document.getElementById('settingsButton').addEventListener('click', handleOpenSettingsModal);
+    document.getElementById('llmModelButton').addEventListener('click', handleOpenLlmModelModal);
     document.getElementById('mcpServersButton').addEventListener('click', handleOpenMcpServersModal);
 
     // Close modal buttons
     document.getElementById('closeModal').addEventListener('click', () => modalsUI.closeModal('assistantModal'));
-    document.getElementById('closeSettingsModal').addEventListener('click', () => modalsUI.closeModal('settingsModal'));
+    document.getElementById('closeLlmModelModal').addEventListener('click', () => modalsUI.closeModal('llmModelModal'));
     document.getElementById('closeCompressionModal').addEventListener('click', () => modalsUI.closeModal('compressionModal'));
     document.getElementById('closeMcpServersModal').addEventListener('click', () => modalsUI.closeModal('mcpServersModal'));
     document.getElementById('closeAssistantFormModal').addEventListener('click', () => modalsUI.closeModal('assistantFormModal'));
     document.getElementById('closeDeleteAssistantModal').addEventListener('click', () => modalsUI.closeModal('deleteAssistantModal'));
     document.getElementById('closeRagFormModal').addEventListener('click', () => modalsUI.closeModal('ragFormModal'));
 
-    // Settings modal events
-    document.getElementById('saveSettingsButton').addEventListener('click', handleSaveSettings);
-    document.getElementById('cancelSettingsButton').addEventListener('click', () => modalsUI.closeModal('settingsModal'));
-    document.getElementById('resetSettingsButton').addEventListener('click', handleResetSettings);
+    // LLM model modal events
+    document.getElementById('saveLlmModelButton').addEventListener('click', handleSaveLlmModel);
+    document.getElementById('cancelLlmModelButton').addEventListener('click', () => modalsUI.closeModal('llmModelModal'));
+    document.getElementById('resetLlmModelButton').addEventListener('click', handleResetLlmModel);
     document.getElementById('modalProviderSelect').addEventListener('change', handleProviderChange);
 
-    // Settings sliders
+    // LLM model sliders
     const temperatureSlider = document.getElementById('modalTemperatureSlider');
     const temperatureValue = document.getElementById('modalTemperatureValue');
     temperatureSlider.addEventListener('input', (e) => {
@@ -528,7 +528,7 @@ function handleDeleteAssistant(assistant) {
             await assistantsApi.deleteAssistant(assistantId);
 
             // Reload assistants list
-            await settingsService.loadAssistants();
+            await llmModelService.loadAssistants();
 
             // Re-render assistants modal with updated list
             const state = appState.getState();
@@ -593,7 +593,7 @@ async function handleSaveAssistantForm(e) {
         }
 
         // Reload assistants list
-        await settingsService.loadAssistants();
+        await llmModelService.loadAssistants();
 
         // Re-render assistants modal with updated list
         const state = appState.getState();
@@ -614,9 +614,9 @@ async function handleSaveAssistantForm(e) {
 }
 
 /**
- * Handle open settings modal
+ * Handle open LLM model modal
  */
-async function handleOpenSettingsModal() {
+async function handleOpenLlmModelModal() {
     try {
         const state = appState.getState();
 
@@ -630,13 +630,13 @@ async function handleOpenSettingsModal() {
         // Load and render models for current provider
         await handleProviderChange(state.settings.providerId);
 
-        // Update settings values
-        modalsUI.updateSettingsModal(state.settings);
+        // Update LLM model values
+        modalsUI.updateLlmModelModal(state.settings);
 
-        modalsUI.openModal('settingsModal');
+        modalsUI.openModal('llmModelModal');
     } catch (error) {
-        console.error('Error opening settings modal:', error);
-        alert('Ошибка при открытии настроек');
+        console.error('Error opening LLM model modal:', error);
+        alert('Ошибка при открытии выбора модели');
     }
 }
 
@@ -645,7 +645,7 @@ async function handleOpenSettingsModal() {
  */
 async function handleProviderChange(providerId) {
     try {
-        const models = await settingsService.loadModels(providerId);
+        const models = await llmModelService.loadModels(providerId);
         const state = appState.getState();
         modalsUI.renderModelsList(models, state.settings.model);
     } catch (error) {
@@ -654,42 +654,42 @@ async function handleProviderChange(providerId) {
 }
 
 /**
- * Handle save settings
+ * Handle save LLM model settings
  */
-async function handleSaveSettings() {
+async function handleSaveLlmModel() {
     try {
-        const newSettings = modalsUI.getSettingsFromModal();
+        const newSettings = modalsUI.getLlmModelFromModal();
         const autoSave = document.getElementById('autoSavePreferences').checked;
 
         // Update settings in memory
-        await settingsService.updateSettings(newSettings);
+        await llmModelService.updateSettings(newSettings);
 
         // Save to database if checkbox is checked
         if (autoSave) {
-            await settingsService.savePreferences(newSettings, true);
+            await llmModelService.savePreferences(newSettings, true);
         }
 
-        modalsUI.closeModal('settingsModal');
+        modalsUI.closeModal('llmModelModal');
     } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('Ошибка при сохранении настроек');
+        console.error('Error saving LLM model settings:', error);
+        alert('Ошибка при сохранении настроек модели');
     }
 }
 
 /**
- * Handle reset settings to defaults
+ * Handle reset LLM model to defaults
  */
-async function handleResetSettings() {
+async function handleResetLlmModel() {
     try {
-        const defaults = await settingsService.resetToDefaults();
+        const defaults = await llmModelService.resetToDefaults();
 
         // Update UI with defaults
-        await handleOpenSettings();
+        await handleOpenLlmModelModal();
 
-        console.log('Settings reset to defaults');
+        console.log('LLM model reset to defaults');
     } catch (error) {
-        console.error('Error resetting settings:', error);
-        alert('Ошибка при сбросе настроек');
+        console.error('Error resetting LLM model:', error);
+        alert('Ошибка при сбросе настроек модели');
     }
 }
 
@@ -723,7 +723,7 @@ async function handleMcpServerToggle(serverId, enabled) {
 
         if (result.success) {
             // Reload MCP servers list
-            await settingsService.loadMcpServers();
+            await llmModelService.loadMcpServers();
 
             // Re-render the modal with updated data
             const state = appState.getState();
@@ -738,7 +738,7 @@ async function handleMcpServerToggle(serverId, enabled) {
         alert(`Ошибка при ${enabled ? 'включении' : 'отключении'} сервера: ${error.message}`);
 
         // Reload to reset toggle state
-        await settingsService.loadMcpServers();
+        await llmModelService.loadMcpServers();
         const state = appState.getState();
         modalsUI.renderMcpServersList(state.mcpServers, handleMcpServerToggle);
     }

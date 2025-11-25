@@ -151,12 +151,12 @@ function closeFormModal() {
     // Reset current connection
     currentConnection = null;
 
-    // Reopen settings modal on the Ollama tab
-    const settingsModal = document.getElementById('settingsModal');
-    if (settingsModal) {
-        settingsModal.classList.add('active');
+    // Reopen LLM model modal on the Ollama tab
+    const llmModelModal = document.getElementById('llmModelModal');
+    if (llmModelModal) {
+        llmModelModal.classList.add('active');
         // Switch to add-model tab
-        import('./settingsModal.js').then(module => {
+        import('./llmModelModal.js').then(module => {
             module.switchTab('add-model');
         });
     }

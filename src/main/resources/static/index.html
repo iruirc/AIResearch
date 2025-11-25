@@ -79,12 +79,12 @@
                     </svg>
                     MCP-серверы
                 </button>
-                <button id="settingsButton" class="settings-button" title="Настройки">
+                <button id="llmModelButton" class="llm-model-button" title="Модель LLM">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    Настройки
+                    Модель LLM
                 </button>
             </div>
             <div class="sidebar-header">
@@ -192,23 +192,23 @@
         </div>
     </div>
 
-    <!-- Модальное окно для настроек -->
-    <div id="settingsModal" class="modal">
+    <!-- Модальное окно для выбора модели LLM -->
+    <div id="llmModelModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Настройки</h3>
-                <button id="closeSettingsModal" class="close-button">&times;</button>
+                <h3>Модель LLM</h3>
+                <button id="closeLlmModelModal" class="close-button">&times;</button>
             </div>
 
             <!-- Tabs navigation -->
-            <div class="settings-tabs">
-                <button class="settings-tab active" data-tab="model-selection">Выбор модели</button>
-                <button class="settings-tab" data-tab="add-model">Добавить модель</button>
+            <div class="llm-model-tabs">
+                <button class="llm-model-tab active" data-tab="model-selection">Выбор модели</button>
+                <button class="llm-model-tab" data-tab="add-model">Добавить модель</button>
             </div>
 
             <!-- Tab content: Model Selection -->
-            <div class="settings-tab-content active" id="tab-model-selection">
-                <div class="settings-content">
+            <div class="llm-model-tab-content active" id="tab-model-selection">
+                <div class="llm-model-content">
                     <div class="format-selector">
                         <label for="modalProviderSelect">Провайдер:</label>
                         <select id="modalProviderSelect" class="format-select">
@@ -265,29 +265,29 @@
                             <option value="XML">XML</option>
                         </select>
                     </div>
-                    <div class="settings-preferences">
+                    <div class="llm-model-preferences">
                         <label class="checkbox-label">
                             <input type="checkbox" id="autoSavePreferences" checked>
                             <span>Сохранять настройки по умолчанию</span>
                         </label>
-                        <small class="settings-hint">При включении настройки автоматически сохраняются в базу данных</small>
+                        <small class="llm-model-hint">При включении настройки автоматически сохраняются в базу данных</small>
                     </div>
-                    <div class="settings-status" id="settingsStatus" style="display: none;">
+                    <div class="llm-model-status" id="llmModelStatus" style="display: none;">
                         <span class="status-icon">✓</span>
                         <span class="status-text">Настройки сохранены</span>
                     </div>
-                    <div class="settings-actions">
-                        <button id="resetSettingsButton" class="reset-button">Сбросить к дефолтным</button>
-                        <div class="settings-actions-right">
-                            <button id="cancelSettingsButton" class="cancel-button">Отменить</button>
-                            <button id="saveSettingsButton" class="save-button">Сохранить</button>
+                    <div class="llm-model-actions">
+                        <button id="resetLlmModelButton" class="reset-button">Сбросить к дефолтным</button>
+                        <div class="llm-model-actions-right">
+                            <button id="cancelLlmModelButton" class="cancel-button">Отменить</button>
+                            <button id="saveLlmModelButton" class="save-button">Сохранить</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Tab content: Add Model (Ollama) -->
-            <div class="settings-tab-content" id="tab-add-model">
+            <div class="llm-model-tab-content" id="tab-add-model">
                 <div id="ollamaConnectionsList" class="ollama-connections-list">
                     <div class="ollama-connections-loading">Загрузка подключений...</div>
                 </div>

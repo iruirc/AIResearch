@@ -1,7 +1,7 @@
 /**
- * @fileoverview Settings Modal UI module with tabs
- * Handles settings modal with Model Selection and Add Model (Ollama) tabs
- * @module ui/settingsModal
+ * @fileoverview LLM Model Modal UI module with tabs
+ * Handles LLM model modal with Model Selection and Add Model (Ollama) tabs
+ * @module ui/llmModelModal
  */
 
 import { ollamaService } from '../services/ollamaService.js';
@@ -15,11 +15,11 @@ import { openFormModal } from './ollamaModal.js';
 let currentTab = 'model-selection';
 
 /**
- * Initialize settings modal with tabs
+ * Initialize LLM model modal with tabs
  * @returns {Promise<void>}
  */
-export async function initializeSettingsModal() {
-    console.log('⚙️ Initializing settings modal...');
+export async function initializeLlmModelModal() {
+    console.log('⚙️ Initializing LLM model modal...');
 
     try {
         // Setup tab event listeners
@@ -28,9 +28,9 @@ export async function initializeSettingsModal() {
         // Subscribe to Ollama state changes
         appState.subscribe('ollamaConnections', renderOllamaTab);
 
-        console.log('✅ Settings modal initialized');
+        console.log('✅ LLM model modal initialized');
     } catch (error) {
-        console.error('❌ Failed to initialize settings modal:', error);
+        console.error('❌ Failed to initialize LLM model modal:', error);
     }
 }
 
@@ -38,7 +38,7 @@ export async function initializeSettingsModal() {
  * Setup tab event listeners
  */
 function setupTabEventListeners() {
-    const tabs = document.querySelectorAll('.settings-tab');
+    const tabs = document.querySelectorAll('.llm-model-tab');
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -57,7 +57,7 @@ export function switchTab(tabName) {
     currentTab = tabName;
 
     // Update tab buttons
-    const tabs = document.querySelectorAll('.settings-tab');
+    const tabs = document.querySelectorAll('.llm-model-tab');
     tabs.forEach(tab => {
         if (tab.dataset.tab === tabName) {
             tab.classList.add('active');
@@ -67,7 +67,7 @@ export function switchTab(tabName) {
     });
 
     // Update tab content
-    const tabContents = document.querySelectorAll('.settings-tab-content');
+    const tabContents = document.querySelectorAll('.llm-model-tab-content');
     tabContents.forEach(content => {
         if (content.id === `tab-${tabName}`) {
             content.classList.add('active');
@@ -265,10 +265,10 @@ function createConnectionItem(connection, activeConnectionId) {
  * @param {Object|null} connection - Connection to edit (null for create)
  */
 function openOllamaFormModal(connection) {
-    // Close settings modal first
-    const settingsModal = document.getElementById('settingsModal');
-    if (settingsModal) {
-        settingsModal.classList.remove('active');
+    // Close LLM model modal first
+    const llmModelModal = document.getElementById('llmModelModal');
+    if (llmModelModal) {
+        llmModelModal.classList.remove('active');
     }
 
     // Use the exported function from ollamaModal.js

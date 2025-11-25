@@ -129,7 +129,7 @@ export const modalsUI = {
     },
 
     /**
-     * Render providers list in settings modal
+     * Render providers list in LLM model modal
      * @param {Array} providers - Array of provider objects
      * @param {string} currentProvider - Current selected provider
      * @param {Function} onProviderChange - Callback for provider change
@@ -160,7 +160,7 @@ export const modalsUI = {
     },
 
     /**
-     * Render models list in settings modal
+     * Render models list in LLM model modal
      * @param {Array} models - Array of model objects
      * @param {string} currentModel - Current selected model
      */
@@ -181,10 +181,10 @@ export const modalsUI = {
     },
 
     /**
-     * Update settings modal with current values
+     * Update LLM model modal with current values
      * @param {Object} settings - Current settings object
      */
-    updateSettingsModal(settings) {
+    updateLlmModelModal(settings) {
         const temperatureSlider = document.getElementById('modalTemperatureSlider');
         const temperatureValue = document.getElementById('modalTemperatureValue');
         const maxTokensSlider = document.getElementById('modalMaxTokensSlider');
@@ -207,10 +207,10 @@ export const modalsUI = {
     },
 
     /**
-     * Get settings from modal inputs
+     * Get LLM model settings from modal inputs
      * @returns {Object} Settings object
      */
-    getSettingsFromModal() {
+    getLlmModelFromModal() {
         const providerSelect = document.getElementById('modalProviderSelect');
         const modelSelect = document.getElementById('modalModelSelect');
         const temperatureSlider = document.getElementById('modalTemperatureSlider');

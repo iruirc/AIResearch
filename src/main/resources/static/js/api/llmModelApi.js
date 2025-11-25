@@ -1,24 +1,24 @@
 /**
- * @fileoverview Settings API module
- * Handles communication with settings and configuration API endpoints
- * @module api/settingsApi
+ * @fileoverview LLM Model API module
+ * Handles communication with LLM model and configuration API endpoints
+ * @module api/llmModelApi
  */
 
 import { API_CONFIG } from '../config.js';
 import { fetchWithTimeout } from '../utils/helpers.js';
 
 /**
- * API module for settings and configuration operations
+ * API module for LLM model and configuration operations
  * @namespace
  */
-export const settingsApi = {
+export const llmModelApi = {
     /**
      * Load application configuration from the server
      * @async
      * @returns {Promise<Object>} Configuration object with model, temperature, maxTokens, and format
      * @throws {Error} If the HTTP request fails
      * @example
-     * const config = await settingsApi.loadConfig();
+     * const config = await llmModelApi.loadConfig();
      * console.log(config.model); // 'claude-haiku-4-5-20251001'
      */
     async loadConfig() {
@@ -43,7 +43,7 @@ export const settingsApi = {
      * @returns {Promise<Array>} Array of provider objects with id and name
      * @throws {Error} If the HTTP request fails
      * @example
-     * const providers = await settingsApi.loadProviders();
+     * const providers = await llmModelApi.loadProviders();
      */
     async loadProviders() {
         const response = await fetchWithTimeout(
@@ -69,7 +69,7 @@ export const settingsApi = {
      * @returns {Promise<Array>} Array of model objects with id, name, and displayName
      * @throws {Error} If the HTTP request fails
      * @example
-     * const models = await settingsApi.loadModels('claude');
+     * const models = await llmModelApi.loadModels('claude');
      */
     async loadModels(providerId) {
         const response = await fetchWithTimeout(
@@ -95,7 +95,7 @@ export const settingsApi = {
      * @returns {Promise<Object>} Model capabilities including maxTokens, contextWindow, supportsVision, etc.
      * @throws {Error} If the HTTP request fails
      * @example
-     * const caps = await settingsApi.loadModelCapabilities('claude-3-opus-20240229');
+     * const caps = await llmModelApi.loadModelCapabilities('claude-3-opus-20240229');
      * console.log(caps.contextWindow); // 200000
      */
     async loadModelCapabilities(modelId) {

@@ -111,15 +111,15 @@
     line-height: 1.4;
 }
 
-/* Settings tabs */
-.settings-tabs {
+/* LLM Model tabs */
+.llm-model-tabs {
     display: flex;
     border-bottom: 2px solid var(--border-light);
     padding: 0 var(--spacing-xl);
     gap: var(--spacing-sm);
 }
 
-.settings-tab {
+.llm-model-tab {
     padding: var(--spacing-md) var(--spacing-lg);
     background: transparent;
     border: none;
@@ -133,29 +133,29 @@
     margin-bottom: -2px;
 }
 
-.settings-tab:hover {
+.llm-model-tab:hover {
     color: var(--text-secondary);
     background: var(--bg-light);
 }
 
-.settings-tab.active {
+.llm-model-tab.active {
     color: var(--color-primary);
     border-bottom-color: var(--color-primary);
     font-weight: 600;
 }
 
-/* Settings tab content */
-.settings-tab-content {
+/* LLM Model tab content */
+.llm-model-tab-content {
     display: none;
     animation: fadeIn var(--transition-fast) ease-in;
 }
 
-.settings-tab-content.active {
+.llm-model-tab-content.active {
     display: block;
 }
 
-/* Settings content */
-.settings-content {
+/* LLM Model content */
+.llm-model-content {
     padding: var(--spacing-xl);
     display: flex;
     flex-direction: column;
@@ -184,7 +184,7 @@
     border-top: 1px solid var(--border-light);
 }
 
-.settings-preferences {
+.llm-model-preferences {
     margin: var(--spacing-lg) 0;
     padding: var(--spacing-md);
     background: var(--bg-light);
@@ -207,7 +207,7 @@
     cursor: pointer;
 }
 
-.settings-hint {
+.llm-model-hint {
     display: block;
     margin-top: var(--spacing-sm);
     font-size: 12px;
@@ -215,7 +215,7 @@
     line-height: 1.4;
 }
 
-.settings-status {
+.llm-model-status {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -227,19 +227,19 @@
     animation: fadeIn 0.3s ease-in;
 }
 
-.settings-status .status-icon {
+.llm-model-status .status-icon {
     color: #155724;
     font-size: 18px;
     font-weight: bold;
 }
 
-.settings-status .status-text {
+.llm-model-status .status-text {
     color: #155724;
     font-size: 14px;
     font-weight: 500;
 }
 
-.settings-actions {
+.llm-model-actions {
     display: flex;
     gap: var(--spacing-md);
     justify-content: space-between;
@@ -247,7 +247,7 @@
     margin-top: var(--spacing-md);
 }
 
-.settings-actions-right {
+.llm-model-actions-right {
     display: flex;
     gap: var(--spacing-md);
 }
