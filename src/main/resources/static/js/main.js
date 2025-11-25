@@ -120,14 +120,7 @@ function setupEventListeners() {
     document.getElementById('newChatButtonSidebar').addEventListener('click', handleNewChat);
     document.getElementById('toggleSidebarButton').addEventListener('click', handleToggleSidebar);
 
-    // Category filter events
-    document.querySelectorAll('.category-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const category = item.dataset.category;
-            const sessions = appState.getState().sessions || [];
-            sessionsUI.filterSessions(category, sessions);
-        });
-    });
+    // Note: Category filter events are now handled by initCategoriesDropdown() in sessionsUI.js
 
     // Modal events
     document.getElementById('assistantsButton').addEventListener('click', handleOpenAssistantsModal);

@@ -1,17 +1,110 @@
 /* ========================================
-   Sessions Categories Navigation
+   Sessions Categories Dropdown
    ======================================== */
 
-.sessions-categories {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-lg) var(--spacing-xl);
+.categories-dropdown {
+    padding: var(--spacing-md) var(--spacing-xl);
     background: var(--bg-light);
     border-bottom: 1px solid var(--border-light);
     flex-shrink: 0;
 }
 
+/* Dropdown Button */
+.categories-dropdown-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast) ease;
+}
+
+.categories-dropdown-button:hover {
+    background: var(--bg-light);
+    border-color: var(--color-primary);
+}
+
+.categories-dropdown-button.active {
+    background: var(--bg-light);
+    border-color: var(--color-primary);
+}
+
+.categories-dropdown-button svg:first-child {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.categories-dropdown-label {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.categories-dropdown-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--gradient-primary);
+    border-radius: var(--radius-round);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bg-white);
+}
+
+.categories-dropdown-button .dropdown-arrow {
+    margin-left: var(--spacing-sm);
+    transition: transform var(--transition-fast) ease;
+    color: var(--text-secondary);
+}
+
+.categories-dropdown-button.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Dropdown Menu */
+.categories-dropdown-menu {
+    display: none;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.categories-dropdown-menu.open {
+    display: flex;
+    animation: fadeInDropdown 0.2s ease-out;
+}
+
+@keyframes fadeInDropdown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Category Items */
 .category-item {
     display: flex;
     align-items: center;
@@ -35,10 +128,9 @@
 }
 
 .category-item.active {
-    background: var(--bg-white);
+    background: var(--bg-light);
     color: var(--color-primary);
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .category-item.active::before {
@@ -95,8 +187,17 @@
     color: var(--bg-white);
 }
 
-/* Адаптация для узких экранов */
+/* Mobile Adaptation */
 @media (max-width: 768px) {
+    .categories-dropdown {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .categories-dropdown-button {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 13px;
+    }
+
     .category-item {
         padding: var(--spacing-sm) var(--spacing-md);
         font-size: 13px;
@@ -107,29 +208,10 @@
         height: 16px;
     }
 
-    .category-count {
+    .category-count,
+    .categories-dropdown-count {
         min-width: 20px;
         height: 18px;
         font-size: 11px;
     }
 }
-
-/* Анимация появления */
-@keyframes fadeInCategory {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.category-item {
-    animation: fadeInCategory 0.2s ease-out;
-}
-
-.category-item:nth-child(1) { animation-delay: 0s; }
-.category-item:nth-child(2) { animation-delay: 0.05s; }
-.category-item:nth-child(3) { animation-delay: 0.1s; }

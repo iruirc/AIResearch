@@ -4,9 +4,32 @@ import { appState } from '../state/appState.js';
 
 // DOM element references
 let sessionsListElement = null;
+let categoriesDropdownButton = null;
+let categoriesDropdownMenu = null;
+let categoryLabel = null;
+let categoryCount = null;
+let categoryIcon = null;
 
 // Current filter state
-let currentFilter = 'all'; // 'all', 'simple', 'agents'
+let currentFilter = 'all'; // 'all', 'simple', 'agents', 'tasks', 'pipelines'
+
+// Category labels mapping
+const categoryLabels = {
+    'all': 'Все чаты',
+    'simple': 'Простые',
+    'agents': 'Ассистенты',
+    'tasks': 'Задачи',
+    'pipelines': 'Пайплайны'
+};
+
+// Category icons SVG mapping
+const categoryIcons = {
+    'all': `<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'simple': `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'agents': `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'tasks': `<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'pipelines': `<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+};
 
 /**
  * Initialize sessions UI with DOM element
@@ -14,6 +37,98 @@ let currentFilter = 'all'; // 'all', 'simple', 'agents'
  */
 export function initSessionsUI(element) {
     sessionsListElement = element;
+    initCategoriesDropdown();
+}
+
+/**
+ * Initialize categories dropdown
+ */
+function initCategoriesDropdown() {
+    categoriesDropdownButton = document.getElementById('categoriesDropdownButton');
+    categoriesDropdownMenu = document.getElementById('categoriesDropdownMenu');
+    categoryLabel = document.getElementById('categoryLabel');
+    categoryCount = document.getElementById('categoryCount');
+    categoryIcon = document.getElementById('categoryIcon');
+
+    if (categoriesDropdownButton && categoriesDropdownMenu) {
+        // Toggle dropdown on button click
+        categoriesDropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleCategoriesDropdown();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!categoriesDropdownButton.contains(e.target) && !categoriesDropdownMenu.contains(e.target)) {
+                closeCategoriesDropdown();
+            }
+        });
+
+        // Handle category item clicks
+        categoriesDropdownMenu.querySelectorAll('.category-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const category = item.dataset.category;
+                if (category) {
+                    // Get sessions from appState and filter
+                    const sessions = appState.sessions || [];
+                    sessionsUI.filterSessions(category, sessions);
+                    closeCategoriesDropdown();
+                }
+            });
+        });
+    }
+}
+
+/**
+ * Toggle categories dropdown visibility
+ */
+function toggleCategoriesDropdown() {
+    if (!categoriesDropdownButton || !categoriesDropdownMenu) return;
+
+    const isOpen = categoriesDropdownMenu.classList.contains('open');
+    if (isOpen) {
+        closeCategoriesDropdown();
+    } else {
+        openCategoriesDropdown();
+    }
+}
+
+/**
+ * Open categories dropdown
+ */
+function openCategoriesDropdown() {
+    if (!categoriesDropdownButton || !categoriesDropdownMenu) return;
+
+    categoriesDropdownButton.classList.add('active');
+    categoriesDropdownMenu.classList.add('open');
+}
+
+/**
+ * Close categories dropdown
+ */
+function closeCategoriesDropdown() {
+    if (!categoriesDropdownButton || !categoriesDropdownMenu) return;
+
+    categoriesDropdownButton.classList.remove('active');
+    categoriesDropdownMenu.classList.remove('open');
+}
+
+/**
+ * Update dropdown button display (label, count, icon)
+ * @param {string} category - Selected category
+ * @param {number} count - Count for selected category
+ */
+function updateDropdownButton(category, count) {
+    if (categoryLabel) {
+        categoryLabel.textContent = categoryLabels[category] || 'Все чаты';
+    }
+    if (categoryCount) {
+        categoryCount.textContent = count.toString();
+    }
+    if (categoryIcon && categoryIcons[category]) {
+        categoryIcon.innerHTML = categoryIcons[category];
+    }
 }
 
 /**
@@ -220,10 +335,35 @@ export const sessionsUI = {
     filterSessions(category, sessions) {
         currentFilter = category;
 
-        // Update active category button
+        // Update active category button in dropdown menu
         document.querySelectorAll('.category-item').forEach(item => {
             item.classList.toggle('active', item.dataset.category === category);
         });
+
+        // Calculate count for the selected category from sessions array
+        let categorySessionCount = 0;
+        if (sessions && sessions.length > 0) {
+            switch (category) {
+                case 'all':
+                    categorySessionCount = sessions.length;
+                    break;
+                case 'simple':
+                    categorySessionCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId).length;
+                    break;
+                case 'agents':
+                    categorySessionCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId).length;
+                    break;
+                case 'tasks':
+                    categorySessionCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId).length;
+                    break;
+                case 'pipelines':
+                    categorySessionCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId).length;
+                    break;
+            }
+        }
+
+        // Update dropdown button with selected category
+        updateDropdownButton(category, categorySessionCount);
 
         // Filter session items in the DOM
         const sessionItems = document.querySelectorAll('.session-item');
@@ -282,6 +422,7 @@ export const sessionsUI = {
         const tasksCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId).length;
         const pipelinesCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId).length;
 
+        // Update counts in dropdown menu items
         const allCountEl = document.getElementById('allCount');
         const simpleCountEl = document.getElementById('simpleCount');
         const assistantsCountEl = document.getElementById('assistantsCount');
@@ -293,6 +434,16 @@ export const sessionsUI = {
         if (assistantsCountEl) assistantsCountEl.textContent = assistantsCount;
         if (tasksCountEl) tasksCountEl.textContent = tasksCount;
         if (pipelinesCountEl) pipelinesCountEl.textContent = pipelinesCount;
+
+        // Also update the dropdown button count for current category
+        const counts = {
+            'all': allCount,
+            'simple': simpleCount,
+            'agents': assistantsCount,
+            'tasks': tasksCount,
+            'pipelines': pipelinesCount
+        };
+        updateDropdownButton(currentFilter, counts[currentFilter] || 0);
     },
 
     /**
