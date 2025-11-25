@@ -6,12 +6,22 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import org.slf4j.LoggerFactory
 
 class OllamaEmbeddingService(
     private val httpClient: HttpClient,
     private val config: RAGConfig
 ) : EmbeddingService {
+
+    private val logger = LoggerFactory.getLogger(OllamaEmbeddingService::class.java)
+
+    companion object {
+        private const val MAX_RETRIES = 5
+        private const val INITIAL_DELAY_MS = 1000L
+        private const val DELAY_BETWEEN_REQUESTS_MS = 200L
+    }
 
     @Serializable
     private data class OllamaEmbeddingRequest(
@@ -25,6 +35,10 @@ class OllamaEmbeddingService(
     )
 
     override suspend fun generateEmbedding(text: String): List<Float> {
+        return generateEmbeddingWithRetry(text)
+    }
+
+    private suspend fun generateEmbeddingWithRetry(text: String, attempt: Int = 1): List<Float> {
         return try {
             val response = httpClient.post("${config.ollamaUrl}/api/embeddings") {
                 contentType(ContentType.Application.Json)
@@ -38,14 +52,41 @@ class OllamaEmbeddingService(
                 val embeddingResponse = response.body<OllamaEmbeddingResponse>()
                 embeddingResponse.embedding
             } else {
-                throw Exception("Ollama API returned status ${response.status}")
+                val statusCode = response.status.value
+                if (statusCode >= 500 && attempt < MAX_RETRIES) {
+                    // Server error - retry with exponential backoff
+                    val delayMs = INITIAL_DELAY_MS * (1 shl (attempt - 1)) // exponential backoff
+                    logger.warn("Ollama API returned $statusCode, retrying in ${delayMs}ms (attempt $attempt/$MAX_RETRIES)")
+                    delay(delayMs)
+                    generateEmbeddingWithRetry(text, attempt + 1)
+                } else {
+                    throw Exception("Ollama API returned status ${response.status}")
+                }
             }
         } catch (e: Exception) {
-            throw Exception("Failed to generate embedding: ${e.message}", e)
+            if (e.message?.contains("Ollama API returned status") == true) {
+                throw e // Already our exception, don't wrap
+            }
+            if (attempt < MAX_RETRIES) {
+                val delayMs = INITIAL_DELAY_MS * (1 shl (attempt - 1))
+                logger.warn("Embedding request failed: ${e.message}, retrying in ${delayMs}ms (attempt $attempt/$MAX_RETRIES)")
+                delay(delayMs)
+                generateEmbeddingWithRetry(text, attempt + 1)
+            } else {
+                throw Exception("Failed to generate embedding: ${e.message}", e)
+            }
         }
     }
 
     override suspend fun generateEmbeddings(texts: List<String>): List<List<Float>> {
-        return texts.map { text -> generateEmbedding(text) }
+        val results = mutableListOf<List<Float>>()
+        for ((index, text) in texts.withIndex()) {
+            if (index > 0) {
+                // Add small delay between requests to prevent overloading Ollama
+                delay(DELAY_BETWEEN_REQUESTS_MS)
+            }
+            results.add(generateEmbedding(text))
+        }
+        return results
     }
 }

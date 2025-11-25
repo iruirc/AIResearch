@@ -588,26 +588,28 @@ export class RAGModal {
                 console.log('Document added successfully');
 
             } else {
-                // Files mode: multiple documents from files
+                // Files mode: combine all files into single document
                 if (this.selectedFiles.length === 0) {
                     alert('Пожалуйста, выберите хотя бы один файл');
                     return;
                 }
 
-                console.log(`Adding ${this.selectedFiles.length} document(s) from files`);
+                console.log(`Combining ${this.selectedFiles.length} file(s) into single document`);
 
+                // Read all files and combine their content
+                const contentParts = [];
                 for (const file of this.selectedFiles) {
-                    const content = await this.readFileContent(file);
-                    // Use file name as document name, or baseName + file name if multiple files
-                    const docName = this.selectedFiles.length === 1
-                        ? baseName
-                        : `${baseName} - ${file.name}`;
-
-                    console.log(`Adding document from file: ${docName}`);
-                    await ragApi.addDocument(docName, content, strategy, enabled);
+                    const fileContent = await this.readFileContent(file);
+                    // Add file header for clarity
+                    contentParts.push(`--- Файл: ${file.name} ---\n${fileContent}`);
                 }
 
-                console.log('All documents added successfully');
+                // Combine all file contents with separator
+                const combinedContent = contentParts.join('\n\n');
+
+                console.log(`Adding combined document: ${baseName}`);
+                await ragApi.addDocument(baseName, combinedContent, strategy, enabled);
+                console.log('Combined document added successfully');
             }
 
             modalsUI.closeModal('ragFormModal');
