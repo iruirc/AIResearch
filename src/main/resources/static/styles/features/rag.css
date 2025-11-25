@@ -237,6 +237,26 @@
 /* RAG Form */
 .rag-form-content {
     padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.rag-form-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.rag-form-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rag-form-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.rag-form-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
 }
 
 .rag-form {
@@ -365,10 +385,8 @@
     display: flex;
     gap: 0;
     margin-bottom: 16px;
-    border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
-    background: var(--bg-secondary);
 }
 
 .rag-tab {
@@ -378,8 +396,8 @@
     justify-content: center;
     gap: 8px;
     padding: 12px 16px;
-    background: transparent;
-    border: none;
+    background: var(--bg-secondary);
+    border: 2px solid #c0c0c0;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -387,14 +405,26 @@
     transition: all 0.2s;
 }
 
-.rag-tab:hover {
+.rag-tab:first-child {
+    border-radius: 8px 0 0 8px;
+    border-right: 1px solid #c0c0c0;
+}
+
+.rag-tab:last-child {
+    border-radius: 0 8px 8px 0;
+    border-left: 1px solid #c0c0c0;
+}
+
+.rag-tab:hover:not(.active) {
     background: var(--bg-hover);
     color: var(--text-primary);
+    border-color: #999;
 }
 
 .rag-tab.active {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    border-color: #667eea;
 }
 
 .rag-tab svg {
