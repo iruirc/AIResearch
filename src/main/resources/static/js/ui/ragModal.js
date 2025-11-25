@@ -145,7 +145,7 @@ export class RAGModal {
             const metaDiv = document.createElement('div');
             metaDiv.className = 'rag-document-meta';
             metaDiv.innerHTML = `
-                <span>Чанков: ${doc.chunkCount || 0}</span>
+                <span>Чанков: ${doc.chunks?.length || 0}</span>
                 <span>Стратегия: ${this.getStrategyLabel(doc.chunkingStrategy)}</span>
                 <span class="rag-document-status ${doc.enabled ? 'enabled' : 'disabled'}">${doc.enabled ? 'Активен' : 'Отключён'}</span>
             `;
