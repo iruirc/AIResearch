@@ -4,6 +4,7 @@
 
 .sessions-list {
     flex: 1;
+    min-height: 0; /* Required for flex item to shrink and enable scrolling */
     overflow-y: auto;
     padding: var(--spacing-md) var(--spacing-xl);
     z-index: var(--z-base);
