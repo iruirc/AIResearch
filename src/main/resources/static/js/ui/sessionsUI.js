@@ -77,6 +77,23 @@ function initCategoriesDropdown() {
                 }
             });
         });
+
+        // Handle "Clear all" button click
+        const clearAllButton = document.getElementById('clearAllChatsButton');
+        if (clearAllButton) {
+            clearAllButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeCategoriesDropdown();
+
+                // Call global handleClearChat function from main.js
+                if (typeof window.handleClearChat === 'function') {
+                    window.handleClearChat();
+                } else {
+                    console.error('handleClearChat function not found');
+                    alert('Ошибка: функция очистки не загружена');
+                }
+            });
+        }
     }
 }
 

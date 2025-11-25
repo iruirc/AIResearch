@@ -84,7 +84,7 @@
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    max-height: 300px;
+    max-height: calc(100vh - 250px);
     overflow-y: auto;
 }
 
@@ -185,6 +185,27 @@
 .category-item.active .category-count {
     background: var(--gradient-primary);
     color: var(--bg-white);
+}
+
+/* Category Divider */
+.category-divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: var(--spacing-sm) 0;
+}
+
+/* Danger Category Item (Clear All) */
+.category-item.category-item-danger {
+    color: var(--color-danger, #ef4444);
+}
+
+.category-item.category-item-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger, #ef4444);
+}
+
+.category-item.category-item-danger svg {
+    color: var(--color-danger, #ef4444);
 }
 
 /* Mobile Adaptation */
