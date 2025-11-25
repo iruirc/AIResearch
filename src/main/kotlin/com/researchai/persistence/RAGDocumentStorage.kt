@@ -8,4 +8,6 @@ interface RAGDocumentStorage {
     suspend fun loadAll(): List<RAGDocument>
     suspend fun delete(documentId: String)
     suspend fun exists(documentId: String): Boolean
+    suspend fun existsByName(name: String): Boolean
+    suspend fun findByName(name: String): RAGDocument?
 }

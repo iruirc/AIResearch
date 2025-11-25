@@ -618,7 +618,11 @@ export class RAGModal {
 
         } catch (error) {
             console.error('Error adding document:', error);
-            alert(`Ошибка при добавлении документа: ${error.message}`);
+            if (error.message.startsWith('DUPLICATE_NAME:')) {
+                alert(`Знание с именем "${baseName}" уже существует.\nВыберите другое имя.`);
+            } else {
+                alert(`Ошибка при добавлении документа: ${error.message}`);
+            }
         }
     }
 
@@ -652,7 +656,11 @@ export class RAGModal {
             console.log('Document updated successfully');
         } catch (error) {
             console.error('Error updating document:', error);
-            alert(`Ошибка при обновлении документа: ${error.message}`);
+            if (error.message.startsWith('DUPLICATE_NAME:')) {
+                alert(`Знание с именем "${name}" уже существует.\nВыберите другое имя.`);
+            } else {
+                alert(`Ошибка при обновлении документа: ${error.message}`);
+            }
         }
     }
 

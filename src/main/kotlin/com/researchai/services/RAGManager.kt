@@ -11,6 +11,11 @@ import com.researchai.persistence.RAGDocumentStorage
 import kotlinx.datetime.Clock
 import java.util.*
 
+/**
+ * Exception thrown when attempting to create a document with a name that already exists
+ */
+class DuplicateDocumentNameException(name: String) : Exception("Document with name '$name' already exists")
+
 class RAGManager(
     private val embeddingService: EmbeddingService,
     private val vectorSearch: VectorSearchService,
@@ -30,6 +35,11 @@ class RAGManager(
         chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
         enabled: Boolean = config.enabledByDefault
     ): RAGDocument {
+        // Check if document with this name already exists
+        if (storage.existsByName(name)) {
+            throw DuplicateDocumentNameException(name)
+        }
+
         val documentId = UUID.randomUUID().toString()
 
         val chunker = getChunker(chunkingStrategy)
@@ -74,6 +84,14 @@ class RAGManager(
         chunkingStrategy: ChunkingStrategy? = null
     ): RAGDocument? {
         val existingDocument = storage.load(documentId) ?: return null
+
+        // Check if new name conflicts with existing document (other than this one)
+        if (name != null && name != existingDocument.name) {
+            val existingByName = storage.findByName(name)
+            if (existingByName != null && existingByName.id != documentId) {
+                throw DuplicateDocumentNameException(name)
+            }
+        }
 
         val shouldReprocess = chunkingStrategy != null && chunkingStrategy != existingDocument.chunkingStrategy
 

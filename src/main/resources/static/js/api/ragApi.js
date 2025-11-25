@@ -89,6 +89,9 @@ export const ragApi = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            if (response.status === 409) {
+                throw new Error(`DUPLICATE_NAME:${errorData.error || 'Знание с таким именем уже существует'}`);
+            }
             throw new Error(errorData.error || `Failed to add document: ${response.status}`);
         }
 
@@ -127,6 +130,9 @@ export const ragApi = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            if (response.status === 409) {
+                throw new Error(`DUPLICATE_NAME:${errorData.error || 'Знание с таким именем уже существует'}`);
+            }
             throw new Error(errorData.error || `Failed to update document: ${response.status}`);
         }
 

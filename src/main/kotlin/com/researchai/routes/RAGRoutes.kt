@@ -1,6 +1,7 @@
 package com.researchai.routes
 
 import com.researchai.domain.models.ChunkingStrategy
+import com.researchai.services.DuplicateDocumentNameException
 import com.researchai.services.RAGManager
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -61,6 +62,8 @@ fun Route.ragRoutes(ragManager: RAGManager) {
                 )
 
                 call.respond(HttpStatusCode.Created, document)
+            } catch (e: DuplicateDocumentNameException) {
+                call.respond(HttpStatusCode.Conflict, ErrorResponse(e.message ?: "Document with this name already exists"))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }
@@ -119,6 +122,8 @@ fun Route.ragRoutes(ragManager: RAGManager) {
                 } else {
                     call.respond(HttpStatusCode.OK, document)
                 }
+            } catch (e: DuplicateDocumentNameException) {
+                call.respond(HttpStatusCode.Conflict, ErrorResponse(e.message ?: "Document with this name already exists"))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }
