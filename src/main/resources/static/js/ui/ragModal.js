@@ -15,6 +15,8 @@ export class RAGModal {
         this.documents = [];
         this.currentMode = 'list'; // 'list', 'add', 'edit'
         this.editingDocument = null;
+        this.activeTab = 'text'; // 'text' or 'files'
+        this.selectedFiles = []; // Array of File objects
 
         // Bind methods
         this.initialize = this.initialize.bind(this);
@@ -26,6 +28,13 @@ export class RAGModal {
         this.handleUpdateDocument = this.handleUpdateDocument.bind(this);
         this.handleDeleteDocument = this.handleDeleteDocument.bind(this);
         this.handleToggleDocument = this.handleToggleDocument.bind(this);
+        this.setupTabs = this.setupTabs.bind(this);
+        this.setupFileHandlers = this.setupFileHandlers.bind(this);
+        this.switchTab = this.switchTab.bind(this);
+        this.addFiles = this.addFiles.bind(this);
+        this.removeFile = this.removeFile.bind(this);
+        this.renderFilesList = this.renderFilesList.bind(this);
+        this.readFileContent = this.readFileContent.bind(this);
     }
 
     /**
@@ -206,6 +215,8 @@ export class RAGModal {
     openAddDocumentForm() {
         this.currentMode = 'add';
         this.editingDocument = null;
+        this.selectedFiles = [];
+        this.activeTab = 'text';
         modalsUI.closeModal('ragModal');
         modalsUI.openModal('ragFormModal');
 
@@ -222,9 +233,24 @@ export class RAGModal {
         const enabledCheckbox = document.getElementById('ragDocumentEnabled');
 
         if (nameInput) nameInput.value = '';
-        if (contentInput) contentInput.value = '';
+        if (contentInput) {
+            contentInput.value = '';
+            contentInput.disabled = false;
+        }
         if (strategySelect) strategySelect.value = 'FIXED_SIZE';
         if (enabledCheckbox) enabledCheckbox.checked = true;
+
+        // Show tabs and reset to text tab
+        const tabsContainer = document.getElementById('ragSourceTabs');
+        if (tabsContainer) {
+            tabsContainer.classList.remove('hidden');
+        }
+        this.switchTab('text');
+        this.renderFilesList();
+
+        // Setup tabs and file handlers
+        this.setupTabs();
+        this.setupFileHandlers();
 
         // Setup form submission
         const form = document.getElementById('ragDocumentForm');
@@ -246,6 +272,221 @@ export class RAGModal {
     }
 
     /**
+     * Setup tab switching functionality
+     */
+    setupTabs() {
+        const tabs = document.querySelectorAll('.rag-tab');
+        tabs.forEach(tab => {
+            tab.onclick = () => {
+                const tabName = tab.dataset.tab;
+                this.switchTab(tabName);
+            };
+        });
+    }
+
+    /**
+     * Switch between text and files tabs
+     * @param {string} tabName - Tab name ('text' or 'files')
+     */
+    switchTab(tabName) {
+        this.activeTab = tabName;
+
+        // Update tab buttons
+        const tabs = document.querySelectorAll('.rag-tab');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+
+        // Update tab content
+        const textContent = document.getElementById('ragTabText');
+        const filesContent = document.getElementById('ragTabFiles');
+
+        if (textContent) {
+            textContent.classList.toggle('active', tabName === 'text');
+        }
+        if (filesContent) {
+            filesContent.classList.toggle('active', tabName === 'files');
+        }
+    }
+
+    /**
+     * Setup file drag&drop and input handlers
+     */
+    setupFileHandlers() {
+        const dropzone = document.getElementById('ragDropzone');
+        const fileInput = document.getElementById('ragFileInput');
+        const browseButton = document.getElementById('ragBrowseButton');
+
+        if (browseButton && fileInput) {
+            browseButton.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            };
+        }
+
+        if (fileInput) {
+            fileInput.onchange = (e) => {
+                if (e.target.files) {
+                    this.addFiles(Array.from(e.target.files));
+                    fileInput.value = ''; // Reset input
+                }
+            };
+        }
+
+        if (dropzone) {
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            // Highlight drop zone on drag
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => {
+                    dropzone.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => {
+                    dropzone.classList.remove('drag-over');
+                }, false);
+            });
+
+            // Handle dropped files
+            dropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer?.files;
+                if (files) {
+                    this.addFiles(Array.from(files));
+                }
+            }, false);
+
+            // Click on dropzone opens file dialog
+            dropzone.onclick = (e) => {
+                if (e.target === dropzone || e.target.closest('.rag-dropzone-text, .rag-dropzone-hint, svg')) {
+                    fileInput?.click();
+                }
+            };
+        }
+    }
+
+    /**
+     * Add files to the selected files list
+     * @param {File[]} files - Array of File objects
+     */
+    addFiles(files) {
+        const allowedExtensions = ['.txt', '.md', '.json', '.xml', '.log'];
+
+        files.forEach(file => {
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (allowedExtensions.includes(ext)) {
+                // Check if file already exists
+                if (!this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    this.selectedFiles.push(file);
+                }
+            } else {
+                console.warn(`File ${file.name} has unsupported extension`);
+            }
+        });
+
+        this.renderFilesList();
+    }
+
+    /**
+     * Remove file from selected files
+     * @param {number} index - Index of file to remove
+     */
+    removeFile(index) {
+        this.selectedFiles.splice(index, 1);
+        this.renderFilesList();
+    }
+
+    /**
+     * Render the list of selected files
+     */
+    renderFilesList() {
+        const filesList = document.getElementById('ragFilesList');
+        if (!filesList) return;
+
+        filesList.innerHTML = '';
+
+        this.selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'rag-file-item';
+
+            const fileIcon = document.createElement('div');
+            fileIcon.className = 'rag-file-icon';
+            fileIcon.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            `;
+
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'rag-file-info';
+
+            const fileName = document.createElement('div');
+            fileName.className = 'rag-file-name';
+            fileName.textContent = file.name;
+
+            const fileSize = document.createElement('div');
+            fileSize.className = 'rag-file-size';
+            fileSize.textContent = this.formatFileSize(file.size);
+
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(fileSize);
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'rag-file-remove';
+            removeButton.title = 'Удалить';
+            removeButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            `;
+            removeButton.onclick = () => this.removeFile(index);
+
+            fileItem.appendChild(fileIcon);
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeButton);
+            filesList.appendChild(fileItem);
+        });
+    }
+
+    /**
+     * Format file size for display
+     * @param {number} bytes - File size in bytes
+     * @returns {string} Formatted file size
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Read content from a file
+     * @param {File} file - File to read
+     * @returns {Promise<string>} File content
+     */
+    readFileContent(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result || '');
+            reader.onerror = (e) => reject(new Error(`Failed to read file: ${file.name}`));
+            reader.readAsText(file);
+        });
+    }
+
+    /**
      * Open the edit document form
      * @param {string} documentId - Document ID to edit
      */
@@ -254,8 +495,8 @@ export class RAGModal {
             this.currentMode = 'edit';
 
             // Load full document details
-            const document = await ragApi.getDocument(documentId);
-            this.editingDocument = document;
+            const doc = await ragApi.getDocument(documentId);
+            this.editingDocument = doc;
 
             modalsUI.closeModal('ragModal');
             modalsUI.openModal('ragFormModal');
@@ -266,16 +507,25 @@ export class RAGModal {
                 formTitle.textContent = 'Редактировать документ';
             }
 
+            // Hide tabs in edit mode (content cannot be changed)
+            const tabsContainer = document.getElementById('ragSourceTabs');
+            if (tabsContainer) {
+                tabsContainer.classList.add('hidden');
+            }
+
+            // Show text tab content only
+            this.switchTab('text');
+
             // Fill form with document data
             const nameInput = document.getElementById('ragDocumentName');
             const contentInput = document.getElementById('ragDocumentContent');
             const strategySelect = document.getElementById('ragChunkingStrategy');
             const enabledCheckbox = document.getElementById('ragDocumentEnabled');
 
-            if (nameInput) nameInput.value = document.name || '';
-            if (contentInput) contentInput.value = document.originalContent || '';
-            if (strategySelect) strategySelect.value = document.chunkingStrategy || 'FIXED_SIZE';
-            if (enabledCheckbox) enabledCheckbox.checked = document.enabled !== false;
+            if (nameInput) nameInput.value = doc.name || '';
+            if (contentInput) contentInput.value = doc.originalContent || '';
+            if (strategySelect) strategySelect.value = doc.chunkingStrategy || 'FIXED_SIZE';
+            if (enabledCheckbox) enabledCheckbox.checked = doc.enabled !== false;
 
             // Disable content editing (can't change document content, only metadata)
             if (contentInput) {
@@ -315,25 +565,55 @@ export class RAGModal {
         const strategySelect = document.getElementById('ragChunkingStrategy');
         const enabledCheckbox = document.getElementById('ragDocumentEnabled');
 
-        const name = nameInput?.value?.trim();
-        const content = contentInput?.value?.trim();
+        const baseName = nameInput?.value?.trim();
         const strategy = strategySelect?.value || 'FIXED_SIZE';
         const enabled = enabledCheckbox?.checked !== false;
 
-        if (!name || !content) {
-            alert('Пожалуйста, заполните название и содержимое документа');
+        if (!baseName) {
+            alert('Пожалуйста, укажите название документа');
             return;
         }
 
         try {
-            console.log(`Adding document: ${name}`);
-            await ragApi.addDocument(name, content, strategy, enabled);
+            if (this.activeTab === 'text') {
+                // Text mode: single document from textarea
+                const content = contentInput?.value?.trim();
+                if (!content) {
+                    alert('Пожалуйста, введите содержимое документа');
+                    return;
+                }
+
+                console.log(`Adding document: ${baseName}`);
+                await ragApi.addDocument(baseName, content, strategy, enabled);
+                console.log('Document added successfully');
+
+            } else {
+                // Files mode: multiple documents from files
+                if (this.selectedFiles.length === 0) {
+                    alert('Пожалуйста, выберите хотя бы один файл');
+                    return;
+                }
+
+                console.log(`Adding ${this.selectedFiles.length} document(s) from files`);
+
+                for (const file of this.selectedFiles) {
+                    const content = await this.readFileContent(file);
+                    // Use file name as document name, or baseName + file name if multiple files
+                    const docName = this.selectedFiles.length === 1
+                        ? baseName
+                        : `${baseName} - ${file.name}`;
+
+                    console.log(`Adding document from file: ${docName}`);
+                    await ragApi.addDocument(docName, content, strategy, enabled);
+                }
+
+                console.log('All documents added successfully');
+            }
 
             modalsUI.closeModal('ragFormModal');
             modalsUI.openModal('ragModal');
             await this.loadDocuments();
 
-            console.log('Document added successfully');
         } catch (error) {
             console.error('Error adding document:', error);
             alert(`Ошибка при добавлении документа: ${error.message}`);

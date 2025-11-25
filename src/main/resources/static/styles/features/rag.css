@@ -357,6 +357,212 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+/* ========================================
+   Source Tabs (Text / Files)
+   ======================================== */
+
+.rag-source-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-secondary);
+}
+
+.rag-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.rag-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.rag-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.rag-tab svg {
+    flex-shrink: 0;
+}
+
+/* Tab Content */
+.rag-tab-content {
+    display: none;
+}
+
+.rag-tab-content.active {
+    display: block;
+}
+
+/* ========================================
+   Dropzone for Files
+   ======================================== */
+
+.rag-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 32px 20px;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.rag-dropzone:hover,
+.rag-dropzone.drag-over {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.rag-dropzone.drag-over {
+    border-style: solid;
+    transform: scale(1.01);
+}
+
+.rag-dropzone svg {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.rag-dropzone-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin: 8px 0 0 0;
+}
+
+.rag-dropzone-hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.rag-browse-button {
+    margin-top: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rag-browse-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* ========================================
+   Files List
+   ======================================== */
+
+.rag-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.rag-files-list:empty {
+    display: none;
+}
+
+.rag-file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.rag-file-item:hover {
+    border-color: var(--primary);
+}
+
+.rag-file-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    color: white;
+}
+
+.rag-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.rag-file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rag-file-size {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.rag-file-remove {
+    flex-shrink: 0;
+    padding: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.rag-file-remove:hover {
+    background: #fff5f5;
+    border-color: var(--error);
+    color: var(--error);
+}
+
+/* ========================================
+   Hidden Tabs in Edit Mode
+   ======================================== */
+
+.rag-source-tabs.hidden {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .rag-document-item {
@@ -370,5 +576,14 @@
 
     .rag-documents-list {
         padding: 12px;
+    }
+
+    .rag-dropzone {
+        padding: 24px 16px;
+    }
+
+    .rag-tab {
+        padding: 10px 12px;
+        font-size: 13px;
     }
 }
