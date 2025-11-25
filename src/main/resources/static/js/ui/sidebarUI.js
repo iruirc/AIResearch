@@ -3,6 +3,8 @@
 // DOM element references
 let sidebar = null;
 let toggleButton = null;
+let settingsDropdownButton = null;
+let settingsDropdownMenu = null;
 
 // Sidebar state
 const SIDEBAR_STATE_KEY = 'sidebarCollapsed';
@@ -16,8 +18,75 @@ export function initSidebarUI(sidebarElement, toggleButtonElement) {
     sidebar = sidebarElement;
     toggleButton = toggleButtonElement;
 
+    // Initialize settings dropdown
+    initSettingsDropdown();
+
     // Restore saved state
     restoreSidebarState();
+}
+
+/**
+ * Initialize settings dropdown
+ */
+function initSettingsDropdown() {
+    settingsDropdownButton = document.getElementById('settingsDropdownButton');
+    settingsDropdownMenu = document.getElementById('settingsDropdownMenu');
+
+    if (settingsDropdownButton && settingsDropdownMenu) {
+        // Toggle dropdown on button click
+        settingsDropdownButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSettingsDropdown();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsDropdownButton.contains(e.target) && !settingsDropdownMenu.contains(e.target)) {
+                closeSettingsDropdown();
+            }
+        });
+
+        // Close dropdown when clicking on menu items (after modal opens)
+        settingsDropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', () => {
+                closeSettingsDropdown();
+            });
+        });
+    }
+}
+
+/**
+ * Toggle settings dropdown visibility
+ */
+function toggleSettingsDropdown() {
+    if (!settingsDropdownButton || !settingsDropdownMenu) return;
+
+    const isOpen = settingsDropdownMenu.classList.contains('open');
+    if (isOpen) {
+        closeSettingsDropdown();
+    } else {
+        openSettingsDropdown();
+    }
+}
+
+/**
+ * Open settings dropdown
+ */
+function openSettingsDropdown() {
+    if (!settingsDropdownButton || !settingsDropdownMenu) return;
+
+    settingsDropdownButton.classList.add('active');
+    settingsDropdownMenu.classList.add('open');
+}
+
+/**
+ * Close settings dropdown
+ */
+function closeSettingsDropdown() {
+    if (!settingsDropdownButton || !settingsDropdownMenu) return;
+
+    settingsDropdownButton.classList.remove('active');
+    settingsDropdownMenu.classList.remove('open');
 }
 
 /**
