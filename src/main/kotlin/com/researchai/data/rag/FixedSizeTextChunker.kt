@@ -29,7 +29,9 @@ class FixedSizeTextChunker(
                 chunks.add(chunk)
             }
 
-            position = chunkEnd - overlap
+            // Ensure position always advances to prevent infinite loops
+            val newPosition = chunkEnd - overlap
+            position = if (newPosition <= position) chunkEnd else newPosition
             if (position >= text.length) break
         }
 
