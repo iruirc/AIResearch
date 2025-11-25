@@ -212,7 +212,7 @@ export class RAGModal {
         // Set form title
         const formTitle = document.getElementById('ragFormTitle');
         if (formTitle) {
-            formTitle.textContent = 'Добавить документ';
+            formTitle.textContent = 'Добавить знание';
         }
 
         // Clear form
