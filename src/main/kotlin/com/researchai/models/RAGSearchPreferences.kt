@@ -40,9 +40,16 @@ data class RAGSearchPreferences(
 
     // CROSS_ENCODER parameters
     /**
-     * Ollama model to use for Cross-Encoder reranking
+     * AI provider for Cross-Encoder reranking
+     * If null, uses the current global provider
      */
-    val crossEncoderModel: String = "llama3.2:latest",
+    val crossEncoderProvider: String? = null,
+
+    /**
+     * Model to use for Cross-Encoder reranking
+     * If null, uses the current global model
+     */
+    val crossEncoderModel: String? = null,
 
     /**
      * Minimum relevance score (0-10) for Cross-Encoder

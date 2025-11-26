@@ -718,6 +718,7 @@
 
 /* Wider select for strategy dropdown */
 #ragStrategy,
+#ragCrossEncoderProvider,
 #ragCrossEncoderModel {
     width: 200px;
 }

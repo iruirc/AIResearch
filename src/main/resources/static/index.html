@@ -731,16 +731,21 @@
                                 <!-- Параметры CROSS_ENCODER -->
                                 <div id="ragCrossEncoderParams" class="rag-strategy-params hidden">
                                     <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragCrossEncoderProvider">
+                                            Провайдер
+                                            <span class="rag-settings-hint">AI провайдер для реранкинга</span>
+                                        </label>
+                                        <select id="ragCrossEncoderProvider" class="form-select">
+                                            <!-- Динамически заполняется из API -->
+                                        </select>
+                                    </div>
+                                    <div class="rag-settings-row">
                                         <label class="rag-settings-label" for="ragCrossEncoderModel">
-                                            Модель LLM
-                                            <span class="rag-settings-hint">Ollama модель для оценки релевантности</span>
+                                            Модель
+                                            <span class="rag-settings-hint">Модель для оценки релевантности</span>
                                         </label>
                                         <select id="ragCrossEncoderModel" class="form-select">
-                                            <option value="llama3.2:latest">llama3.2:latest</option>
-                                            <option value="mistral:latest">mistral:latest</option>
-                                            <option value="qwen2.5:latest">qwen2.5:latest</option>
-                                            <option value="phi3:latest">phi3:latest</option>
-                                            <option value="gemma2:latest">gemma2:latest</option>
+                                            <!-- Динамически заполняется при выборе провайдера -->
                                         </select>
                                     </div>
                                     <div class="rag-settings-row">

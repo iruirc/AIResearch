@@ -6,6 +6,8 @@
 
 import { ragApi } from '../api/ragApi.js';
 import { modalsUI } from './modalsUI.js';
+import { llmModelApi } from '../api/llmModelApi.js';
+import { appState } from '../state/appState.js';
 
 /**
  * RAG Modal class for managing document operations
@@ -49,6 +51,10 @@ export class RAGModal {
         this.handleResetSettings = this.handleResetSettings.bind(this);
         this.updateStrategyParams = this.updateStrategyParams.bind(this);
         this.setupSettingsHandlers = this.setupSettingsHandlers.bind(this);
+
+        // Cross-Encoder provider/model methods
+        this.loadCrossEncoderProviders = this.loadCrossEncoderProviders.bind(this);
+        this.loadCrossEncoderModels = this.loadCrossEncoderModels.bind(this);
     }
 
     /**
@@ -805,8 +811,8 @@ export class RAGModal {
         // Strategy selector
         const strategySelect = document.getElementById('ragStrategy');
         if (strategySelect) {
-            strategySelect.addEventListener('change', (e) => {
-                this.updateStrategyParams(e.target.value);
+            strategySelect.addEventListener('change', async (e) => {
+                await this.updateStrategyParams(e.target.value);
             });
         }
 
@@ -824,6 +830,14 @@ export class RAGModal {
         if (resetButton) {
             resetButton.addEventListener('click', async () => {
                 await this.handleResetSettings();
+            });
+        }
+
+        // Cross-Encoder provider selector
+        const crossEncoderProviderSelect = document.getElementById('ragCrossEncoderProvider');
+        if (crossEncoderProviderSelect) {
+            crossEncoderProviderSelect.addEventListener('change', async (e) => {
+                await this.loadCrossEncoderModels(e.target.value);
             });
         }
     }
@@ -852,7 +866,7 @@ export class RAGModal {
      * Populate settings form with preferences data
      * @param {Object} prefs - Preferences object
      */
-    populateSettingsForm(prefs) {
+    async populateSettingsForm(prefs) {
         if (!prefs) return;
 
         // Enable reranking toggle
@@ -866,11 +880,15 @@ export class RAGModal {
             }
         }
 
-        // Strategy
+        // Strategy - pass saved provider and model for CROSS_ENCODER
         const strategy = document.getElementById('ragStrategy');
         if (strategy) {
             strategy.value = prefs.strategy || 'SCORE_THRESHOLD';
-            this.updateStrategyParams(prefs.strategy || 'SCORE_THRESHOLD');
+            await this.updateStrategyParams(
+                prefs.strategy || 'SCORE_THRESHOLD',
+                prefs.crossEncoderProvider,
+                prefs.crossEncoderModel
+            );
         }
 
         // SCORE_THRESHOLD params
@@ -890,19 +908,8 @@ export class RAGModal {
             minResultsToKeep.value = prefs.minResultsToKeep ?? 1;
         }
 
-        // CROSS_ENCODER params
-        const crossEncoderModel = document.getElementById('ragCrossEncoderModel');
-        if (crossEncoderModel) {
-            // Check if the model exists in options, otherwise add it
-            const modelValue = prefs.crossEncoderModel || 'llama3.2:latest';
-            if (!Array.from(crossEncoderModel.options).some(opt => opt.value === modelValue)) {
-                const option = document.createElement('option');
-                option.value = modelValue;
-                option.textContent = modelValue;
-                crossEncoderModel.appendChild(option);
-            }
-            crossEncoderModel.value = modelValue;
-        }
+        // CROSS_ENCODER params - model is populated dynamically via updateStrategyParams
+        // Just set the min score here
 
         const crossEncoderMinScore = document.getElementById('ragCrossEncoderMinScore');
         if (crossEncoderMinScore) {
@@ -924,8 +931,10 @@ export class RAGModal {
     /**
      * Update visibility of strategy-specific parameter sections
      * @param {string} strategy - Selected strategy
+     * @param {string} savedProvider - Provider from saved preferences (optional)
+     * @param {string} savedModel - Model from saved preferences (optional)
      */
-    updateStrategyParams(strategy) {
+    async updateStrategyParams(strategy, savedProvider = null, savedModel = null) {
         const scoreThresholdParams = document.getElementById('ragScoreThresholdParams');
         const statisticalParams = document.getElementById('ragStatisticalParams');
         const crossEncoderParams = document.getElementById('ragCrossEncoderParams');
@@ -945,6 +954,8 @@ export class RAGModal {
                 break;
             case 'CROSS_ENCODER':
                 if (crossEncoderParams) crossEncoderParams.classList.remove('hidden');
+                // Load providers and models for Cross-Encoder
+                await this.loadCrossEncoderProviders(savedProvider, savedModel);
                 break;
         }
     }
@@ -961,7 +972,8 @@ export class RAGModal {
                 scoreThreshold: parseFloat(document.getElementById('ragScoreThreshold')?.value) || 0.75,
                 stdDevMultiplier: parseFloat(document.getElementById('ragStdDevMultiplier')?.value) || 1.0,
                 minResultsToKeep: parseInt(document.getElementById('ragMinResultsToKeep')?.value) || 1,
-                crossEncoderModel: document.getElementById('ragCrossEncoderModel')?.value || 'llama3.2:latest',
+                crossEncoderProvider: document.getElementById('ragCrossEncoderProvider')?.value || null,
+                crossEncoderModel: document.getElementById('ragCrossEncoderModel')?.value || null,
                 crossEncoderMinScore: parseFloat(document.getElementById('ragCrossEncoderMinScore')?.value) || 6.0,
                 searchTopK: parseInt(document.getElementById('ragSearchTopK')?.value) || 5,
                 searchMinScore: parseFloat(document.getElementById('ragSearchMinScore')?.value) || 0.7
@@ -1025,6 +1037,102 @@ export class RAGModal {
         setTimeout(() => {
             notification.style.display = 'none';
         }, 3000);
+    }
+
+    // ============================================
+    // Cross-Encoder Provider/Model Methods
+    // ============================================
+
+    /**
+     * Load providers list for Cross-Encoder dropdown
+     * Uses the same providers as global settings
+     * @param {string} currentProvider - Currently selected provider ID (optional)
+     * @param {string} currentModel - Currently selected model ID (optional)
+     */
+    async loadCrossEncoderProviders(currentProvider = null, currentModel = null) {
+        const providerSelect = document.getElementById('ragCrossEncoderProvider');
+        if (!providerSelect) return;
+
+        try {
+            // Get providers from appState or load from API
+            let providers = appState.providers;
+            if (!providers || providers.length === 0) {
+                providers = await llmModelApi.loadProviders();
+            }
+
+            // Clear existing options
+            providerSelect.innerHTML = '';
+
+            // Populate provider dropdown
+            providers.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider.id;
+                option.textContent = provider.displayName || provider.name;
+                providerSelect.appendChild(option);
+            });
+
+            // Determine default provider: use provided, or current global, or first available
+            let defaultProvider = currentProvider;
+            if (!defaultProvider && appState.currentProvider) {
+                defaultProvider = appState.currentProvider;
+            }
+            if (!defaultProvider && providers.length > 0) {
+                defaultProvider = providers[0].id;
+            }
+
+            if (defaultProvider) {
+                providerSelect.value = defaultProvider;
+                // Load models for the selected provider
+                await this.loadCrossEncoderModels(defaultProvider, currentModel);
+            }
+        } catch (error) {
+            console.error('Error loading Cross-Encoder providers:', error);
+        }
+    }
+
+    /**
+     * Load models for selected provider in Cross-Encoder dropdown
+     * @param {string} providerId - Provider ID to load models for
+     * @param {string} currentModel - Currently selected model ID (optional)
+     */
+    async loadCrossEncoderModels(providerId, currentModel = null) {
+        const modelSelect = document.getElementById('ragCrossEncoderModel');
+        if (!modelSelect || !providerId) return;
+
+        try {
+            // Load models from API
+            const models = await llmModelApi.loadModels(providerId);
+
+            // Clear existing options
+            modelSelect.innerHTML = '';
+
+            // Populate model dropdown
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = model.displayName || model.name || model.id;
+                modelSelect.appendChild(option);
+            });
+
+            // Determine default model
+            let defaultModel = currentModel;
+
+            // If no current model set, try to use the global model (if same provider)
+            if (!defaultModel && appState.currentProvider === providerId && appState.currentSettings?.model) {
+                defaultModel = appState.currentSettings.model;
+            }
+
+            // If model exists in options, select it
+            if (defaultModel) {
+                const modelExists = Array.from(modelSelect.options).some(opt => opt.value === defaultModel);
+                if (modelExists) {
+                    modelSelect.value = defaultModel;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading Cross-Encoder models:', error);
+            modelSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        }
     }
 }
 
