@@ -1046,6 +1046,26 @@
     line-height: 1.5;
     color: var(--color-text-secondary);
     word-break: break-word;
+    max-height: 150px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.rag-preview-result-text::-webkit-scrollbar {
+    width: 4px;
+}
+
+.rag-preview-result-text::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rag-preview-result-text::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+}
+
+.rag-preview-result-text::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-tertiary);
 }
 
 /* Filtered results divider */

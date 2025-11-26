@@ -246,7 +246,6 @@ class RagPreviewModal {
         // Active results
         results.forEach((result, index) => {
             const score = (result.score * 100).toFixed(1);
-            const truncatedText = this.truncateText(result.text, 200);
 
             html += `
                 <div class="rag-preview-result">
@@ -255,7 +254,7 @@ class RagPreviewModal {
                         <span class="rag-preview-result-doc">${this.escapeHtml(result.documentName)}</span>
                         <span class="rag-preview-result-score">${score}%</span>
                     </div>
-                    <div class="rag-preview-result-text">${this.escapeHtml(truncatedText)}</div>
+                    <div class="rag-preview-result-text">${this.escapeHtml(result.text)}</div>
                 </div>
             `;
         });
@@ -265,7 +264,6 @@ class RagPreviewModal {
             html += '<div class="rag-preview-filtered-divider">Отфильтровано:</div>';
             filteredResults.forEach((result) => {
                 const score = (result.score * 100).toFixed(1);
-                const truncatedText = this.truncateText(result.text, 100);
 
                 html += `
                     <div class="rag-preview-result filtered">
@@ -273,7 +271,7 @@ class RagPreviewModal {
                             <span class="rag-preview-result-doc">${this.escapeHtml(result.documentName)}</span>
                             <span class="rag-preview-result-score">${score}%</span>
                         </div>
-                        <div class="rag-preview-result-text">${this.escapeHtml(truncatedText)}</div>
+                        <div class="rag-preview-result-text">${this.escapeHtml(result.text)}</div>
                     </div>
                 `;
             });
