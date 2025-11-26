@@ -634,13 +634,164 @@
 
     <!-- Модальное окно для RAG документов -->
     <div id="ragModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content rag-modal-wide">
             <div class="modal-header">
                 <h3>Управление знаниями RAG</h3>
                 <button id="closeRagModal" class="close-button">&times;</button>
             </div>
-            <div id="ragDocumentsList" class="rag-documents-list">
-                <div class="rag-documents-loading">Загрузка документов...</div>
+
+            <!-- Вкладки RAG модала -->
+            <div class="rag-modal-tabs">
+                <button type="button" class="rag-modal-tab active" data-tab="documents">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    <span>Документы</span>
+                </button>
+                <button type="button" class="rag-modal-tab" data-tab="settings">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span>Настройки поиска</span>
+                </button>
+            </div>
+
+            <!-- Вкладка: Документы -->
+            <div id="ragTabDocuments" class="rag-modal-tab-content active">
+                <div id="ragDocumentsList" class="rag-documents-list">
+                    <div class="rag-documents-loading">Загрузка документов...</div>
+                </div>
+            </div>
+
+            <!-- Вкладка: Настройки поиска -->
+            <div id="ragTabSettings" class="rag-modal-tab-content">
+                <div class="rag-settings-content">
+                    <form id="ragSearchSettingsForm" class="rag-settings-form">
+                        <!-- Секция: Реранкинг -->
+                        <div class="rag-settings-section">
+                            <h4 class="rag-settings-section-title">Реранкинг результатов</h4>
+
+                            <div class="rag-settings-row">
+                                <label class="rag-settings-label">
+                                    Использовать реранкинг
+                                    <span class="rag-settings-hint">Дополнительная фильтрация результатов</span>
+                                </label>
+                                <label class="rag-toggle-switch">
+                                    <input type="checkbox" id="ragEnableReranking">
+                                    <span class="rag-toggle-slider"></span>
+                                </label>
+                            </div>
+
+                            <div id="ragRerankingOptions" class="rag-settings-options hidden">
+                                <div class="rag-settings-row">
+                                    <label class="rag-settings-label" for="ragStrategy">Стратегия</label>
+                                    <select id="ragStrategy" class="form-select">
+                                        <option value="SCORE_THRESHOLD">Порог скора</option>
+                                        <option value="STATISTICAL">Статистическая</option>
+                                        <option value="CROSS_ENCODER">Cross-Encoder (LLM)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Параметры SCORE_THRESHOLD -->
+                                <div id="ragScoreThresholdParams" class="rag-strategy-params">
+                                    <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragScoreThreshold">
+                                            Вторичный порог
+                                            <span class="rag-settings-hint">Результаты ниже этого порога удаляются (0.0 - 1.0)</span>
+                                        </label>
+                                        <input type="number" id="ragScoreThreshold" class="form-input"
+                                               min="0" max="1" step="0.05" value="0.75">
+                                    </div>
+                                </div>
+
+                                <!-- Параметры STATISTICAL -->
+                                <div id="ragStatisticalParams" class="rag-strategy-params hidden">
+                                    <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragStdDevMultiplier">
+                                            Множитель σ
+                                            <span class="rag-settings-hint">Порог = среднее - (множитель × σ)</span>
+                                        </label>
+                                        <input type="number" id="ragStdDevMultiplier" class="form-input"
+                                               min="0" max="3" step="0.1" value="1.0">
+                                    </div>
+                                    <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragMinResultsToKeep">
+                                            Мин. результатов
+                                            <span class="rag-settings-hint">Минимум результатов независимо от порога</span>
+                                        </label>
+                                        <input type="number" id="ragMinResultsToKeep" class="form-input"
+                                               min="0" max="20" step="1" value="1">
+                                    </div>
+                                </div>
+
+                                <!-- Параметры CROSS_ENCODER -->
+                                <div id="ragCrossEncoderParams" class="rag-strategy-params hidden">
+                                    <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragCrossEncoderModel">
+                                            Модель LLM
+                                            <span class="rag-settings-hint">Ollama модель для оценки релевантности</span>
+                                        </label>
+                                        <select id="ragCrossEncoderModel" class="form-select">
+                                            <option value="llama3.2:latest">llama3.2:latest</option>
+                                            <option value="mistral:latest">mistral:latest</option>
+                                            <option value="qwen2.5:latest">qwen2.5:latest</option>
+                                            <option value="phi3:latest">phi3:latest</option>
+                                            <option value="gemma2:latest">gemma2:latest</option>
+                                        </select>
+                                    </div>
+                                    <div class="rag-settings-row">
+                                        <label class="rag-settings-label" for="ragCrossEncoderMinScore">
+                                            Мин. скор релевантности
+                                            <span class="rag-settings-hint">LLM оценивает от 0 до 10</span>
+                                        </label>
+                                        <input type="number" id="ragCrossEncoderMinScore" class="form-input"
+                                               min="0" max="10" step="0.5" value="6.0">
+                                    </div>
+                                    <div class="rag-settings-warning">
+                                        ⚠️ Cross-Encoder работает медленнее, но даёт лучшее качество
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Секция: Общие параметры поиска -->
+                        <div class="rag-settings-section">
+                            <h4 class="rag-settings-section-title">Общие параметры поиска</h4>
+
+                            <div class="rag-settings-row">
+                                <label class="rag-settings-label" for="ragSearchTopK">
+                                    Top-K результатов
+                                    <span class="rag-settings-hint">Количество результатов на первом этапе</span>
+                                </label>
+                                <input type="number" id="ragSearchTopK" class="form-input"
+                                       min="1" max="100" step="1" value="5">
+                            </div>
+
+                            <div class="rag-settings-row">
+                                <label class="rag-settings-label" for="ragSearchMinScore">
+                                    Минимальный скор
+                                    <span class="rag-settings-hint">Порог косинусного сходства (0.0 - 1.0)</span>
+                                </label>
+                                <input type="number" id="ragSearchMinScore" class="form-input"
+                                       min="0" max="1" step="0.05" value="0.7">
+                            </div>
+                        </div>
+
+                        <!-- Кнопки действий -->
+                        <div class="rag-settings-actions">
+                            <button type="button" id="ragResetSettingsButton" class="cancel-button">
+                                Сбросить
+                            </button>
+                            <button type="submit" class="save-button">
+                                Сохранить
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

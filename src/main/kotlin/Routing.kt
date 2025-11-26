@@ -69,7 +69,7 @@ fun Application.configureRouting(
         preferencesRoutes(appModule.preferencesManager)
 
         // API роуты для RAG (Retrieval-Augmented Generation)
-        ragRoutes(appModule.ragManager)
+        ragRoutes(appModule.ragManager, appModule.ragPreferencesStorage)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

@@ -287,6 +287,13 @@ class AppModule(
     }
 
     /**
+     * RAG Search Preferences Storage
+     */
+    val ragPreferencesStorage: com.researchai.persistence.RAGPreferencesStorage by lazy {
+        com.researchai.persistence.JsonRAGPreferencesStorage()
+    }
+
+    /**
      * Ollama Embedding Service
      */
     val embeddingService: com.researchai.domain.rag.EmbeddingService by lazy {

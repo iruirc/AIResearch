@@ -3,6 +3,8 @@ package com.researchai.routes
 import com.researchai.domain.models.ChunkingStrategy
 import com.researchai.domain.models.RerankerConfig
 import com.researchai.domain.models.RerankerStrategy
+import com.researchai.models.RAGSearchPreferences
+import com.researchai.persistence.RAGPreferencesStorage
 import com.researchai.services.DuplicateDocumentNameException
 import com.researchai.services.RAGManager
 import io.ktor.http.*
@@ -70,7 +72,7 @@ data class ErrorResponse(
     val error: String
 )
 
-fun Route.ragRoutes(ragManager: RAGManager) {
+fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesStorage) {
     route("/rag") {
         // POST /rag/documents - Add new document
         post("/documents") {
@@ -283,6 +285,76 @@ fun Route.ragRoutes(ragManager: RAGManager) {
                 )
             }
             call.respond(HttpStatusCode.OK, strategies)
+        }
+
+        // ============================================
+        // RAG Search Preferences Endpoints
+        // ============================================
+
+        // GET /rag/preferences - Get current RAG search preferences
+        get("/preferences") {
+            try {
+                val preferences = preferencesStorage.load()
+                call.respond(HttpStatusCode.OK, preferences)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to load preferences"))
+            }
+        }
+
+        // POST /rag/preferences - Save RAG search preferences
+        post("/preferences") {
+            try {
+                val preferences = call.receive<RAGSearchPreferences>()
+
+                // Validate parameters
+                if (preferences.scoreThreshold < 0f || preferences.scoreThreshold > 1f) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("scoreThreshold must be between 0.0 and 1.0"))
+                    return@post
+                }
+
+                if (preferences.searchMinScore < 0f || preferences.searchMinScore > 1f) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("searchMinScore must be between 0.0 and 1.0"))
+                    return@post
+                }
+
+                if (preferences.crossEncoderMinScore < 0f || preferences.crossEncoderMinScore > 10f) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("crossEncoderMinScore must be between 0.0 and 10.0"))
+                    return@post
+                }
+
+                if (preferences.searchTopK < 1 || preferences.searchTopK > 100) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("searchTopK must be between 1 and 100"))
+                    return@post
+                }
+
+                if (preferences.minResultsToKeep < 0) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("minResultsToKeep must be non-negative"))
+                    return@post
+                }
+
+                // Save with updated timestamp
+                val updatedPreferences = preferences.copy(updatedAt = System.currentTimeMillis())
+                preferencesStorage.save(updatedPreferences)
+
+                call.respond(HttpStatusCode.OK, updatedPreferences)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to save preferences"))
+            }
+        }
+
+        // DELETE /rag/preferences - Reset to default preferences
+        delete("/preferences") {
+            try {
+                val defaults = preferencesStorage.reset()
+                call.respond(HttpStatusCode.OK, defaults)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to reset preferences"))
+            }
+        }
+
+        // GET /rag/preferences/defaults - Get default preferences without modifying storage
+        get("/preferences/defaults") {
+            call.respond(HttpStatusCode.OK, RAGSearchPreferences.default())
         }
     }
 }

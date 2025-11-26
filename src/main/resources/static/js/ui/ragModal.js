@@ -15,8 +15,10 @@ export class RAGModal {
         this.documents = [];
         this.currentMode = 'list'; // 'list', 'add', 'edit'
         this.editingDocument = null;
-        this.activeTab = 'text'; // 'text' or 'files'
+        this.activeTab = 'text'; // 'text' or 'files' (for document form)
         this.selectedFiles = []; // Array of File objects
+        this.activeModalTab = 'documents'; // 'documents' or 'settings'
+        this.searchPreferences = null; // Cached search preferences
 
         // Bind methods
         this.initialize = this.initialize.bind(this);
@@ -35,6 +37,18 @@ export class RAGModal {
         this.removeFile = this.removeFile.bind(this);
         this.renderFilesList = this.renderFilesList.bind(this);
         this.readFileContent = this.readFileContent.bind(this);
+
+        // Modal tab methods
+        this.setupModalTabs = this.setupModalTabs.bind(this);
+        this.switchModalTab = this.switchModalTab.bind(this);
+
+        // Settings methods
+        this.loadSearchPreferences = this.loadSearchPreferences.bind(this);
+        this.populateSettingsForm = this.populateSettingsForm.bind(this);
+        this.handleSaveSettings = this.handleSaveSettings.bind(this);
+        this.handleResetSettings = this.handleResetSettings.bind(this);
+        this.updateStrategyParams = this.updateStrategyParams.bind(this);
+        this.setupSettingsHandlers = this.setupSettingsHandlers.bind(this);
     }
 
     /**
@@ -57,6 +71,12 @@ export class RAGModal {
                 modalsUI.closeModal('ragModal');
             });
         }
+
+        // Setup modal tabs (Documents / Settings)
+        this.setupModalTabs();
+
+        // Setup settings form handlers
+        this.setupSettingsHandlers();
 
         console.log('RAG Modal initialized');
     }
@@ -714,6 +734,297 @@ export class RAGModal {
             'SEMANTIC': 'Семантический'
         };
         return labels[strategy] || strategy;
+    }
+
+    // ============================================
+    // Modal Tab Methods
+    // ============================================
+
+    /**
+     * Setup modal tab switching (Documents / Settings)
+     */
+    setupModalTabs() {
+        const tabs = document.querySelectorAll('.rag-modal-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                this.switchModalTab(tabName);
+            });
+        });
+    }
+
+    /**
+     * Switch between modal tabs
+     * @param {string} tabName - Tab name ('documents' or 'settings')
+     */
+    async switchModalTab(tabName) {
+        this.activeModalTab = tabName;
+
+        // Update tab buttons
+        const tabs = document.querySelectorAll('.rag-modal-tab');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+
+        // Update tab content
+        const documentsTab = document.getElementById('ragTabDocuments');
+        const settingsTab = document.getElementById('ragTabSettings');
+
+        if (documentsTab) {
+            documentsTab.classList.toggle('active', tabName === 'documents');
+        }
+        if (settingsTab) {
+            settingsTab.classList.toggle('active', tabName === 'settings');
+        }
+
+        // Load data for the active tab
+        if (tabName === 'settings') {
+            await this.loadSearchPreferences();
+        }
+    }
+
+    // ============================================
+    // Search Settings Methods
+    // ============================================
+
+    /**
+     * Setup settings form event handlers
+     */
+    setupSettingsHandlers() {
+        // Enable reranking toggle
+        const enableRerankingToggle = document.getElementById('ragEnableReranking');
+        if (enableRerankingToggle) {
+            enableRerankingToggle.addEventListener('change', (e) => {
+                const options = document.getElementById('ragRerankingOptions');
+                if (options) {
+                    options.classList.toggle('hidden', !e.target.checked);
+                }
+            });
+        }
+
+        // Strategy selector
+        const strategySelect = document.getElementById('ragStrategy');
+        if (strategySelect) {
+            strategySelect.addEventListener('change', (e) => {
+                this.updateStrategyParams(e.target.value);
+            });
+        }
+
+        // Settings form submission
+        const settingsForm = document.getElementById('ragSearchSettingsForm');
+        if (settingsForm) {
+            settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.handleSaveSettings();
+            });
+        }
+
+        // Reset button
+        const resetButton = document.getElementById('ragResetSettingsButton');
+        if (resetButton) {
+            resetButton.addEventListener('click', async () => {
+                await this.handleResetSettings();
+            });
+        }
+    }
+
+    /**
+     * Load search preferences from API
+     */
+    async loadSearchPreferences() {
+        try {
+            console.log('Loading RAG search preferences...');
+            this.searchPreferences = await ragApi.getSearchPreferences();
+            this.populateSettingsForm(this.searchPreferences);
+        } catch (error) {
+            console.error('Error loading search preferences:', error);
+            // Use defaults if loading fails
+            try {
+                this.searchPreferences = await ragApi.getDefaultPreferences();
+                this.populateSettingsForm(this.searchPreferences);
+            } catch (defaultError) {
+                console.error('Error loading default preferences:', defaultError);
+            }
+        }
+    }
+
+    /**
+     * Populate settings form with preferences data
+     * @param {Object} prefs - Preferences object
+     */
+    populateSettingsForm(prefs) {
+        if (!prefs) return;
+
+        // Enable reranking toggle
+        const enableReranking = document.getElementById('ragEnableReranking');
+        if (enableReranking) {
+            enableReranking.checked = prefs.enableReranking || false;
+            // Show/hide options
+            const options = document.getElementById('ragRerankingOptions');
+            if (options) {
+                options.classList.toggle('hidden', !prefs.enableReranking);
+            }
+        }
+
+        // Strategy
+        const strategy = document.getElementById('ragStrategy');
+        if (strategy) {
+            strategy.value = prefs.strategy || 'SCORE_THRESHOLD';
+            this.updateStrategyParams(prefs.strategy || 'SCORE_THRESHOLD');
+        }
+
+        // SCORE_THRESHOLD params
+        const scoreThreshold = document.getElementById('ragScoreThreshold');
+        if (scoreThreshold) {
+            scoreThreshold.value = prefs.scoreThreshold ?? 0.75;
+        }
+
+        // STATISTICAL params
+        const stdDevMultiplier = document.getElementById('ragStdDevMultiplier');
+        if (stdDevMultiplier) {
+            stdDevMultiplier.value = prefs.stdDevMultiplier ?? 1.0;
+        }
+
+        const minResultsToKeep = document.getElementById('ragMinResultsToKeep');
+        if (minResultsToKeep) {
+            minResultsToKeep.value = prefs.minResultsToKeep ?? 1;
+        }
+
+        // CROSS_ENCODER params
+        const crossEncoderModel = document.getElementById('ragCrossEncoderModel');
+        if (crossEncoderModel) {
+            // Check if the model exists in options, otherwise add it
+            const modelValue = prefs.crossEncoderModel || 'llama3.2:latest';
+            if (!Array.from(crossEncoderModel.options).some(opt => opt.value === modelValue)) {
+                const option = document.createElement('option');
+                option.value = modelValue;
+                option.textContent = modelValue;
+                crossEncoderModel.appendChild(option);
+            }
+            crossEncoderModel.value = modelValue;
+        }
+
+        const crossEncoderMinScore = document.getElementById('ragCrossEncoderMinScore');
+        if (crossEncoderMinScore) {
+            crossEncoderMinScore.value = prefs.crossEncoderMinScore ?? 6.0;
+        }
+
+        // General search params
+        const searchTopK = document.getElementById('ragSearchTopK');
+        if (searchTopK) {
+            searchTopK.value = prefs.searchTopK ?? 5;
+        }
+
+        const searchMinScore = document.getElementById('ragSearchMinScore');
+        if (searchMinScore) {
+            searchMinScore.value = prefs.searchMinScore ?? 0.7;
+        }
+    }
+
+    /**
+     * Update visibility of strategy-specific parameter sections
+     * @param {string} strategy - Selected strategy
+     */
+    updateStrategyParams(strategy) {
+        const scoreThresholdParams = document.getElementById('ragScoreThresholdParams');
+        const statisticalParams = document.getElementById('ragStatisticalParams');
+        const crossEncoderParams = document.getElementById('ragCrossEncoderParams');
+
+        // Hide all
+        if (scoreThresholdParams) scoreThresholdParams.classList.add('hidden');
+        if (statisticalParams) statisticalParams.classList.add('hidden');
+        if (crossEncoderParams) crossEncoderParams.classList.add('hidden');
+
+        // Show relevant section
+        switch (strategy) {
+            case 'SCORE_THRESHOLD':
+                if (scoreThresholdParams) scoreThresholdParams.classList.remove('hidden');
+                break;
+            case 'STATISTICAL':
+                if (statisticalParams) statisticalParams.classList.remove('hidden');
+                break;
+            case 'CROSS_ENCODER':
+                if (crossEncoderParams) crossEncoderParams.classList.remove('hidden');
+                break;
+        }
+    }
+
+    /**
+     * Handle saving search settings
+     */
+    async handleSaveSettings() {
+        try {
+            // Gather form data
+            const preferences = {
+                enableReranking: document.getElementById('ragEnableReranking')?.checked || false,
+                strategy: document.getElementById('ragStrategy')?.value || 'SCORE_THRESHOLD',
+                scoreThreshold: parseFloat(document.getElementById('ragScoreThreshold')?.value) || 0.75,
+                stdDevMultiplier: parseFloat(document.getElementById('ragStdDevMultiplier')?.value) || 1.0,
+                minResultsToKeep: parseInt(document.getElementById('ragMinResultsToKeep')?.value) || 1,
+                crossEncoderModel: document.getElementById('ragCrossEncoderModel')?.value || 'llama3.2:latest',
+                crossEncoderMinScore: parseFloat(document.getElementById('ragCrossEncoderMinScore')?.value) || 6.0,
+                searchTopK: parseInt(document.getElementById('ragSearchTopK')?.value) || 5,
+                searchMinScore: parseFloat(document.getElementById('ragSearchMinScore')?.value) || 0.7
+            };
+
+            console.log('Saving RAG search preferences:', preferences);
+            await ragApi.saveSearchPreferences(preferences);
+            this.searchPreferences = preferences;
+
+            // Show success message
+            this.showSettingsNotification('Настройки сохранены', 'success');
+        } catch (error) {
+            console.error('Error saving search preferences:', error);
+            this.showSettingsNotification(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Handle resetting search settings to defaults
+     */
+    async handleResetSettings() {
+        if (!confirm('Сбросить настройки поиска к значениям по умолчанию?')) {
+            return;
+        }
+
+        try {
+            console.log('Resetting RAG search preferences...');
+            const defaults = await ragApi.resetSearchPreferences();
+            this.searchPreferences = defaults;
+            this.populateSettingsForm(defaults);
+
+            this.showSettingsNotification('Настройки сброшены', 'success');
+        } catch (error) {
+            console.error('Error resetting search preferences:', error);
+            this.showSettingsNotification(`Ошибка: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Show notification in settings tab
+     * @param {string} message - Message to display
+     * @param {string} type - 'success' or 'error'
+     */
+    showSettingsNotification(message, type) {
+        // Create or reuse notification element
+        let notification = document.querySelector('.rag-settings-notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'rag-settings-notification';
+            const settingsContent = document.querySelector('.rag-settings-content');
+            if (settingsContent) {
+                settingsContent.insertBefore(notification, settingsContent.firstChild);
+            }
+        }
+
+        notification.textContent = message;
+        notification.className = `rag-settings-notification ${type}`;
+        notification.style.display = 'block';
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
     }
 }
 
