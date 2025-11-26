@@ -75,6 +75,11 @@ export class RAGModal {
         this.setupTestTabs = this.setupTestTabs.bind(this);
         this.setupTestFileHandlers = this.setupTestFileHandlers.bind(this);
         this.switchTestTab = this.switchTestTab.bind(this);
+
+        // Validation methods
+        this.validateTestJSON = this.validateTestJSON.bind(this);
+        this.showValidationError = this.showValidationError.bind(this);
+        this.hideValidationError = this.hideValidationError.bind(this);
     }
 
     /**
@@ -1317,6 +1322,9 @@ export class RAGModal {
             contentInput.disabled = false;
         }
 
+        // Hide any previous validation errors
+        this.hideValidationError();
+
         // Show tabs and reset to text tab
         const tabsContainer = document.getElementById('ragTestSourceTabs');
         if (tabsContainer) {
@@ -1364,6 +1372,9 @@ export class RAGModal {
     async openEditTestForm(testId) {
         try {
             this.currentTestMode = 'edit';
+
+            // Hide any previous validation errors
+            this.hideValidationError();
 
             // Load full test details
             const test = await ragTestApi.getTest(testId);
@@ -1430,6 +1441,135 @@ export class RAGModal {
     }
 
     /**
+     * Validate test content as JSON with required fields
+     * @param {string} content - JSON content to validate
+     * @returns {{valid: boolean, error?: string, lineNumber?: number}} Validation result
+     */
+    validateTestJSON(content) {
+        // Required fields for each query element
+        const requiredFields = ['id', 'query', 'explanation'];
+
+        // First, try to parse as JSON
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // Extract line number from JSON parse error if available
+            const lineMatch = e.message.match(/position\s+(\d+)/i) ||
+                              e.message.match(/line\s+(\d+)/i) ||
+                              e.message.match(/at\s+(\d+)/i);
+
+            let lineNumber = null;
+            if (lineMatch) {
+                // Try to calculate line number from position
+                const position = parseInt(lineMatch[1], 10);
+                const lines = content.substring(0, position).split('\n');
+                lineNumber = lines.length;
+            }
+
+            return {
+                valid: false,
+                error: `Некорректный JSON: ${e.message}`,
+                lineNumber: lineNumber
+            };
+        }
+
+        // Find queries array (could be top-level array or nested under "queries" key)
+        let queries = Array.isArray(parsed) ? parsed : parsed.queries;
+
+        if (!queries) {
+            return {
+                valid: false,
+                error: 'JSON должен содержать массив запросов (либо как массив, либо в поле "queries")'
+            };
+        }
+
+        if (!Array.isArray(queries)) {
+            return {
+                valid: false,
+                error: 'Поле "queries" должно быть массивом'
+            };
+        }
+
+        if (queries.length === 0) {
+            return {
+                valid: false,
+                error: 'Массив запросов не может быть пустым'
+            };
+        }
+
+        // Validate each query element
+        for (let i = 0; i < queries.length; i++) {
+            const query = queries[i];
+            const missingFields = [];
+
+            for (const field of requiredFields) {
+                if (!(field in query) || query[field] === null || query[field] === undefined) {
+                    missingFields.push(field);
+                } else if (typeof query[field] === 'string' && query[field].trim() === '') {
+                    missingFields.push(`${field} (пустое значение)`);
+                }
+            }
+
+            if (missingFields.length > 0) {
+                // Try to find line number for this query in the JSON string
+                let lineNumber = null;
+                try {
+                    // Search for this query's id in the original content
+                    const queryId = query.id || `элемент ${i + 1}`;
+                    const idPattern = new RegExp(`"id"\\s*:\\s*"${queryId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g');
+                    const match = idPattern.exec(content);
+                    if (match) {
+                        const lines = content.substring(0, match.index).split('\n');
+                        lineNumber = lines.length;
+                    }
+                } catch (e) {
+                    // Ignore regex errors
+                }
+
+                return {
+                    valid: false,
+                    error: `Элемент #${i + 1}${query.id ? ` (id: "${query.id}")` : ''}: отсутствуют обязательные поля: ${missingFields.join(', ')}`,
+                    lineNumber: lineNumber
+                };
+            }
+        }
+
+        return { valid: true };
+    }
+
+    /**
+     * Show validation error in the UI
+     * @param {string} error - Error message
+     * @param {number|null} lineNumber - Line number where error occurred
+     */
+    showValidationError(error, lineNumber = null) {
+        const errorDiv = document.getElementById('ragTestValidationError');
+        if (!errorDiv) return;
+
+        let html = `<div class="validation-error-title">Ошибка валидации JSON</div>`;
+        if (lineNumber) {
+            html += `<div class="validation-error-line">Строка: ${lineNumber}</div>`;
+        }
+        html += `<div>${error}</div>`;
+        html += `<div class="validation-error-details">Обязательные поля для каждого запроса: id, query, explanation</div>`;
+
+        errorDiv.innerHTML = html;
+        errorDiv.classList.remove('hidden');
+    }
+
+    /**
+     * Hide validation error
+     */
+    hideValidationError() {
+        const errorDiv = document.getElementById('ragTestValidationError');
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+            errorDiv.innerHTML = '';
+        }
+    }
+
+    /**
      * Handle adding a new test
      */
     async handleAddTest() {
@@ -1437,6 +1577,9 @@ export class RAGModal {
         const contentInput = document.getElementById('ragTestContent');
 
         const name = nameInput?.value?.trim();
+
+        // Hide any previous validation errors
+        this.hideValidationError();
 
         if (!name) {
             alert('Пожалуйста, укажите название теста');
@@ -1459,6 +1602,13 @@ export class RAGModal {
                     return;
                 }
                 content = await this.readFileContent(this.selectedTestFile);
+            }
+
+            // Validate JSON content
+            const validation = this.validateTestJSON(content);
+            if (!validation.valid) {
+                this.showValidationError(validation.error, validation.lineNumber);
+                return;
             }
 
             console.log(`Adding test: ${name}`);
@@ -1491,9 +1641,21 @@ export class RAGModal {
         const name = nameInput?.value?.trim();
         const content = contentInput?.value?.trim();
 
+        // Hide any previous validation errors
+        this.hideValidationError();
+
         if (!name) {
             alert('Пожалуйста, укажите название теста');
             return;
+        }
+
+        // Validate JSON content if provided
+        if (content) {
+            const validation = this.validateTestJSON(content);
+            if (!validation.valid) {
+                this.showValidationError(validation.error, validation.lineNumber);
+                return;
+            }
         }
 
         try {
