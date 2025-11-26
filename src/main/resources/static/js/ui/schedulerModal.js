@@ -30,10 +30,19 @@ export class SchedulerModal {
         this.cancelButton.addEventListener('click', () => this.close());
 
         // Закрыть при клике вне модального окна
+        // Track where mousedown started to prevent accidental closes during text selection
+        let mouseDownTarget = null;
+
+        this.modal.addEventListener('mousedown', (e) => {
+            mouseDownTarget = e.target;
+        });
+
         this.modal.addEventListener('click', (e) => {
-            if (e.target === this.modal) {
+            // Only close if both mousedown and click happened on the modal backdrop
+            if (e.target === this.modal && mouseDownTarget === this.modal) {
                 this.close();
             }
+            mouseDownTarget = null;
         });
 
         // Обработка отправки формы

@@ -79,17 +79,38 @@ function setupEventListeners() {
     }
 
     // Click outside to close
+    // Track where mousedown started to prevent accidental closes during text selection
     const modal = document.getElementById('ollamaModal');
     if (modal) {
+        let modalMouseDownTarget = null;
+
+        modal.addEventListener('mousedown', (e) => {
+            modalMouseDownTarget = e.target;
+        });
+
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
+            // Only close if both mousedown and click happened on the modal backdrop
+            if (e.target === modal && modalMouseDownTarget === modal) {
+                closeModal();
+            }
+            modalMouseDownTarget = null;
         });
     }
 
     const formModal = document.getElementById('ollamaFormModal');
     if (formModal) {
+        let formModalMouseDownTarget = null;
+
+        formModal.addEventListener('mousedown', (e) => {
+            formModalMouseDownTarget = e.target;
+        });
+
         formModal.addEventListener('click', (e) => {
-            if (e.target === formModal) closeFormModal();
+            // Only close if both mousedown and click happened on the modal backdrop
+            if (e.target === formModal && formModalMouseDownTarget === formModal) {
+                closeFormModal();
+            }
+            formModalMouseDownTarget = null;
         });
     }
 }

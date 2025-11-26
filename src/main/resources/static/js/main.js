@@ -175,10 +175,19 @@ function setupEventListeners() {
     document.getElementById('cancelDeleteAssistantButton').addEventListener('click', () => modalsUI.closeModal('deleteAssistantModal'));
 
     // Close modals on background click
+    // Track where mousedown started to prevent accidental closes during text selection
+    let modalMouseDownTarget = null;
+
+    window.addEventListener('mousedown', (e) => {
+        modalMouseDownTarget = e.target;
+    });
+
     window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
+        // Only close if both mousedown and click (mouseup) happened on the modal backdrop
+        if (e.target.classList.contains('modal') && modalMouseDownTarget === e.target) {
             modalsUI.closeAllModals();
         }
+        modalMouseDownTarget = null;
     });
 }
 
