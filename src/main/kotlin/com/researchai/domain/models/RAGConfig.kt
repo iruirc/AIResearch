@@ -10,5 +10,10 @@ data class RAGConfig(
     val defaultOverlap: Int = 200,
     val searchTopK: Int = 5,
     val searchMinScore: Float = 0.7f,
-    val enabledByDefault: Boolean = true
+    val enabledByDefault: Boolean = true,
+
+    /**
+     * Default reranker configuration for two-stage search
+     */
+    val rerankerConfig: RerankerConfig = RerankerConfig()
 )

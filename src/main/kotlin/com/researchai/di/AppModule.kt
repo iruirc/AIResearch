@@ -301,6 +301,13 @@ class AppModule(
     }
 
     /**
+     * Reranker Service for two-stage search
+     */
+    val rerankerService: com.researchai.services.RerankerService by lazy {
+        com.researchai.services.RerankerService(httpClient, ragConfig.ollamaUrl)
+    }
+
+    /**
      * RAG Manager - Main orchestrator for RAG operations
      */
     val ragManager: com.researchai.services.RAGManager by lazy {
@@ -308,7 +315,8 @@ class AppModule(
             embeddingService = embeddingService,
             vectorSearch = vectorSearchService,
             storage = ragDocumentStorage,
-            config = ragConfig
+            config = ragConfig,
+            rerankerService = rerankerService
         )
     }
 

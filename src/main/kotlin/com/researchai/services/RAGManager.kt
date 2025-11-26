@@ -9,6 +9,7 @@ import com.researchai.domain.rag.TextChunker
 import com.researchai.domain.rag.VectorSearchService
 import com.researchai.persistence.RAGDocumentStorage
 import kotlinx.datetime.Clock
+import org.slf4j.LoggerFactory
 import java.util.*
 
 /**
@@ -20,8 +21,10 @@ class RAGManager(
     private val embeddingService: EmbeddingService,
     private val vectorSearch: VectorSearchService,
     private val storage: RAGDocumentStorage,
-    private val config: RAGConfig
+    private val config: RAGConfig,
+    private val rerankerService: RerankerService? = null
 ) {
+    private val logger = LoggerFactory.getLogger(RAGManager::class.java)
     suspend fun initialize() {
         val documents = storage.loadAll()
         documents.forEach { document ->
@@ -152,6 +155,9 @@ class RAGManager(
         return storage.loadAll()
     }
 
+    /**
+     * First stage: Vector search only (without reranking)
+     */
     suspend fun searchRelevantContext(
         query: String,
         topK: Int = config.searchTopK,
@@ -161,12 +167,78 @@ class RAGManager(
         return vectorSearch.search(queryEmbedding, topK, minScore)
     }
 
+    /**
+     * Two-stage search: Vector search + Reranking
+     *
+     * Stage 1: Vector search with cosine similarity (retrieval)
+     * Stage 2: Reranking/filtering based on configured strategy
+     */
+    suspend fun searchWithReranking(
+        query: String,
+        topK: Int = config.searchTopK,
+        minScore: Float = config.searchMinScore,
+        rerankerConfig: RerankerConfig = config.rerankerConfig
+    ): RerankerResult {
+        logger.info("Two-stage search: query='${query.take(50)}...', topK=$topK, minScore=$minScore, strategy=${rerankerConfig.strategy}")
+
+        // Stage 1: Vector search
+        val firstStageResults = searchRelevantContext(query, topK, minScore)
+        logger.debug("Stage 1 (vector search): ${firstStageResults.size} results")
+
+        // Stage 2: Reranking
+        if (rerankerService == null) {
+            logger.warn("RerankerService not configured, returning first-stage results")
+            return RerankerResult(
+                results = firstStageResults,
+                originalResults = firstStageResults,
+                strategy = RerankerStrategy.NONE,
+                statistics = RerankerStatistics(
+                    inputCount = firstStageResults.size,
+                    outputCount = firstStageResults.size,
+                    filteredCount = 0,
+                    avgScoreBefore = firstStageResults.map { it.score }.average().toFloat(),
+                    avgScoreAfter = firstStageResults.map { it.score }.average().toFloat(),
+                    processingTimeMs = 0
+                )
+            )
+        }
+
+        val rerankerResult = rerankerService.rerank(query, firstStageResults, rerankerConfig)
+        logger.info("Stage 2 (${rerankerConfig.strategy}): ${firstStageResults.size} -> ${rerankerResult.results.size} results")
+
+        return rerankerResult
+    }
+
+    /**
+     * Compare search results with and without reranking
+     */
+    suspend fun compareSearchStrategies(
+        query: String,
+        topK: Int = config.searchTopK,
+        minScore: Float = config.searchMinScore,
+        rerankerConfig: RerankerConfig = config.rerankerConfig
+    ): ComparisonResult {
+        val firstStageResults = searchRelevantContext(query, topK, minScore)
+
+        if (rerankerService == null) {
+            throw IllegalStateException("RerankerService not configured")
+        }
+
+        return rerankerService.compareWithAndWithoutReranking(query, firstStageResults, rerankerConfig)
+    }
+
     suspend fun getContextForChat(
         query: String,
         topK: Int = config.searchTopK,
-        minScore: Float = config.searchMinScore
+        minScore: Float = config.searchMinScore,
+        useReranking: Boolean = false,
+        rerankerConfig: RerankerConfig = config.rerankerConfig
     ): String {
-        val results = searchRelevantContext(query, topK, minScore)
+        val results = if (useReranking && rerankerService != null) {
+            searchWithReranking(query, topK, minScore, rerankerConfig).results
+        } else {
+            searchRelevantContext(query, topK, minScore)
+        }
 
         if (results.isEmpty()) {
             return ""

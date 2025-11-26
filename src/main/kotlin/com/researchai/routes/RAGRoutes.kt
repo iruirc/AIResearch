@@ -1,6 +1,8 @@
 package com.researchai.routes
 
 import com.researchai.domain.models.ChunkingStrategy
+import com.researchai.domain.models.RerankerConfig
+import com.researchai.domain.models.RerankerStrategy
 import com.researchai.services.DuplicateDocumentNameException
 import com.researchai.services.RAGManager
 import io.ktor.http.*
@@ -30,6 +32,37 @@ data class SearchRequest(
     val query: String,
     val topK: Int = 5,
     val minScore: Float = 0.7f
+)
+
+/**
+ * Request for two-stage search with reranking
+ */
+@Serializable
+data class SearchWithRerankingRequest(
+    val query: String,
+    val topK: Int = 5,
+    val minScore: Float = 0.7f,
+    val rerankerStrategy: RerankerStrategy = RerankerStrategy.SCORE_THRESHOLD,
+    val secondaryThreshold: Float = 0.75f,
+    val stdDevMultiplier: Float = 1.0f,
+    val minResultsToKeep: Int = 1,
+    val crossEncoderModel: String = "llama3.2:latest",
+    val crossEncoderMinScore: Float = 6.0f
+)
+
+/**
+ * Request for comparing search strategies
+ */
+@Serializable
+data class CompareSearchRequest(
+    val query: String,
+    val topK: Int = 5,
+    val minScore: Float = 0.7f,
+    val rerankerStrategy: RerankerStrategy = RerankerStrategy.SCORE_THRESHOLD,
+    val secondaryThreshold: Float = 0.75f,
+    val stdDevMultiplier: Float = 1.0f,
+    val crossEncoderModel: String = "llama3.2:latest",
+    val crossEncoderMinScore: Float = 6.0f
 )
 
 @Serializable
@@ -149,7 +182,7 @@ fun Route.ragRoutes(ragManager: RAGManager) {
             }
         }
 
-        // POST /rag/search - Search relevant context
+        // POST /rag/search - Search relevant context (first stage only)
         post("/search") {
             try {
                 val request = call.receive<SearchRequest>()
@@ -169,6 +202,87 @@ fun Route.ragRoutes(ragManager: RAGManager) {
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }
+        }
+
+        // POST /rag/search/rerank - Two-stage search with reranking
+        post("/search/rerank") {
+            try {
+                val request = call.receive<SearchWithRerankingRequest>()
+
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Query cannot be empty"))
+                    return@post
+                }
+
+                val rerankerConfig = RerankerConfig(
+                    strategy = request.rerankerStrategy,
+                    secondaryThreshold = request.secondaryThreshold,
+                    stdDevMultiplier = request.stdDevMultiplier,
+                    minResultsToKeep = request.minResultsToKeep,
+                    crossEncoderModel = request.crossEncoderModel,
+                    crossEncoderMinScore = request.crossEncoderMinScore
+                )
+
+                val result = ragManager.searchWithReranking(
+                    query = request.query,
+                    topK = request.topK,
+                    minScore = request.minScore,
+                    rerankerConfig = rerankerConfig
+                )
+
+                call.respond(HttpStatusCode.OK, result)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
+        // POST /rag/search/compare - Compare results with and without reranking
+        post("/search/compare") {
+            try {
+                val request = call.receive<CompareSearchRequest>()
+
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Query cannot be empty"))
+                    return@post
+                }
+
+                val rerankerConfig = RerankerConfig(
+                    strategy = request.rerankerStrategy,
+                    secondaryThreshold = request.secondaryThreshold,
+                    stdDevMultiplier = request.stdDevMultiplier,
+                    crossEncoderModel = request.crossEncoderModel,
+                    crossEncoderMinScore = request.crossEncoderMinScore
+                )
+
+                val comparison = ragManager.compareSearchStrategies(
+                    query = request.query,
+                    topK = request.topK,
+                    minScore = request.minScore,
+                    rerankerConfig = rerankerConfig
+                )
+
+                call.respond(HttpStatusCode.OK, comparison)
+            } catch (e: IllegalStateException) {
+                call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse(e.message ?: "Reranker not configured"))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
+        // GET /rag/reranker/strategies - Get available reranking strategies
+        get("/reranker/strategies") {
+            val strategies = RerankerStrategy.entries.map { strategy ->
+                mapOf(
+                    "name" to strategy.name,
+                    "description" to when (strategy) {
+                        RerankerStrategy.NONE -> "No reranking - use first-stage results as-is"
+                        RerankerStrategy.SCORE_THRESHOLD -> "Score threshold filter - removes results below secondary threshold"
+                        RerankerStrategy.STATISTICAL -> "Statistical filter - removes outliers based on score distribution"
+                        RerankerStrategy.CROSS_ENCODER -> "Cross-encoder reranker - uses LLM to rerank results (slower but more accurate)"
+                    }
+                )
+            }
+            call.respond(HttpStatusCode.OK, strategies)
         }
     }
 }
