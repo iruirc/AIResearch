@@ -365,14 +365,24 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
         post("/preview") {
             try {
                 val request = call.receive<PreviewRequest>()
+                println("🔍 RAG Preview: query='${request.query.take(50)}...'")
 
                 if (request.query.isBlank()) {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse("Query cannot be empty"))
                     return@post
                 }
 
+                // Debug: Check how many documents are in the index
+                val allDocs = ragManager.getAllDocuments()
+                val enabledDocs = allDocs.filter { it.enabled }
+                println("🔍 RAG Preview: ${allDocs.size} total docs, ${enabledDocs.size} enabled")
+                enabledDocs.forEach { doc ->
+                    println("  - ${doc.name}: ${doc.chunks.size} chunks")
+                }
+
                 // Load preferences
                 val prefs = preferencesStorage.load()
+                println("🔍 RAG Preview: prefs topK=${prefs.searchTopK}, minScore=${prefs.searchMinScore}")
 
                 // Build reranker config from preferences
                 val rerankerConfig = RerankerConfig(
@@ -390,6 +400,7 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                     topK = prefs.searchTopK,
                     minScore = prefs.searchMinScore
                 )
+                println("🔍 RAG Preview: search returned ${withoutReranking.size} results")
 
                 // Get results with reranking (if enabled)
                 val withReranking = if (prefs.enableReranking) {
