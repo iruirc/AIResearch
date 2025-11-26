@@ -72,6 +72,12 @@ async function initApp() {
     // Initialize RAG preview modal
     ragPreviewModal.init();
 
+    // Set up callback for RAG preview modal send buttons
+    ragPreviewModal.setOnSendCallback((query, useReranking) => {
+        console.log('RAG preview sending message:', query, 'useReranking:', useReranking);
+        sendMessageWithText(query, useReranking);
+    });
+
     // Setup event listeners
     setupEventListeners();
 
@@ -251,9 +257,22 @@ function subscribeToStateChanges() {
 
 /**
  * Handle send message
+ * @param {boolean|null} [useReranking=null] - Override reranking setting (null = use global settings)
  */
-async function handleSendMessage() {
+async function handleSendMessage(useReranking = null) {
     const message = messageInput.value.trim();
+    if (!message || appState.getState().loading) return;
+
+    // Send message with the specified text
+    await sendMessageWithText(message, useReranking);
+}
+
+/**
+ * Send a message with specific text
+ * @param {string} message - Message text to send
+ * @param {boolean|null} [useReranking=null] - Override reranking setting (null = use global settings)
+ */
+async function sendMessageWithText(message, useReranking = null) {
     if (!message || appState.getState().loading) return;
 
     // Clear input
@@ -285,9 +304,9 @@ async function handleSendMessage() {
     }
 
     try {
-        // Send message via chat service
-        const response = await chatService.sendMessage(message);
-        console.log('Message sent, response sessionId:', response.sessionId);
+        // Send message via chat service with reranking override
+        const response = await chatService.sendMessage(message, useReranking);
+        console.log('Message sent, response sessionId:', response.sessionId, 'useReranking:', useReranking);
 
         // Add assistant message to UI with metadata and timestamp
         messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());

@@ -81,7 +81,9 @@ class RagPreviewModal {
 
         const query = messageInput.value.trim();
         if (!query) {
-            this.showError('Введите текст запроса');
+            // Show alert if query is empty
+            alert('Введите текст запроса для предпросмотра RAG контекста');
+            messageInput.focus();
             return;
         }
 

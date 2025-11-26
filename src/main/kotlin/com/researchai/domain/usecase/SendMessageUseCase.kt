@@ -43,7 +43,8 @@ class SendMessageUseCase(
         providerId: ProviderType = ProviderType.CLAUDE,
         model: String? = null,
         parameters: RequestParameters = RequestParameters(),
-        skipUserMessage: Boolean = false
+        skipUserMessage: Boolean = false,
+        useRerankingOverride: Boolean? = null // null = use global settings, true/false = override
     ): Result<MessageResult> {
         return try {
             logger.info("SendMessageUseCase: Processing message for provider $providerId")
@@ -126,7 +127,9 @@ class SendMessageUseCase(
                         logger.info("RAG: Searching context from ${enabledDocs.size} enabled documents")
 
                         // Build reranker config from preferences
-                        val useReranking = ragPrefs?.enableReranking == true
+                        // Use override if provided, otherwise use global settings
+                        val useReranking = useRerankingOverride ?: (ragPrefs?.enableReranking == true)
+                        logger.info("RAG: useReranking=${useReranking} (override=${useRerankingOverride}, global=${ragPrefs?.enableReranking})")
                         val rerankerConfig = if (useReranking && ragPrefs != null) {
                             com.researchai.domain.models.RerankerConfig(
                                 strategy = ragPrefs.strategy,

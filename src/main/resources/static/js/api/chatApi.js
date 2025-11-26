@@ -22,6 +22,7 @@ export const chatApi = {
      * @param {string} settings.model - AI model identifier
      * @param {number} settings.temperature - Temperature for generation (0.0-2.0)
      * @param {number} settings.maxTokens - Maximum tokens for response
+     * @param {boolean|null} [useReranking=null] - Override reranking setting (null = use global settings)
      * @returns {Promise<Object>} Response object with response text, sessionId, and token usage
      * @throws {Error} If the HTTP request fails
      * @example
@@ -31,7 +32,7 @@ export const chatApi = {
      *   { model: 'claude-3-opus', temperature: 1.0, maxTokens: 4096, format: 'PLAIN_TEXT' }
      * );
      */
-    async sendMessage(message, sessionId, settings) {
+    async sendMessage(message, sessionId, settings, useReranking = null) {
         const requestBody = {
             message,
             format: settings.format,
@@ -42,6 +43,10 @@ export const chatApi = {
 
         if (sessionId) {
             requestBody.sessionId = sessionId;
+        }
+
+        if (useReranking !== null) {
+            requestBody.useReranking = useReranking;
         }
 
         const response = await fetchWithTimeout(

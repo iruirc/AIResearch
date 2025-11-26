@@ -17,6 +17,7 @@ export const chatService = {
      * Send a message to the chat and process the response
      * @async
      * @param {string} message - User's message text
+     * @param {boolean|null} [useReranking=null] - Override reranking setting (null = use global settings)
      * @returns {Promise<Object|null>} Response data with response text, sessionId, metadata, and wasNewChat flag
      * @throws {Error} Throws user-friendly error messages for different failure scenarios
      * @example
@@ -28,7 +29,7 @@ export const chatService = {
      *   console.error(error.message); // User-friendly error message
      * }
      */
-    async sendMessage(message) {
+    async sendMessage(message, useReranking = null) {
         if (!message || appState.isLoading) {
             return null;
         }
@@ -44,7 +45,7 @@ export const chatService = {
             const sessionId = appState.currentSessionId;
 
             // Send message via API
-            const data = await chatApi.sendMessage(message, sessionId, settings);
+            const data = await chatApi.sendMessage(message, sessionId, settings, useReranking);
 
             // Update session ID IMMEDIATELY if this was a new chat
             // This triggers the state change listener to reload sessions
