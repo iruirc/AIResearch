@@ -255,6 +255,69 @@ class RAGManager(
         }
     }
 
+    /**
+     * Result of getContextForChat with debug information
+     */
+    data class ContextWithDebugInfo(
+        val context: String,
+        val debugInfo: RAGDebugInfo
+    )
+
+    /**
+     * Get context for chat with optional debug information
+     */
+    suspend fun getContextForChatWithDebug(
+        query: String,
+        topK: Int = config.searchTopK,
+        minScore: Float = config.searchMinScore,
+        useReranking: Boolean = false,
+        rerankerConfig: RerankerConfig = config.rerankerConfig
+    ): ContextWithDebugInfo {
+        val startTime = System.currentTimeMillis()
+
+        val (usedResults, filteredResults) = if (useReranking && rerankerService != null) {
+            val rerankerResult = searchWithReranking(query, topK, minScore, rerankerConfig)
+            // Calculate filtered results (those in original but not in final)
+            val filtered = rerankerResult.originalResults.filter { original ->
+                rerankerResult.results.none { it.documentId == original.documentId && it.chunkIndex == original.chunkIndex }
+            }
+            Pair(rerankerResult.results, filtered)
+        } else {
+            Pair(searchRelevantContext(query, topK, minScore), emptyList())
+        }
+
+        val processingTime = System.currentTimeMillis() - startTime
+
+        val context = if (usedResults.isEmpty()) {
+            ""
+        } else {
+            buildString {
+                appendLine("Relevant context from knowledge base:")
+                appendLine()
+                usedResults.forEachIndexed { index, result ->
+                    appendLine("${index + 1}. From document '${result.documentName}' (relevance: ${String.format("%.2f", result.score)}):")
+                    appendLine(result.text)
+                    appendLine()
+                }
+            }
+        }
+
+        // Estimate tokens (rough: ~4 chars per token)
+        val estimatedTokens = context.length / 4
+
+        val debugInfo = RAGDebugInfo(
+            query = query,
+            usedResults = usedResults,
+            filteredResults = filteredResults,
+            rerankingEnabled = useReranking,
+            rerankingStrategy = if (useReranking) rerankerConfig.strategy.name else null,
+            processingTimeMs = processingTime,
+            estimatedTokens = estimatedTokens
+        )
+
+        return ContextWithDebugInfo(context, debugInfo)
+    }
+
     private fun getChunker(strategy: ChunkingStrategy): TextChunker {
         return when (strategy) {
             ChunkingStrategy.FIXED_SIZE -> FixedSizeTextChunker(

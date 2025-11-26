@@ -926,6 +926,12 @@ export class RAGModal {
         if (searchMinScore) {
             searchMinScore.value = prefs.searchMinScore ?? 0.7;
         }
+
+        // Debug mode
+        const debugMode = document.getElementById('ragDebugMode');
+        if (debugMode) {
+            debugMode.checked = prefs.debugMode || false;
+        }
     }
 
     /**
@@ -976,7 +982,8 @@ export class RAGModal {
                 crossEncoderModel: document.getElementById('ragCrossEncoderModel')?.value || null,
                 crossEncoderMinScore: parseFloat(document.getElementById('ragCrossEncoderMinScore')?.value) || 6.0,
                 searchTopK: parseInt(document.getElementById('ragSearchTopK')?.value) || 5,
-                searchMinScore: parseFloat(document.getElementById('ragSearchMinScore')?.value) || 0.7
+                searchMinScore: parseFloat(document.getElementById('ragSearchMinScore')?.value) || 0.7,
+                debugMode: document.getElementById('ragDebugMode')?.checked || false
             };
 
             console.log('Saving RAG search preferences:', preferences);

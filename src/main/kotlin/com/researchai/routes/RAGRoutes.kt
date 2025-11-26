@@ -356,5 +356,92 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
         get("/preferences/defaults") {
             call.respond(HttpStatusCode.OK, RAGSearchPreferences.default())
         }
+
+        // ============================================
+        // RAG Context Preview Endpoints
+        // ============================================
+
+        // POST /rag/preview - Preview RAG context with comparison (uses saved preferences)
+        post("/preview") {
+            try {
+                val request = call.receive<PreviewRequest>()
+
+                if (request.query.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Query cannot be empty"))
+                    return@post
+                }
+
+                // Load preferences
+                val prefs = preferencesStorage.load()
+
+                // Build reranker config from preferences
+                val rerankerConfig = RerankerConfig(
+                    strategy = prefs.strategy,
+                    secondaryThreshold = prefs.scoreThreshold,
+                    stdDevMultiplier = prefs.stdDevMultiplier,
+                    minResultsToKeep = prefs.minResultsToKeep,
+                    crossEncoderModel = prefs.crossEncoderModel ?: "llama3.2:latest",
+                    crossEncoderMinScore = prefs.crossEncoderMinScore
+                )
+
+                // Get results without reranking (first stage only)
+                val withoutReranking = ragManager.searchRelevantContext(
+                    query = request.query,
+                    topK = prefs.searchTopK,
+                    minScore = prefs.searchMinScore
+                )
+
+                // Get results with reranking (if enabled)
+                val withReranking = if (prefs.enableReranking) {
+                    ragManager.searchWithReranking(
+                        query = request.query,
+                        topK = prefs.searchTopK,
+                        minScore = prefs.searchMinScore,
+                        rerankerConfig = rerankerConfig
+                    )
+                } else null
+
+                // Build preview response
+                val previewResponse = PreviewResponse(
+                    query = request.query,
+                    withoutReranking = withoutReranking,
+                    withReranking = withReranking?.results,
+                    filteredResults = withReranking?.let { result ->
+                        result.originalResults.filter { original ->
+                            result.results.none { it.documentId == original.documentId && it.chunkIndex == original.chunkIndex }
+                        }
+                    } ?: emptyList(),
+                    rerankingEnabled = prefs.enableReranking,
+                    rerankingStrategy = if (prefs.enableReranking) prefs.strategy.name else null,
+                    statistics = withReranking?.statistics
+                )
+
+                call.respond(HttpStatusCode.OK, previewResponse)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to preview context"))
+            }
+        }
     }
 }
+
+/**
+ * Request for previewing RAG context
+ */
+@Serializable
+data class PreviewRequest(
+    val query: String
+)
+
+/**
+ * Response with preview comparison
+ */
+@Serializable
+data class PreviewResponse(
+    val query: String,
+    val withoutReranking: List<com.researchai.domain.models.SearchResult>,
+    val withReranking: List<com.researchai.domain.models.SearchResult>?,
+    val filteredResults: List<com.researchai.domain.models.SearchResult>,
+    val rerankingEnabled: Boolean,
+    val rerankingStrategy: String?,
+    val statistics: com.researchai.domain.models.RerankerStatistics?
+)

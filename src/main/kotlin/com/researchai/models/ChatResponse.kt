@@ -1,5 +1,6 @@
 package com.researchai.models
 
+import com.researchai.domain.models.RAGDebugInfo
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -8,7 +9,9 @@ data class ChatResponse(
     val sessionId: String,
     val tokensUsed: Int? = null,
     // Детальная информация о токенах
-    val tokenDetails: TokenDetails? = null
+    val tokenDetails: TokenDetails? = null,
+    // Debug информация о RAG контексте (если debugMode включен)
+    val ragDebugInfo: RAGDebugInfo? = null
 )
 
 @Serializable

@@ -62,6 +62,12 @@ export const messagesUI = {
         if (metadata && type === 'assistant') {
             const metadataDiv = this._createMetadataDiv(metadata);
             contentDiv.appendChild(metadataDiv);
+
+            // Add RAG debug info if present
+            if (metadata.ragDebugInfo) {
+                const debugDiv = this._createRagDebugDiv(metadata.ragDebugInfo);
+                contentDiv.appendChild(debugDiv);
+            }
         }
 
         messageDiv.appendChild(contentDiv);
@@ -259,6 +265,132 @@ export const messagesUI = {
         }
 
         return metadataDiv;
+    },
+
+    /**
+     * Create RAG debug info div
+     * @private
+     * @param {Object} debugInfo - RAG debug info from response
+     * @returns {HTMLElement} Debug info div element
+     */
+    _createRagDebugDiv(debugInfo) {
+        const debugDiv = document.createElement('div');
+        debugDiv.className = 'rag-debug-info';
+
+        // Header (clickable to expand/collapse)
+        const header = document.createElement('div');
+        header.className = 'rag-debug-header';
+        header.innerHTML = `<h5>RAG контекст (${debugInfo.usedResults?.length || 0} чанков)</h5>`;
+        header.addEventListener('click', () => {
+            debugDiv.classList.toggle('expanded');
+        });
+        debugDiv.appendChild(header);
+
+        // Content (hidden by default)
+        const content = document.createElement('div');
+        content.className = 'rag-debug-content';
+
+        // Summary
+        const summary = document.createElement('div');
+        summary.className = 'rag-debug-summary';
+
+        const reranking = debugInfo.rerankingEnabled ? debugInfo.rerankingStrategy : 'Отключен';
+        const filtered = debugInfo.filteredResults?.length || 0;
+        const time = debugInfo.processingTimeMs || 0;
+        const tokens = debugInfo.estimatedTokens || 0;
+
+        summary.innerHTML = `
+            <div class="rag-debug-summary-item">
+                <span class="rag-debug-summary-label">Реранкинг:</span>
+                <span class="rag-debug-summary-value">${this._getStrategyDisplayName(reranking)}</span>
+            </div>
+            <div class="rag-debug-summary-item">
+                <span class="rag-debug-summary-label">Отфильтровано:</span>
+                <span class="rag-debug-summary-value">${filtered}</span>
+            </div>
+            <div class="rag-debug-summary-item">
+                <span class="rag-debug-summary-label">Время:</span>
+                <span class="rag-debug-summary-value">${time}мс</span>
+            </div>
+            <div class="rag-debug-summary-item">
+                <span class="rag-debug-summary-label">Токены:</span>
+                <span class="rag-debug-summary-value">~${tokens}</span>
+            </div>
+        `;
+        content.appendChild(summary);
+
+        // Chunks
+        const chunks = document.createElement('div');
+        chunks.className = 'rag-debug-chunks';
+
+        // Used results
+        if (debugInfo.usedResults && debugInfo.usedResults.length > 0) {
+            debugInfo.usedResults.forEach(result => {
+                const chunk = this._createDebugChunk(result, false);
+                chunks.appendChild(chunk);
+            });
+        }
+
+        // Filtered results
+        if (debugInfo.filteredResults && debugInfo.filteredResults.length > 0) {
+            debugInfo.filteredResults.forEach(result => {
+                const chunk = this._createDebugChunk(result, true);
+                chunks.appendChild(chunk);
+            });
+        }
+
+        content.appendChild(chunks);
+        debugDiv.appendChild(content);
+
+        return debugDiv;
+    },
+
+    /**
+     * Create a debug chunk element
+     * @private
+     */
+    _createDebugChunk(result, isFiltered) {
+        const chunk = document.createElement('div');
+        chunk.className = `rag-debug-chunk${isFiltered ? ' filtered' : ''}`;
+
+        const score = (result.score * 100).toFixed(1);
+        const text = result.text?.substring(0, 150) + (result.text?.length > 150 ? '...' : '');
+
+        chunk.innerHTML = `
+            <div class="rag-debug-chunk-header">
+                <span class="rag-debug-chunk-doc">${this._escapeHtml(result.documentName)}</span>
+                <span class="rag-debug-chunk-score">${score}%${isFiltered ? ' ✗' : ' ✓'}</span>
+            </div>
+            <div class="rag-debug-chunk-text">${this._escapeHtml(text)}</div>
+        `;
+
+        return chunk;
+    },
+
+    /**
+     * Get display name for reranking strategy
+     * @private
+     */
+    _getStrategyDisplayName(strategy) {
+        const names = {
+            'SCORE_THRESHOLD': 'Порог релевантности',
+            'STATISTICAL': 'Статистический',
+            'CROSS_ENCODER': 'Cross-Encoder',
+            'NONE': 'Нет',
+            'Отключен': 'Отключен'
+        };
+        return names[strategy] || strategy;
+    },
+
+    /**
+     * Escape HTML special characters
+     * @private
+     */
+    _escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     },
 
     /**

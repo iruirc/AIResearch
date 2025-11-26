@@ -86,11 +86,17 @@ export const chatService = {
             metadata.contextWindow = appState.currentContextWindow;
             metadata.sessionTotalTokens = appState.sessionTotalTokens;
 
+            // Add RAG debug info if present
+            if (data.ragDebugInfo) {
+                metadata.ragDebugInfo = data.ragDebugInfo;
+            }
+
             return {
                 response: data.response,
                 sessionId: data.sessionId,
                 metadata,
-                wasNewChat
+                wasNewChat,
+                ragDebugInfo: data.ragDebugInfo
             };
 
         } catch (error) {

@@ -110,7 +110,8 @@ fun Route.chatRoutes(
                             estimatedInputTokens = messageResult.estimatedInputTokens,
                             estimatedOutputTokens = messageResult.estimatedOutputTokens,
                             estimatedTotalTokens = messageResult.estimatedInputTokens + messageResult.estimatedOutputTokens
-                        )
+                        ),
+                        ragDebugInfo = messageResult.ragDebugInfo
                     ))
                 }.onFailure { error ->
                     val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0

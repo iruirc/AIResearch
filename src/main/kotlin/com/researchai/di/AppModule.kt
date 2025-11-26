@@ -185,7 +185,8 @@ class AppModule(
             assistantManager = assistantManager,
             mcpOrchestrationService = mcpOrchestrationService,
             ollamaConnectionManager = ollamaConnectionManager,
-            ragManager = ragManager
+            ragManager = ragManager,
+            ragPreferencesStorage = ragPreferencesStorage
         )
     }
 

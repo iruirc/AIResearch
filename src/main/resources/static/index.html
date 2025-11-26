@@ -198,11 +198,19 @@
                         placeholder="Введите ваш вопрос..."
                         rows="3"
                     ></textarea>
-                    <button id="sendButton" class="send-button" title="Отправить">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+                    <div class="input-buttons">
+                        <button id="previewContextButton" class="preview-button" title="Предпросмотр RAG контекста">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </button>
+                        <button id="sendButton" class="send-button" title="Отправить">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="status" id="status"></div>
             </div>
@@ -786,6 +794,22 @@
                             </div>
                         </div>
 
+                        <!-- Секция Debug Mode -->
+                        <div class="rag-settings-section">
+                            <h4 class="rag-settings-section-title">Отладка</h4>
+
+                            <div class="rag-settings-row">
+                                <label class="rag-settings-label" for="ragDebugMode">
+                                    Режим отладки RAG
+                                    <span class="rag-settings-hint">Показывать информацию о контексте в ответах</span>
+                                </label>
+                                <label class="rag-toggle-switch">
+                                    <input type="checkbox" id="ragDebugMode">
+                                    <span class="rag-toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Кнопки действий -->
                         <div class="rag-settings-actions">
                             <button type="button" id="ragResetSettingsButton" class="cancel-button">
@@ -883,6 +907,67 @@
                         <button type="submit" class="save-button">Сохранить</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RAG Context Preview Modal -->
+    <div id="ragPreviewModal" class="modal">
+        <div class="modal-content rag-preview-modal-content">
+            <div class="modal-header">
+                <h3>Предпросмотр RAG контекста</h3>
+                <button id="closeRagPreviewModal" class="close-button">&times;</button>
+            </div>
+
+            <div class="rag-preview-query">
+                <span class="rag-preview-label">Запрос:</span>
+                <span id="ragPreviewQuery" class="rag-preview-query-text"></span>
+            </div>
+
+            <div class="rag-preview-comparison">
+                <!-- Left column - Without reranking -->
+                <div class="rag-preview-column">
+                    <div class="rag-preview-column-header">
+                        <h4>Без реранкинга</h4>
+                        <span id="ragPreviewWithoutCount" class="rag-preview-count">0 чанков</span>
+                    </div>
+                    <div id="ragPreviewWithoutResults" class="rag-preview-results">
+                        <!-- Results will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Right column - With reranking -->
+                <div class="rag-preview-column">
+                    <div class="rag-preview-column-header">
+                        <h4>С реранкингом</h4>
+                        <span id="ragPreviewWithCount" class="rag-preview-count">0 чанков</span>
+                    </div>
+                    <div id="ragPreviewWithResults" class="rag-preview-results">
+                        <!-- Results will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div id="ragPreviewStats" class="rag-preview-stats hidden">
+                <div class="rag-preview-stat">
+                    <span class="rag-preview-stat-label">Стратегия:</span>
+                    <span id="ragPreviewStrategy" class="rag-preview-stat-value"></span>
+                </div>
+                <div class="rag-preview-stat">
+                    <span class="rag-preview-stat-label">Отфильтровано:</span>
+                    <span id="ragPreviewFiltered" class="rag-preview-stat-value"></span>
+                </div>
+                <div class="rag-preview-stat">
+                    <span class="rag-preview-stat-label">Время обработки:</span>
+                    <span id="ragPreviewTime" class="rag-preview-stat-value"></span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="rag-preview-actions">
+                <button id="ragPreviewSendWithout" class="secondary-button">Отправить без реранкинга</button>
+                <button id="ragPreviewSendWith" class="primary-button">Отправить с реранкингом</button>
             </div>
         </div>
     </div>

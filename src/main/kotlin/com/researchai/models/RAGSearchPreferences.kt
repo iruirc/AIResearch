@@ -67,6 +67,13 @@ data class RAGSearchPreferences(
      */
     val searchMinScore: Float = 0.7f,
 
+    // Debug settings
+    /**
+     * Whether to include RAG debug info in chat responses
+     * Shows which chunks were used and their scores
+     */
+    val debugMode: Boolean = false,
+
     /**
      * Timestamp of last update
      */

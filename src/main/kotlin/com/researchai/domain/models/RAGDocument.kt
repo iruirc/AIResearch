@@ -29,5 +29,50 @@ data class SearchResult(
     val documentName: String,
     val chunkIndex: Int,
     val text: String,
-    val score: Float
+    val score: Float,
+    /**
+     * Score after reranking (if applicable)
+     */
+    val rerankedScore: Float? = null
+)
+
+/**
+ * Debug information about RAG context used in a chat response
+ */
+@Serializable
+data class RAGDebugInfo(
+    /**
+     * Query used for search
+     */
+    val query: String,
+
+    /**
+     * Results used in the response (after filtering)
+     */
+    val usedResults: List<SearchResult>,
+
+    /**
+     * Results that were filtered out by reranking
+     */
+    val filteredResults: List<SearchResult> = emptyList(),
+
+    /**
+     * Whether reranking was enabled
+     */
+    val rerankingEnabled: Boolean,
+
+    /**
+     * Reranking strategy used (if enabled)
+     */
+    val rerankingStrategy: String? = null,
+
+    /**
+     * Total processing time in milliseconds
+     */
+    val processingTimeMs: Long = 0,
+
+    /**
+     * Token count estimate for the context
+     */
+    val estimatedTokens: Int = 0
 )

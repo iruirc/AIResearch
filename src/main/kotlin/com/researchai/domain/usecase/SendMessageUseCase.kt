@@ -3,6 +3,7 @@ package com.researchai.domain.usecase
 import com.researchai.data.provider.ollama.OllamaConnectionManager
 import com.researchai.domain.mcp.MCPOrchestrationService
 import com.researchai.domain.models.*
+import com.researchai.domain.models.RAGDebugInfo
 import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ChatSession
 import com.researchai.domain.repository.ConfigRepository
@@ -26,7 +27,8 @@ class SendMessageUseCase(
     private val assistantManager: AssistantManager,
     private val mcpOrchestrationService: MCPOrchestrationService? = null,
     private val ollamaConnectionManager: OllamaConnectionManager? = null,
-    private val ragManager: com.researchai.services.RAGManager? = null
+    private val ragManager: com.researchai.services.RAGManager? = null,
+    private val ragPreferencesStorage: com.researchai.persistence.RAGPreferencesStorage? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
     private val claudeMapper = ClaudeMapper()
@@ -108,6 +110,9 @@ class SendMessageUseCase(
             }
 
             // 6.5. Получаем RAG контекст если доступен
+            val ragPrefs = ragPreferencesStorage?.load()
+            var ragDebugInfo: RAGDebugInfo? = null
+
             val ragContext = ragManager?.let { manager ->
                 try {
                     // Проверяем есть ли включенные документы
@@ -119,13 +124,57 @@ class SendMessageUseCase(
                         null
                     } else {
                         logger.info("RAG: Searching context from ${enabledDocs.size} enabled documents")
-                        val context = manager.getContextForChat(message)
-                        if (context.isNotBlank()) {
-                            logger.info("RAG: Found relevant context (${context.length} characters)")
-                            context
+
+                        // Build reranker config from preferences
+                        val useReranking = ragPrefs?.enableReranking == true
+                        val rerankerConfig = if (useReranking && ragPrefs != null) {
+                            com.researchai.domain.models.RerankerConfig(
+                                strategy = ragPrefs.strategy,
+                                secondaryThreshold = ragPrefs.scoreThreshold,
+                                stdDevMultiplier = ragPrefs.stdDevMultiplier,
+                                minResultsToKeep = ragPrefs.minResultsToKeep,
+                                crossEncoderModel = ragPrefs.crossEncoderModel ?: "llama3.2:latest",
+                                crossEncoderMinScore = ragPrefs.crossEncoderMinScore
+                            )
                         } else {
-                            logger.info("RAG: No relevant context found")
-                            null
+                            com.researchai.domain.models.RerankerConfig()
+                        }
+
+                        val topK = ragPrefs?.searchTopK ?: 5
+                        val minScore = ragPrefs?.searchMinScore ?: 0.7f
+
+                        // Use debug method if debug mode is enabled
+                        if (ragPrefs?.debugMode == true) {
+                            val result = manager.getContextForChatWithDebug(
+                                query = message,
+                                topK = topK,
+                                minScore = minScore,
+                                useReranking = useReranking,
+                                rerankerConfig = rerankerConfig
+                            )
+                            ragDebugInfo = result.debugInfo
+                            if (result.context.isNotBlank()) {
+                                logger.info("RAG: Found relevant context (${result.context.length} characters, debug mode)")
+                                result.context
+                            } else {
+                                logger.info("RAG: No relevant context found")
+                                null
+                            }
+                        } else {
+                            val context = manager.getContextForChat(
+                                query = message,
+                                topK = topK,
+                                minScore = minScore,
+                                useReranking = useReranking,
+                                rerankerConfig = rerankerConfig
+                            )
+                            if (context.isNotBlank()) {
+                                logger.info("RAG: Found relevant context (${context.length} characters)")
+                                context
+                            } else {
+                                logger.info("RAG: No relevant context found")
+                                null
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -228,7 +277,8 @@ class SendMessageUseCase(
                     model = finalResponse.model,
                     providerId = providerId,
                     estimatedInputTokens = finalResponse.estimatedInputTokens,
-                    estimatedOutputTokens = finalResponse.estimatedOutputTokens
+                    estimatedOutputTokens = finalResponse.estimatedOutputTokens,
+                    ragDebugInfo = ragDebugInfo
                 )
             )
         } catch (e: Exception) {
@@ -358,5 +408,6 @@ data class MessageResult(
     val model: String,
     val providerId: ProviderType,
     val estimatedInputTokens: Int = 0, // Локально подсчитанные входные токены
-    val estimatedOutputTokens: Int = 0 // Локально подсчитанные выходные токены
+    val estimatedOutputTokens: Int = 0, // Локально подсчитанные выходные токены
+    val ragDebugInfo: RAGDebugInfo? = null // Debug info о RAG контексте (если debugMode включен)
 )

@@ -26,6 +26,7 @@ import { initializePipelinesModal } from './ui/pipelinesModal.js';
 import { initializeOllamaModal } from './ui/ollamaModal.js';
 import { initializeLlmModelModal } from './ui/llmModelModal.js';
 import { initializeRAGModal } from './ui/ragModal.js';
+import { ragPreviewModal } from './ui/ragPreviewModal.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -67,6 +68,9 @@ async function initApp() {
 
     // Initialize RAG modal
     await initializeRAGModal();
+
+    // Initialize RAG preview modal
+    ragPreviewModal.init();
 
     // Setup event listeners
     setupEventListeners();

@@ -328,5 +328,41 @@ export const ragApi = {
         }
 
         return await response.json();
+    },
+
+    // ============================================
+    // RAG Context Preview API
+    // ============================================
+
+    /**
+     * Preview RAG context for a query with comparison
+     * Shows results with and without reranking based on saved preferences
+     * @async
+     * @param {string} query - The query to preview
+     * @returns {Promise<Object>} Preview result with comparison data
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const preview = await ragApi.previewContext('What is AI?');
+     * // Returns: { query, withoutReranking, withReranking, filteredResults, ... }
+     */
+    async previewContext(query) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.RAG}/preview`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query }),
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to preview context: ${response.status}`);
+        }
+
+        return await response.json();
     }
 };
