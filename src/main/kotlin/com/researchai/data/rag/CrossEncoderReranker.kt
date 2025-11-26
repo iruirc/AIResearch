@@ -3,11 +3,12 @@ package com.researchai.data.rag
 import com.researchai.domain.models.*
 import com.researchai.domain.rag.Reranker
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import kotlin.system.measureTimeMillis
 
@@ -23,6 +24,11 @@ class CrossEncoderReranker(
 ) : Reranker {
 
     private val logger = LoggerFactory.getLogger(CrossEncoderReranker::class.java)
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     companion object {
         private const val DELAY_BETWEEN_REQUESTS_MS = 100L
@@ -126,7 +132,9 @@ class CrossEncoderReranker(
             throw Exception("Ollama API returned status ${response.status}")
         }
 
-        val generateResponse = response.body<OllamaGenerateResponse>()
+        // Read response as text first to handle x-ndjson content type
+        val responseText = response.bodyAsText()
+        val generateResponse = json.decodeFromString<OllamaGenerateResponse>(responseText)
         return parseScoreFromResponse(generateResponse.response)
     }
 

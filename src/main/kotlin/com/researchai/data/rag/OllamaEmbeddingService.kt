@@ -5,6 +5,7 @@ import com.researchai.domain.rag.EmbeddingService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -53,14 +54,21 @@ class OllamaEmbeddingService(
                 embeddingResponse.embedding
             } else {
                 val statusCode = response.status.value
+                val errorBody = try {
+                    response.bodyAsText()
+                } catch (e: Exception) {
+                    "Unable to read error body"
+                }
+
                 if (statusCode >= 500 && attempt < MAX_RETRIES) {
                     // Server error - retry with exponential backoff
                     val delayMs = INITIAL_DELAY_MS * (1 shl (attempt - 1)) // exponential backoff
-                    logger.warn("Ollama API returned $statusCode, retrying in ${delayMs}ms (attempt $attempt/$MAX_RETRIES)")
+                    logger.warn("Ollama API returned $statusCode, retrying in ${delayMs}ms (attempt $attempt/$MAX_RETRIES). Model: ${config.embeddingModel}, Error: $errorBody")
                     delay(delayMs)
                     generateEmbeddingWithRetry(text, attempt + 1)
                 } else {
-                    throw Exception("Ollama API returned status ${response.status}")
+                    logger.error("Ollama embedding API failed. Model: ${config.embeddingModel}, Status: ${response.status}, Error: $errorBody")
+                    throw Exception("Ollama API returned status ${response.status}: $errorBody")
                 }
             }
         } catch (e: Exception) {

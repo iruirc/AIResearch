@@ -122,7 +122,7 @@ async function initApp() {
  */
 function setupEventListeners() {
     // Message input events
-    sendButton.addEventListener('click', handleSendMessage);
+    sendButton.addEventListener('click', () => handleSendMessage());
     messageInput.addEventListener('keydown', handleMessageInputKeydown);
     messageInput.addEventListener('input', handleMessageInputResize);
 
