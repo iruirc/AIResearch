@@ -5,6 +5,7 @@
  */
 
 import { ragApi } from '../api/ragApi.js';
+import { ragTestApi } from '../api/ragTestApi.js';
 import { modalsUI } from './modalsUI.js';
 import { llmModelApi } from '../api/llmModelApi.js';
 import { appState } from '../state/appState.js';
@@ -19,8 +20,15 @@ export class RAGModal {
         this.editingDocument = null;
         this.activeTab = 'text'; // 'text' or 'files' (for document form)
         this.selectedFiles = []; // Array of File objects
-        this.activeModalTab = 'documents'; // 'documents' or 'settings'
+        this.activeModalTab = 'documents'; // 'documents', 'settings', or 'testing'
         this.searchPreferences = null; // Cached search preferences
+
+        // Test-related properties
+        this.tests = [];
+        this.currentTestMode = 'list'; // 'list', 'add', 'edit'
+        this.editingTest = null;
+        this.activeTestTab = 'text'; // 'text' or 'files' (for test form)
+        this.selectedTestFile = null; // Single File object for test
 
         // Bind methods
         this.initialize = this.initialize.bind(this);
@@ -55,6 +63,18 @@ export class RAGModal {
         // Cross-Encoder provider/model methods
         this.loadCrossEncoderProviders = this.loadCrossEncoderProviders.bind(this);
         this.loadCrossEncoderModels = this.loadCrossEncoderModels.bind(this);
+
+        // Test methods
+        this.loadTests = this.loadTests.bind(this);
+        this.renderTestsList = this.renderTestsList.bind(this);
+        this.openAddTestForm = this.openAddTestForm.bind(this);
+        this.openEditTestForm = this.openEditTestForm.bind(this);
+        this.handleAddTest = this.handleAddTest.bind(this);
+        this.handleUpdateTest = this.handleUpdateTest.bind(this);
+        this.handleDeleteTest = this.handleDeleteTest.bind(this);
+        this.setupTestTabs = this.setupTestTabs.bind(this);
+        this.setupTestFileHandlers = this.setupTestFileHandlers.bind(this);
+        this.switchTestTab = this.switchTestTab.bind(this);
     }
 
     /**
@@ -761,7 +781,7 @@ export class RAGModal {
 
     /**
      * Switch between modal tabs
-     * @param {string} tabName - Tab name ('documents' or 'settings')
+     * @param {string} tabName - Tab name ('documents', 'settings', or 'testing')
      */
     async switchModalTab(tabName) {
         this.activeModalTab = tabName;
@@ -775,6 +795,7 @@ export class RAGModal {
         // Update tab content
         const documentsTab = document.getElementById('ragTabDocuments');
         const settingsTab = document.getElementById('ragTabSettings');
+        const testingTab = document.getElementById('ragTabTesting');
 
         if (documentsTab) {
             documentsTab.classList.toggle('active', tabName === 'documents');
@@ -782,10 +803,15 @@ export class RAGModal {
         if (settingsTab) {
             settingsTab.classList.toggle('active', tabName === 'settings');
         }
+        if (testingTab) {
+            testingTab.classList.toggle('active', tabName === 'testing');
+        }
 
         // Load data for the active tab
         if (tabName === 'settings') {
             await this.loadSearchPreferences();
+        } else if (tabName === 'testing') {
+            await this.loadTests();
         }
     }
 
@@ -1140,6 +1166,568 @@ export class RAGModal {
             console.error('Error loading Cross-Encoder models:', error);
             modelSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
         }
+    }
+
+    // ============================================
+    // RAG Testing Methods
+    // ============================================
+
+    /**
+     * Load all RAG tests from the API
+     */
+    async loadTests() {
+        try {
+            console.log('Loading RAG tests...');
+            const ragTestsList = document.getElementById('ragTestsList');
+
+            if (ragTestsList) {
+                ragTestsList.innerHTML = '<div class="rag-tests-loading">Загрузка тестов...</div>';
+            }
+
+            this.tests = await ragTestApi.loadTests();
+            console.log(`Loaded ${this.tests.length} tests`);
+
+            this.renderTestsList();
+        } catch (error) {
+            console.error('Error loading RAG tests:', error);
+            const ragTestsList = document.getElementById('ragTestsList');
+            if (ragTestsList) {
+                ragTestsList.innerHTML = `<div class="rag-tests-error">Ошибка загрузки: ${error.message}</div>`;
+            }
+        }
+    }
+
+    /**
+     * Render the tests list view
+     */
+    renderTestsList() {
+        const ragTestsList = document.getElementById('ragTestsList');
+        if (!ragTestsList) return;
+
+        ragTestsList.innerHTML = '';
+
+        // Add "Add Test" button at the top
+        const addButton = document.createElement('button');
+        addButton.className = 'rag-add-test-button';
+        addButton.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Добавить тест</span>
+        `;
+        addButton.addEventListener('click', () => this.openAddTestForm());
+        ragTestsList.appendChild(addButton);
+
+        // Show empty state if no tests
+        if (!this.tests || this.tests.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'rag-tests-empty';
+            emptyMessage.textContent = 'Нет тестов. Добавьте тест для проверки качества RAG.';
+            ragTestsList.appendChild(emptyMessage);
+            return;
+        }
+
+        // Render each test
+        this.tests.forEach(test => {
+            const testItem = document.createElement('div');
+            testItem.className = 'rag-test-item';
+
+            // Test content
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'rag-test-content';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'rag-test-name';
+            nameDiv.textContent = test.name;
+
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'rag-test-meta';
+            const createdDate = new Date(test.createdAt).toLocaleDateString('ru-RU');
+            const contentLength = test.content ? test.content.length : 0;
+            metaDiv.innerHTML = `
+                <span>Символов: ${contentLength}</span>
+                <span>Создан: ${createdDate}</span>
+            `;
+
+            contentDiv.appendChild(nameDiv);
+            contentDiv.appendChild(metaDiv);
+
+            // Test actions
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'rag-test-actions';
+
+            // Edit button
+            const editButton = document.createElement('button');
+            editButton.className = 'rag-test-action-button edit-button';
+            editButton.title = 'Редактировать';
+            editButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+            editButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.openEditTestForm(test.id);
+            });
+
+            // Delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'rag-test-action-button delete-button';
+            deleteButton.title = 'Удалить';
+            deleteButton.textContent = '🗑️';
+            deleteButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.handleDeleteTest(test.id, test.name);
+            });
+
+            actionsDiv.appendChild(editButton);
+            actionsDiv.appendChild(deleteButton);
+
+            testItem.appendChild(contentDiv);
+            testItem.appendChild(actionsDiv);
+            ragTestsList.appendChild(testItem);
+        });
+    }
+
+    /**
+     * Open the add test form
+     */
+    openAddTestForm() {
+        this.currentTestMode = 'add';
+        this.editingTest = null;
+        this.selectedTestFile = null;
+        this.activeTestTab = 'text';
+        modalsUI.closeModal('ragModal');
+        modalsUI.openModal('ragTestFormModal');
+
+        // Set form title
+        const formTitle = document.getElementById('ragTestFormTitle');
+        if (formTitle) {
+            formTitle.textContent = 'Добавить тест';
+        }
+
+        // Clear form
+        const nameInput = document.getElementById('ragTestName');
+        const contentInput = document.getElementById('ragTestContent');
+
+        if (nameInput) nameInput.value = '';
+        if (contentInput) {
+            contentInput.value = '';
+            contentInput.disabled = false;
+        }
+
+        // Show tabs and reset to text tab
+        const tabsContainer = document.getElementById('ragTestSourceTabs');
+        if (tabsContainer) {
+            tabsContainer.classList.remove('hidden');
+        }
+        this.switchTestTab('text');
+        this.renderTestFilesList();
+
+        // Setup tabs and file handlers
+        this.setupTestTabs();
+        this.setupTestFileHandlers();
+
+        // Setup form submission
+        const form = document.getElementById('ragTestForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.handleAddTest();
+            };
+        }
+
+        // Setup cancel button
+        const cancelButton = document.getElementById('cancelRagTestFormButton');
+        if (cancelButton) {
+            cancelButton.onclick = () => {
+                modalsUI.closeModal('ragTestFormModal');
+                modalsUI.openModal('ragModal');
+            };
+        }
+
+        // Setup close button
+        const closeButton = document.getElementById('closeRagTestFormModal');
+        if (closeButton) {
+            closeButton.onclick = () => {
+                modalsUI.closeModal('ragTestFormModal');
+                modalsUI.openModal('ragModal');
+            };
+        }
+    }
+
+    /**
+     * Open the edit test form
+     * @param {string} testId - Test ID to edit
+     */
+    async openEditTestForm(testId) {
+        try {
+            this.currentTestMode = 'edit';
+
+            // Load full test details
+            const test = await ragTestApi.getTest(testId);
+            this.editingTest = test;
+
+            modalsUI.closeModal('ragModal');
+            modalsUI.openModal('ragTestFormModal');
+
+            // Set form title
+            const formTitle = document.getElementById('ragTestFormTitle');
+            if (formTitle) {
+                formTitle.textContent = 'Редактировать тест';
+            }
+
+            // Hide tabs in edit mode (show text content only)
+            const tabsContainer = document.getElementById('ragTestSourceTabs');
+            if (tabsContainer) {
+                tabsContainer.classList.add('hidden');
+            }
+
+            // Show text tab content only
+            this.switchTestTab('text');
+
+            // Fill form with test data
+            const nameInput = document.getElementById('ragTestName');
+            const contentInput = document.getElementById('ragTestContent');
+
+            if (nameInput) nameInput.value = test.name || '';
+            if (contentInput) {
+                contentInput.value = test.content || '';
+                contentInput.disabled = false;
+            }
+
+            // Setup form submission
+            const form = document.getElementById('ragTestForm');
+            if (form) {
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    await this.handleUpdateTest();
+                };
+            }
+
+            // Setup cancel button
+            const cancelButton = document.getElementById('cancelRagTestFormButton');
+            if (cancelButton) {
+                cancelButton.onclick = () => {
+                    modalsUI.closeModal('ragTestFormModal');
+                    modalsUI.openModal('ragModal');
+                };
+            }
+
+            // Setup close button
+            const closeButton = document.getElementById('closeRagTestFormModal');
+            if (closeButton) {
+                closeButton.onclick = () => {
+                    modalsUI.closeModal('ragTestFormModal');
+                    modalsUI.openModal('ragModal');
+                };
+            }
+        } catch (error) {
+            console.error('Error loading test for editing:', error);
+            alert(`Ошибка загрузки теста: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle adding a new test
+     */
+    async handleAddTest() {
+        const nameInput = document.getElementById('ragTestName');
+        const contentInput = document.getElementById('ragTestContent');
+
+        const name = nameInput?.value?.trim();
+
+        if (!name) {
+            alert('Пожалуйста, укажите название теста');
+            return;
+        }
+
+        try {
+            let content = '';
+
+            if (this.activeTestTab === 'text') {
+                content = contentInput?.value?.trim() || '';
+                if (!content) {
+                    alert('Пожалуйста, введите содержимое теста');
+                    return;
+                }
+            } else {
+                // Files mode: read file content
+                if (!this.selectedTestFile) {
+                    alert('Пожалуйста, выберите файл');
+                    return;
+                }
+                content = await this.readFileContent(this.selectedTestFile);
+            }
+
+            console.log(`Adding test: ${name}`);
+            await ragTestApi.addTest(name, content);
+            console.log('Test added successfully');
+
+            modalsUI.closeModal('ragTestFormModal');
+            modalsUI.openModal('ragModal');
+            await this.loadTests();
+
+        } catch (error) {
+            console.error('Error adding test:', error);
+            if (error.message.startsWith('DUPLICATE_NAME:')) {
+                alert(`Тест с именем "${name}" уже существует.\nВыберите другое имя.`);
+            } else {
+                alert(`Ошибка при добавлении теста: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * Handle updating an existing test
+     */
+    async handleUpdateTest() {
+        if (!this.editingTest) return;
+
+        const nameInput = document.getElementById('ragTestName');
+        const contentInput = document.getElementById('ragTestContent');
+
+        const name = nameInput?.value?.trim();
+        const content = contentInput?.value?.trim();
+
+        if (!name) {
+            alert('Пожалуйста, укажите название теста');
+            return;
+        }
+
+        try {
+            console.log(`Updating test: ${this.editingTest.id}`);
+            await ragTestApi.updateTest(this.editingTest.id, name, content);
+
+            modalsUI.closeModal('ragTestFormModal');
+            modalsUI.openModal('ragModal');
+            await this.loadTests();
+
+            console.log('Test updated successfully');
+        } catch (error) {
+            console.error('Error updating test:', error);
+            if (error.message.startsWith('DUPLICATE_NAME:')) {
+                alert(`Тест с именем "${name}" уже существует.\nВыберите другое имя.`);
+            } else {
+                alert(`Ошибка при обновлении теста: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * Handle deleting a test
+     * @param {string} testId - Test ID to delete
+     * @param {string} testName - Test name for confirmation
+     */
+    async handleDeleteTest(testId, testName) {
+        if (!confirm(`Вы уверены, что хотите удалить тест "${testName}"?\nЭто действие нельзя отменить.`)) {
+            return;
+        }
+
+        try {
+            console.log(`Deleting test: ${testId}`);
+            await ragTestApi.deleteTest(testId);
+            await this.loadTests();
+            console.log('Test deleted successfully');
+        } catch (error) {
+            console.error('Error deleting test:', error);
+            alert(`Ошибка при удалении теста: ${error.message}`);
+        }
+    }
+
+    /**
+     * Setup test tab switching functionality
+     */
+    setupTestTabs() {
+        const tabs = document.querySelectorAll('#ragTestSourceTabs .rag-tab');
+        tabs.forEach(tab => {
+            tab.onclick = () => {
+                const tabName = tab.dataset.tab;
+                this.switchTestTab(tabName);
+            };
+        });
+    }
+
+    /**
+     * Switch between test text and files tabs
+     * @param {string} tabName - Tab name ('text' or 'files')
+     */
+    switchTestTab(tabName) {
+        this.activeTestTab = tabName;
+
+        // Update tab buttons
+        const tabs = document.querySelectorAll('#ragTestSourceTabs .rag-tab');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+
+        // Update tab content
+        const textContent = document.getElementById('ragTestTabText');
+        const filesContent = document.getElementById('ragTestTabFiles');
+
+        if (textContent) {
+            textContent.classList.toggle('active', tabName === 'text');
+        }
+        if (filesContent) {
+            filesContent.classList.toggle('active', tabName === 'files');
+        }
+    }
+
+    /**
+     * Setup test file drag&drop and input handlers
+     */
+    setupTestFileHandlers() {
+        const dropzone = document.getElementById('ragTestDropzone');
+        const fileInput = document.getElementById('ragTestFileInput');
+        const browseButton = document.getElementById('ragTestBrowseButton');
+
+        if (browseButton && fileInput) {
+            browseButton.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            };
+        }
+
+        if (fileInput) {
+            fileInput.onchange = async (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    await this.addTestFile(e.target.files[0]);
+                    fileInput.value = ''; // Reset input
+                }
+            };
+        }
+
+        if (dropzone) {
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            // Highlight drop zone on drag
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => {
+                    dropzone.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, () => {
+                    dropzone.classList.remove('drag-over');
+                }, false);
+            });
+
+            // Handle dropped files
+            dropzone.addEventListener('drop', async (e) => {
+                const files = e.dataTransfer?.files;
+                if (files && files.length > 0) {
+                    await this.addTestFile(files[0]);
+                }
+            }, false);
+
+            // Click on dropzone opens file dialog
+            dropzone.onclick = (e) => {
+                if (e.target === dropzone || e.target.closest('.rag-dropzone-text, .rag-dropzone-hint, svg')) {
+                    fileInput?.click();
+                }
+            };
+        }
+    }
+
+    /**
+     * Add file as test content (only one file allowed)
+     * @param {File} file - File object
+     */
+    async addTestFile(file) {
+        const allowedExtensions = ['.txt', '.md', '.json', '.xml', '.log'];
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+
+        if (!allowedExtensions.includes(ext)) {
+            alert(`Формат файла не поддерживается.\nПоддерживаемые форматы: ${allowedExtensions.join(', ')}`);
+            return;
+        }
+
+        this.selectedTestFile = file;
+        this.renderTestFilesList();
+
+        // Also populate the content textarea with file content
+        try {
+            const content = await this.readFileContent(file);
+            const contentInput = document.getElementById('ragTestContent');
+            if (contentInput) {
+                contentInput.value = content;
+            }
+        } catch (error) {
+            console.error('Error reading file:', error);
+        }
+    }
+
+    /**
+     * Remove the selected test file
+     */
+    removeTestFile() {
+        this.selectedTestFile = null;
+        this.renderTestFilesList();
+    }
+
+    /**
+     * Render the list of selected test file (only one)
+     */
+    renderTestFilesList() {
+        const filesList = document.getElementById('ragTestFilesList');
+        if (!filesList) return;
+
+        filesList.innerHTML = '';
+
+        if (!this.selectedTestFile) return;
+
+        const file = this.selectedTestFile;
+        const fileItem = document.createElement('div');
+        fileItem.className = 'rag-file-item';
+
+        const fileIcon = document.createElement('div');
+        fileIcon.className = 'rag-file-icon';
+        fileIcon.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'rag-file-info';
+
+        const fileName = document.createElement('div');
+        fileName.className = 'rag-file-name';
+        fileName.textContent = file.name;
+
+        const fileSize = document.createElement('div');
+        fileSize.className = 'rag-file-size';
+        fileSize.textContent = this.formatFileSize(file.size);
+
+        fileInfo.appendChild(fileName);
+        fileInfo.appendChild(fileSize);
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'rag-file-remove';
+        removeButton.title = 'Удалить';
+        removeButton.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        `;
+        removeButton.onclick = () => this.removeTestFile();
+
+        fileItem.appendChild(fileIcon);
+        fileItem.appendChild(fileInfo);
+        fileItem.appendChild(removeButton);
+        filesList.appendChild(fileItem);
     }
 }
 

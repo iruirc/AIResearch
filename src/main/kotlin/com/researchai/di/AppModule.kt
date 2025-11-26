@@ -295,6 +295,13 @@ class AppModule(
     }
 
     /**
+     * RAG Test Storage (JSON-based)
+     */
+    val ragTestStorage: com.researchai.persistence.RAGTestStorage by lazy {
+        com.researchai.persistence.JsonRAGTestStorage()
+    }
+
+    /**
      * Ollama Embedding Service
      */
     val embeddingService: com.researchai.domain.rag.EmbeddingService by lazy {

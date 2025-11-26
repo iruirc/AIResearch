@@ -1271,3 +1271,155 @@
     color: var(--color-text-secondary);
     line-height: 1.4;
 }
+
+/* ============================================
+   RAG Testing Tab Styles
+   ============================================ */
+
+/* Tests List */
+.rag-tests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.rag-tests-loading,
+.rag-tests-empty,
+.rag-tests-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.rag-tests-error {
+    color: var(--error);
+}
+
+/* Add Test Button (gradient style like documents) */
+.rag-add-test-button {
+    padding: 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.rag-add-test-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.rag-add-test-button svg {
+    flex-shrink: 0;
+}
+
+/* Test Item */
+.rag-test-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.rag-test-item:hover {
+    border-color: #10b981;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rag-test-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.rag-test-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rag-test-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.rag-test-meta span {
+    white-space: nowrap;
+}
+
+/* Test Actions */
+.rag-test-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.rag-test-action-button {
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-primary);
+}
+
+.rag-test-action-button:hover {
+    background: var(--bg-hover);
+    border-color: #10b981;
+}
+
+.rag-test-action-button.edit-button:hover {
+    border-color: #ffc107;
+}
+
+.rag-test-action-button.delete-button:hover {
+    border-color: var(--error);
+    background: #fff5f5;
+}
+
+.rag-test-action-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive for testing tab */
+@media (max-width: 768px) {
+    .rag-test-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rag-test-actions {
+        justify-content: flex-end;
+    }
+
+    .rag-tests-list {
+        padding: 12px;
+    }
+}

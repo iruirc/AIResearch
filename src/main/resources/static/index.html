@@ -666,6 +666,13 @@
                     </svg>
                     <span>Настройки поиска</span>
                 </button>
+                <button type="button" class="rag-modal-tab" data-tab="testing">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    <span>Тестирование</span>
+                </button>
             </div>
 
             <!-- Вкладка: Документы -->
@@ -822,6 +829,13 @@
                     </form>
                 </div>
             </div>
+
+            <!-- Вкладка: Тестирование -->
+            <div id="ragTabTesting" class="rag-modal-tab-content">
+                <div id="ragTestsList" class="rag-tests-list">
+                    <div class="rag-tests-loading">Загрузка тестов...</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -904,6 +918,76 @@
                     </div>
                     <div class="rag-form-actions">
                         <button type="button" id="cancelRagFormButton" class="cancel-button">Отменить</button>
+                        <button type="submit" class="save-button">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления/редактирования RAG теста -->
+    <div id="ragTestFormModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ragTestFormTitle">Добавить тест</h3>
+                <button id="closeRagTestFormModal" class="close-button">&times;</button>
+            </div>
+            <div class="rag-form-content">
+                <form id="ragTestForm" class="rag-form">
+                    <div class="form-group">
+                        <label for="ragTestName">Название <span class="required">*</span></label>
+                        <input type="text" id="ragTestName" class="form-input" placeholder="Например: Тест API документации" required>
+                    </div>
+
+                    <!-- Табы для выбора источника -->
+                    <div class="rag-source-tabs" id="ragTestSourceTabs">
+                        <button type="button" class="rag-tab active" data-tab="text">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <span>Текст</span>
+                        </button>
+                        <button type="button" class="rag-tab" data-tab="files">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                            <span>Файл</span>
+                        </button>
+                    </div>
+
+                    <!-- Контент для таба "Текст" -->
+                    <div class="rag-tab-content active" id="ragTestTabText">
+                        <div class="form-group">
+                            <label for="ragTestContent">Содержимое <span class="required">*</span></label>
+                            <textarea id="ragTestContent" class="form-textarea" rows="10" placeholder="Вставьте текст теста..."></textarea>
+                            <small class="form-hint">Поддерживаются форматы: txt, md, json, xml, log</small>
+                        </div>
+                    </div>
+
+                    <!-- Контент для таба "Файл" -->
+                    <div class="rag-tab-content" id="ragTestTabFiles">
+                        <div class="rag-dropzone" id="ragTestDropzone">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p class="rag-dropzone-text">Перетащите файл сюда</p>
+                            <p class="rag-dropzone-hint">или</p>
+                            <button type="button" class="rag-browse-button" id="ragTestBrowseButton">Выбрать файл</button>
+                            <input type="file" id="ragTestFileInput" accept=".txt,.md,.json,.xml,.log" hidden>
+                            <small class="form-hint">Поддерживаются: txt, md, json, xml, log (только 1 файл)</small>
+                        </div>
+                        <div class="rag-files-list" id="ragTestFilesList">
+                            <!-- Выбранный файл будет добавлен динамически -->
+                        </div>
+                    </div>
+
+                    <div class="rag-form-actions">
+                        <button type="button" id="cancelRagTestFormButton" class="cancel-button">Отменить</button>
                         <button type="submit" class="save-button">Сохранить</button>
                     </div>
                 </form>

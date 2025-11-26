@@ -11,6 +11,7 @@ import com.researchai.routes.ollamaRoutes
 import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.routes.ragRoutes
+import com.researchai.routes.ragTestRoutes
 import com.researchai.routes.schedulerRoutes
 import com.researchai.routes.preferencesRoutes
 import com.researchai.services.ClaudeService
@@ -70,6 +71,9 @@ fun Application.configureRouting(
 
         // API роуты для RAG (Retrieval-Augmented Generation)
         ragRoutes(appModule.ragManager, appModule.ragPreferencesStorage)
+
+        // API роуты для RAG тестов
+        ragTestRoutes(appModule.ragTestStorage)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {
