@@ -1,10 +1,12 @@
 package com.researchai.persistence
 
 import com.researchai.domain.models.RAGTest
+import com.researchai.domain.models.RAGTestQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -12,8 +14,31 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /**
+ * Legacy JSON format for backward compatibility during migration.
+ * Used to read old tests that have content as string.
+ */
+@Serializable
+private data class LegacyRAGTest(
+    val id: String,
+    val name: String,
+    val content: String,
+    val createdAt: kotlinx.datetime.Instant,
+    val updatedAt: kotlinx.datetime.Instant
+)
+
+/**
+ * Wrapper for parsing JSON content with queries array.
+ */
+@Serializable
+private data class QueriesWrapper(
+    val queries: List<RAGTestQuery>,
+    val evaluationMetrics: Map<String, String>? = null
+)
+
+/**
  * JSON-based implementation of RAGTestStorage.
  * Stores tests as individual JSON files in the specified directory.
+ * Supports reading both new format (with queries) and legacy format (with content string).
  */
 class JsonRAGTestStorage(
     private val storageDir: String = "data/rag/tests"
@@ -23,6 +48,7 @@ class JsonRAGTestStorage(
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
+        encodeDefaults = true
     }
 
     // Cache: test ID -> filename (without extension)
@@ -94,8 +120,7 @@ class JsonRAGTestStorage(
                     val file = File(storageDir, "$filename.json")
                     if (file.exists()) {
                         return@withContext try {
-                            val jsonString = file.readText()
-                            json.decodeFromString<RAGTest>(jsonString)
+                            parseTestFile(file)
                         } catch (e: Exception) {
                             throw Exception("Failed to load RAG test $testId: ${e.message}", e)
                         }
@@ -110,8 +135,7 @@ class JsonRAGTestStorage(
                     file.isFile && file.extension == "json" && !file.name.endsWith(".tmp")
                 }?.forEach { file ->
                     try {
-                        val jsonString = file.readText()
-                        val test = json.decodeFromString<RAGTest>(jsonString)
+                        val test = parseTestFile(file)
                         // Update cache
                         val sanitizedName = file.nameWithoutExtension
                         idToFilename[test.id] = sanitizedName
@@ -147,8 +171,7 @@ class JsonRAGTestStorage(
                     file.isFile && file.extension == "json" && !file.name.endsWith(".tmp")
                 }?.forEach { file ->
                     try {
-                        val jsonString = file.readText()
-                        val test = json.decodeFromString<RAGTest>(jsonString)
+                        val test = parseTestFile(file)
                         tests.add(test)
 
                         // Update caches
@@ -178,8 +201,7 @@ class JsonRAGTestStorage(
                         file.isFile && file.extension == "json" && !file.name.endsWith(".tmp")
                     }?.forEach { file ->
                         try {
-                            val jsonString = file.readText()
-                            val test = json.decodeFromString<RAGTest>(jsonString)
+                            val test = parseTestFile(file)
                             if (test.id == testId) {
                                 filename = file.nameWithoutExtension
                             }
@@ -217,8 +239,7 @@ class JsonRAGTestStorage(
                     val file = File(storageDir, "$sanitizedName.json")
                     if (file.exists()) {
                         return@withContext try {
-                            val jsonString = file.readText()
-                            json.decodeFromString<RAGTest>(jsonString)
+                            parseTestFile(file)
                         } catch (e: Exception) {
                             null
                         }
@@ -229,8 +250,7 @@ class JsonRAGTestStorage(
                 val file = File(storageDir, "$sanitizedName.json")
                 if (file.exists()) {
                     return@withContext try {
-                        val jsonString = file.readText()
-                        val test = json.decodeFromString<RAGTest>(jsonString)
+                        val test = parseTestFile(file)
                         // Update cache
                         idToFilename[test.id] = sanitizedName
                         nameToId[sanitizedName] = test.id
@@ -242,6 +262,60 @@ class JsonRAGTestStorage(
 
                 null
             }
+        }
+    }
+
+    /**
+     * Parse test file, handling both new format (with queries) and legacy format (with content).
+     */
+    private fun parseTestFile(file: File): RAGTest {
+        val jsonString = file.readText()
+
+        // Try to parse as new format first
+        return try {
+            json.decodeFromString<RAGTest>(jsonString)
+        } catch (e: Exception) {
+            // Try legacy format with content as string
+            try {
+                val legacy = json.decodeFromString<LegacyRAGTest>(jsonString)
+                convertLegacyToNew(legacy)
+            } catch (e2: Exception) {
+                throw Exception("Failed to parse test file ${file.name}: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * Convert legacy test format (content as string) to new format (queries as objects).
+     */
+    private fun convertLegacyToNew(legacy: LegacyRAGTest): RAGTest {
+        // Try to parse content as JSON with queries
+        return try {
+            val wrapper = json.decodeFromString<QueriesWrapper>(legacy.content)
+            RAGTest(
+                id = legacy.id,
+                name = legacy.name,
+                queries = wrapper.queries,
+                evaluationMetrics = wrapper.evaluationMetrics,
+                createdAt = legacy.createdAt,
+                updatedAt = legacy.updatedAt
+            )
+        } catch (e: Exception) {
+            // If content is not valid JSON, create a single query from content
+            RAGTest(
+                id = legacy.id,
+                name = legacy.name,
+                queries = listOf(
+                    RAGTestQuery(
+                        id = "q1",
+                        query = legacy.content,
+                        explanation = "Migrated from legacy format"
+                    )
+                ),
+                evaluationMetrics = null,
+                createdAt = legacy.createdAt,
+                updatedAt = legacy.updatedAt
+            )
         }
     }
 }

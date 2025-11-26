@@ -1,6 +1,7 @@
 package com.researchai.routes
 
 import com.researchai.domain.models.RAGTest
+import com.researchai.domain.models.RAGTestQuery
 import com.researchai.persistence.RAGTestStorage
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -14,24 +15,60 @@ import java.util.UUID
 @Serializable
 data class AddTestRequest(
     val name: String,
-    val content: String
+    val queries: List<RAGTestQuery>,
+    val evaluationMetrics: Map<String, String>? = null
 )
 
 @Serializable
 data class UpdateTestRequest(
     val name: String? = null,
-    val content: String? = null
+    val queries: List<RAGTestQuery>? = null,
+    val evaluationMetrics: Map<String, String>? = null
 )
 
 @Serializable
 data class TestErrorResponse(
-    val error: String
+    val error: String,
+    val details: ValidationDetails? = null
+)
+
+@Serializable
+data class ValidationDetails(
+    val invalidQueries: List<InvalidQueryInfo>? = null
+)
+
+@Serializable
+data class InvalidQueryInfo(
+    val index: Int,
+    val missingFields: List<String>
 )
 
 /**
  * Exception thrown when a test with the same name already exists.
  */
 class DuplicateTestNameException(name: String) : Exception("Test with name '$name' already exists")
+
+/**
+ * Validate that all required fields are present in queries.
+ * Required fields: id, query, explanation
+ */
+private fun validateQueries(queries: List<RAGTestQuery>): List<InvalidQueryInfo> {
+    val invalidQueries = mutableListOf<InvalidQueryInfo>()
+
+    queries.forEachIndexed { index, query ->
+        val missingFields = mutableListOf<String>()
+
+        if (query.id.isBlank()) missingFields.add("id")
+        if (query.query.isBlank()) missingFields.add("query")
+        if (query.explanation.isBlank()) missingFields.add("explanation")
+
+        if (missingFields.isNotEmpty()) {
+            invalidQueries.add(InvalidQueryInfo(index, missingFields))
+        }
+    }
+
+    return invalidQueries
+}
 
 /**
  * Routes for RAG test management.
@@ -48,8 +85,21 @@ fun Route.ragTestRoutes(storage: RAGTestStorage) {
                     return@post
                 }
 
-                if (request.content.isBlank()) {
-                    call.respond(HttpStatusCode.BadRequest, TestErrorResponse("Test content cannot be empty"))
+                if (request.queries.isEmpty()) {
+                    call.respond(HttpStatusCode.BadRequest, TestErrorResponse("Test must contain at least one query"))
+                    return@post
+                }
+
+                // Validate required fields in queries
+                val invalidQueries = validateQueries(request.queries)
+                if (invalidQueries.isNotEmpty()) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        TestErrorResponse(
+                            "Some queries have missing required fields (id, query, explanation)",
+                            ValidationDetails(invalidQueries)
+                        )
+                    )
                     return@post
                 }
 
@@ -63,7 +113,8 @@ fun Route.ragTestRoutes(storage: RAGTestStorage) {
                 val test = RAGTest(
                     id = UUID.randomUUID().toString(),
                     name = request.name,
-                    content = request.content,
+                    queries = request.queries,
+                    evaluationMetrics = request.evaluationMetrics,
                     createdAt = now,
                     updatedAt = now
                 )
@@ -132,9 +183,30 @@ fun Route.ragTestRoutes(storage: RAGTestStorage) {
                     }
                 }
 
+                // Validate queries if provided
+                if (request.queries != null) {
+                    if (request.queries.isEmpty()) {
+                        call.respond(HttpStatusCode.BadRequest, TestErrorResponse("Test must contain at least one query"))
+                        return@put
+                    }
+
+                    val invalidQueries = validateQueries(request.queries)
+                    if (invalidQueries.isNotEmpty()) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            TestErrorResponse(
+                                "Some queries have missing required fields (id, query, explanation)",
+                                ValidationDetails(invalidQueries)
+                            )
+                        )
+                        return@put
+                    }
+                }
+
                 val updatedTest = existingTest.copy(
                     name = request.name ?: existingTest.name,
-                    content = request.content ?: existingTest.content,
+                    queries = request.queries ?: existingTest.queries,
+                    evaluationMetrics = request.evaluationMetrics ?: existingTest.evaluationMetrics,
                     updatedAt = Clock.System.now()
                 )
 

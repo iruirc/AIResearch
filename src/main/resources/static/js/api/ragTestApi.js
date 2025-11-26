@@ -66,13 +66,20 @@ export const ragTestApi = {
      * Add a new RAG test
      * @async
      * @param {string} name - Test name
-     * @param {string} content - Test content (text)
+     * @param {Array<Object>} queries - Array of test query objects
+     * @param {Object|null} evaluationMetrics - Optional evaluation metrics
      * @returns {Promise<Object>} Created test data
      * @throws {Error} If the HTTP request fails
      * @example
-     * const test = await ragTestApi.addTest('My Test', 'Test content...');
+     * const queries = [{ id: 'q1', query: 'Test query', explanation: 'Why this test' }];
+     * const test = await ragTestApi.addTest('My Test', queries);
      */
-    async addTest(name, content) {
+    async addTest(name, queries, evaluationMetrics = null) {
+        const body = { name, queries };
+        if (evaluationMetrics) {
+            body.evaluationMetrics = evaluationMetrics;
+        }
+
         const response = await fetchWithTimeout(
             `${API_CONFIG.RAG}/tests`,
             {
@@ -80,7 +87,7 @@ export const ragTestApi = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name, content }),
+                body: JSON.stringify(body),
             },
             API_CONFIG.REQUEST_TIMEOUT
         );
@@ -89,6 +96,12 @@ export const ragTestApi = {
             const errorData = await response.json().catch(() => ({}));
             if (response.status === 409) {
                 throw new Error(`DUPLICATE_NAME:${errorData.error || 'Тест с таким именем уже существует'}`);
+            }
+            if (response.status === 400 && errorData.details?.invalidQueries) {
+                const invalidInfo = errorData.details.invalidQueries
+                    .map(q => `Query ${q.index + 1}: missing ${q.missingFields.join(', ')}`)
+                    .join('\n');
+                throw new Error(`VALIDATION_ERROR:${errorData.error}\n${invalidInfo}`);
             }
             throw new Error(errorData.error || `Failed to add test: ${response.status}`);
         }
@@ -101,16 +114,19 @@ export const ragTestApi = {
      * @async
      * @param {string} testId - The test identifier
      * @param {string|null} name - Updated test name (null to keep unchanged)
-     * @param {string|null} content - Updated test content (null to keep unchanged)
+     * @param {Array<Object>|null} queries - Updated test queries (null to keep unchanged)
+     * @param {Object|null} evaluationMetrics - Updated evaluation metrics (null to keep unchanged)
      * @returns {Promise<Object>} Updated test data
      * @throws {Error} If the HTTP request fails
      * @example
-     * const test = await ragTestApi.updateTest('test-123', 'New Name', 'New content');
+     * const queries = [{ id: 'q1', query: 'Updated query', explanation: 'Why' }];
+     * const test = await ragTestApi.updateTest('test-123', 'New Name', queries);
      */
-    async updateTest(testId, name = null, content = null) {
+    async updateTest(testId, name = null, queries = null, evaluationMetrics = null) {
         const body = {};
         if (name !== null) body.name = name;
-        if (content !== null) body.content = content;
+        if (queries !== null) body.queries = queries;
+        if (evaluationMetrics !== null) body.evaluationMetrics = evaluationMetrics;
 
         const response = await fetchWithTimeout(
             `${API_CONFIG.RAG}/tests/${testId}`,
@@ -128,6 +144,12 @@ export const ragTestApi = {
             const errorData = await response.json().catch(() => ({}));
             if (response.status === 409) {
                 throw new Error(`DUPLICATE_NAME:${errorData.error || 'Тест с таким именем уже существует'}`);
+            }
+            if (response.status === 400 && errorData.details?.invalidQueries) {
+                const invalidInfo = errorData.details.invalidQueries
+                    .map(q => `Query ${q.index + 1}: missing ${q.missingFields.join(', ')}`)
+                    .join('\n');
+                throw new Error(`VALIDATION_ERROR:${errorData.error}\n${invalidInfo}`);
             }
             throw new Error(errorData.error || `Failed to update test: ${response.status}`);
         }

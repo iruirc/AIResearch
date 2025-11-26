@@ -295,10 +295,10 @@ class AppModule(
     }
 
     /**
-     * RAG Test Storage (JSON-based)
+     * RAG Test Storage (JSON or PostgreSQL based on enablePostgres flag)
      */
     val ragTestStorage: com.researchai.persistence.RAGTestStorage by lazy {
-        com.researchai.persistence.JsonRAGTestStorage()
+        StorageFactory.createRAGTestStorage(enablePostgres)
     }
 
     /**

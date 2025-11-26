@@ -1248,9 +1248,9 @@ export class RAGModal {
             const metaDiv = document.createElement('div');
             metaDiv.className = 'rag-test-meta';
             const createdDate = new Date(test.createdAt).toLocaleDateString('ru-RU');
-            const contentLength = test.content ? test.content.length : 0;
+            const queriesCount = test.queries ? test.queries.length : 0;
             metaDiv.innerHTML = `
-                <span>Символов: ${contentLength}</span>
+                <span>Запросов: ${queriesCount}</span>
                 <span>Создан: ${createdDate}</span>
             `;
 
@@ -1404,7 +1404,14 @@ export class RAGModal {
 
             if (nameInput) nameInput.value = test.name || '';
             if (contentInput) {
-                contentInput.value = test.content || '';
+                // Convert queries to JSON format for editing
+                const contentObj = {
+                    queries: test.queries || []
+                };
+                if (test.evaluationMetrics) {
+                    contentObj.evaluationMetrics = test.evaluationMetrics;
+                }
+                contentInput.value = JSON.stringify(contentObj, null, 2);
                 contentInput.disabled = false;
             }
 
@@ -1611,8 +1618,13 @@ export class RAGModal {
                 return;
             }
 
-            console.log(`Adding test: ${name}`);
-            await ragTestApi.addTest(name, content);
+            // Parse JSON and extract queries and evaluationMetrics
+            const parsed = JSON.parse(content);
+            const queries = Array.isArray(parsed) ? parsed : parsed.queries;
+            const evaluationMetrics = parsed.evaluationMetrics || null;
+
+            console.log(`Adding test: ${name} with ${queries.length} queries`);
+            await ragTestApi.addTest(name, queries, evaluationMetrics);
             console.log('Test added successfully');
 
             modalsUI.closeModal('ragTestFormModal');
@@ -1650,17 +1662,25 @@ export class RAGModal {
         }
 
         // Validate JSON content if provided
+        let queries = null;
+        let evaluationMetrics = null;
+
         if (content) {
             const validation = this.validateTestJSON(content);
             if (!validation.valid) {
                 this.showValidationError(validation.error, validation.lineNumber);
                 return;
             }
+
+            // Parse JSON and extract queries and evaluationMetrics
+            const parsed = JSON.parse(content);
+            queries = Array.isArray(parsed) ? parsed : parsed.queries;
+            evaluationMetrics = parsed.evaluationMetrics || null;
         }
 
         try {
             console.log(`Updating test: ${this.editingTest.id}`);
-            await ragTestApi.updateTest(this.editingTest.id, name, content);
+            await ragTestApi.updateTest(this.editingTest.id, name, queries, evaluationMetrics);
 
             modalsUI.closeModal('ragTestFormModal');
             modalsUI.openModal('ragModal');

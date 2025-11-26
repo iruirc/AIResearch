@@ -47,4 +47,23 @@ object StorageFactory {
             JsonAssistantStorage()
         }
     }
+
+    /**
+     * Creates RAGTestStorage based on ENABLE_POSTGRES flag
+     * Falls back to JSON storage if PostgreSQL is unavailable
+     */
+    fun createRAGTestStorage(enablePostgres: Boolean): RAGTestStorage {
+        return if (enablePostgres) {
+            try {
+                logger.info("Attempting to use PostgreSQL for RAG test storage...")
+                PostgresRAGTestStorage()
+            } catch (e: Exception) {
+                logger.error("Failed to initialize PostgreSQL RAG test storage, falling back to JSON", e)
+                JsonRAGTestStorage()
+            }
+        } else {
+            logger.info("Using JSON-based RAG test storage (PostgreSQL disabled)")
+            JsonRAGTestStorage()
+        }
+    }
 }
