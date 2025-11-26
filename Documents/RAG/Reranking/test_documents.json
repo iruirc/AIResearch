@@ -1,0 +1,88 @@
+{
+  "description": "Тестовые документы для демонстрации разницы между Ranking и Reranking в RAG",
+  "version": "1.0",
+  "date": "2025-11-26",
+  "documents": [
+    {
+      "id": "python-frameworks",
+      "name": "Python Frameworks",
+      "content": "Django — это высокоуровневый Python веб-фреймворк, который поощряет быструю разработку и чистый, прагматичный дизайн. Django включает ORM, систему шаблонов и административную панель.\n\nFlask — это микрофреймворк для Python, основанный на Werkzeug и Jinja2. Он минималистичен и не навязывает структуру проекта.\n\nFastAPI — современный, быстрый веб-фреймворк для создания API с Python 3.6+ на основе стандартных подсказок типов Python. FastAPI автоматически генерирует OpenAPI документацию и поддерживает асинхронные запросы.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["python", "web", "frameworks", "api"],
+      "testScenario": "lexical-vs-semantic"
+    },
+    {
+      "id": "python-datascience",
+      "name": "Python в Data Science",
+      "content": "Python широко используется в data science благодаря библиотекам:\n- NumPy для работы с массивами и математических операций\n- Pandas для анализа и манипуляции данных\n- Matplotlib и Seaborn для визуализации\n- Scikit-learn для машинного обучения\n- TensorFlow и PyTorch для глубокого обучения\n\nPython стал стандартом де-факто в этой области благодаря простоте синтаксиса и богатой экосистеме. Jupyter Notebooks позволяют интерактивно работать с данными.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["python", "data-science", "ml"],
+      "testScenario": "lexical-vs-semantic"
+    },
+    {
+      "id": "python-history",
+      "name": "История Python",
+      "content": "Python был создан Гвидо ван Россумом в конце 1980-х годов. Название языка происходит от комедийной группы Monty Python. Первая версия Python 0.9.0 была выпущена в 1991 году.\n\nPython использует отступы для обозначения блоков кода, что отличает его от других языков программирования. Версия Python 2.0 вышла в 2000 году, Python 3.0 — в 2008 году. Python 2 был официально прекращён в 2020 году.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["python", "history"],
+      "testScenario": "lexical-vs-semantic"
+    },
+    {
+      "id": "microservices-antipatterns",
+      "name": "Когда НЕ использовать микросервисы",
+      "content": "Микросервисная архитектура не подходит для:\n\n1. Небольших команд (до 5 человек) — накладные расходы на коммуникацию между сервисами превысят выгоду\n2. MVP и прототипов — быстрее разработать монолит и итерировать\n3. Проектов без DevOps культуры — нужны CI/CD, мониторинг, оркестрация\n4. Простых CRUD приложений — избыточная сложность\n5. Стартапов на ранней стадии — требования ещё не устоялись\n\nНакладные расходы на инфраструктуру, сетевую задержку и отладку распределённой системы перевесят преимущества.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["architecture", "microservices", "antipatterns"],
+      "testScenario": "negative-context"
+    },
+    {
+      "id": "microservices-benefits",
+      "name": "Преимущества микросервисов",
+      "content": "Микросервисная архитектура позволяет:\n\n1. Масштабировать отдельные компоненты независимо — если нагружен только сервис авторизации, масштабируем только его\n2. Использовать разные технологии для разных сервисов — Python для ML, Go для высоконагруженных частей\n3. Независимо деплоить изменения — команда может выкатить фикс без координации с другими\n4. Изолировать сбои — падение одного сервиса не роняет всю систему\n5. Организовать команды вокруг бизнес-доменов\n\nМикросервисы идеальны для крупных распределённых команд (10+ разработчиков) и сложных систем с разными паттернами нагрузки.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["architecture", "microservices", "benefits"],
+      "testScenario": "negative-context"
+    },
+    {
+      "id": "apple-company",
+      "name": "Apple Inc.",
+      "content": "Apple — американская технологическая компания, основанная Стивом Джобсом, Стивом Возняком и Рональдом Уэйном в 1976 году. Штаб-квартира расположена в Купертино, Калифорния.\n\nКомпания известна продуктами:\n- iPhone — смартфоны (с 2007)\n- Mac — компьютеры (с 1984)\n- iPad — планшеты (с 2010)\n- Apple Watch — умные часы (с 2015)\n- AirPods — беспроводные наушники\n\nРыночная капитализация Apple превышает 3 триллиона долларов, что делает её одной из самых дорогих компаний мира. Тикер на бирже: AAPL.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["company", "technology", "apple"],
+      "testScenario": "disambiguation"
+    },
+    {
+      "id": "apple-fruit",
+      "name": "Яблоки в питании",
+      "content": "Яблоки (Apple) — один из самых популярных фруктов в мире. Пищевая ценность на 100г:\n- Калорийность: 52 ккал\n- Углеводы: 14г\n- Клетчатка: 2.4г\n- Витамин C: 4.6мг\n\nПолезные свойства:\n- Содержат антиоксиданты (кверцетин, катехин)\n- Поддерживают здоровье сердца\n- Помогают контролировать вес\n- Улучшают пищеварение благодаря пектину\n\nПопулярные сорта: Гала, Фуджи, Гренни Смит, Ред Делишес, Голден. Рекомендуется употреблять 1-2 яблока в день.",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["food", "nutrition", "fruit", "apple"],
+      "testScenario": "disambiguation"
+    },
+    {
+      "id": "databases-overview",
+      "name": "Обзор баз данных",
+      "content": "Популярные базы данных и их особенности:\n\nPostgreSQL — мощная объектно-реляционная СУБД:\n- Поддержка JSON/JSONB\n- Полнотекстовый поиск\n- Расширения (PostGIS, pg_vector)\n- ACID транзакции\n\nMongoDB — документоориентированная NoSQL:\n- Гибкая схема\n- Горизонтальное масштабирование\n- Aggregation pipeline\n\nRedis — in-memory хранилище:\n- Кэширование\n- Очереди сообщений\n- Pub/Sub\n- Скорость до 100K ops/sec",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["database", "postgresql", "mongodb", "redis"],
+      "testScenario": "complex-query"
+    },
+    {
+      "id": "mysql-to-postgresql",
+      "name": "Миграция с MySQL на PostgreSQL",
+      "content": "При миграции с MySQL на PostgreSQL учитывайте следующие различия:\n\n1. Типы данных:\n   - TINYINT → SMALLINT (нет TINYINT в PostgreSQL)\n   - DATETIME → TIMESTAMP\n   - AUTO_INCREMENT → SERIAL или IDENTITY\n   - ENUM → CHECK constraint или отдельная таблица\n\n2. Синтаксис:\n   - Обратные кавычки ` → двойные кавычки \"\n   - LIMIT offset, count → LIMIT count OFFSET offset\n   - IFNULL() → COALESCE()\n\n3. Инструменты миграции:\n   - pgLoader — автоматическая миграция\n   - AWS DMS — для облачных баз\n   - Ручной экспорт через mysqldump + преобразование\n\n4. Проблемы:\n   - Разная обработка NULL в индексах\n   - Регистрозависимость идентификаторов\n   - Различия в работе транзакций",
+      "chunkingStrategy": "SEMANTIC",
+      "enabled": true,
+      "tags": ["database", "migration", "mysql", "postgresql"],
+      "testScenario": "complex-query"
+    }
+  ]
+}

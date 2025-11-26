@@ -1,0 +1,103 @@
+{
+  "description": "Тестовые запросы для сравнения Ranking vs Reranking",
+  "version": "1.0",
+  "date": "2025-11-26",
+  "queries": [
+    {
+      "id": "q1",
+      "query": "Какой Python фреймворк лучше использовать для REST API?",
+      "scenario": "lexical-vs-semantic",
+      "expectedTopResult": "python-frameworks",
+      "expectedChunkKeywords": ["FastAPI", "API"],
+      "explanation": "Bi-encoder может вернуть python-datascience (много упоминаний Python). Cross-encoder понимает связь REST API + framework и вернёт FastAPI.",
+      "rankingTrap": "python-datascience содержит больше упоминаний Python"
+    },
+    {
+      "id": "q2",
+      "query": "У меня стартап из 3 разработчиков. Стоит ли использовать микросервисы?",
+      "scenario": "negative-context",
+      "expectedTopResult": "microservices-antipatterns",
+      "expectedChunkKeywords": ["небольших команд", "до 5 человек", "стартапов"],
+      "explanation": "Cross-encoder понимает, что 3 разработчика = небольшая команда, и находит документ про ограничения.",
+      "rankingTrap": "microservices-benefits содержит больше ключевых слов про микросервисы"
+    },
+    {
+      "id": "q3",
+      "query": "Расскажи про последние новости Apple",
+      "scenario": "disambiguation-company",
+      "expectedTopResult": "apple-company",
+      "expectedChunkKeywords": ["компания", "iPhone", "AAPL"],
+      "explanation": "Слово 'новости' в контексте бизнеса указывает на компанию, а не фрукт.",
+      "rankingTrap": "Оба документа содержат слово Apple с высокой частотой"
+    },
+    {
+      "id": "q4",
+      "query": "Сколько калорий в Apple?",
+      "scenario": "disambiguation-fruit",
+      "expectedTopResult": "apple-fruit",
+      "expectedChunkKeywords": ["калорийность", "52 ккал", "фрукт"],
+      "explanation": "Слово 'калории' однозначно указывает на пищевой контекст.",
+      "rankingTrap": "Оба документа содержат слово Apple"
+    },
+    {
+      "id": "q5",
+      "query": "Мы используем MySQL и хотим перейти на PostgreSQL. Какие проблемы могут возникнуть?",
+      "scenario": "complex-query",
+      "expectedTopResult": "mysql-to-postgresql",
+      "expectedChunkKeywords": ["миграция", "MySQL", "PostgreSQL", "проблемы"],
+      "explanation": "Cross-encoder понимает связь MySQL → PostgreSQL + проблемы = миграция.",
+      "rankingTrap": "databases-overview упоминает PostgreSQL чаще"
+    },
+    {
+      "id": "q6",
+      "query": "Что НЕ умеет делать Django?",
+      "scenario": "negative-query",
+      "expectedTopResult": "python-frameworks",
+      "expectedChunkKeywords": ["Django"],
+      "explanation": "Негативный запрос. Bi-encoder игнорирует 'НЕ', cross-encoder учитывает отрицание.",
+      "rankingTrap": "Все документы про Python будут иметь похожий score"
+    },
+    {
+      "id": "q7",
+      "query": "Альтернативы FastAPI для веб-разработки на Python",
+      "scenario": "contextual-understanding",
+      "expectedTopResult": "python-frameworks",
+      "expectedChunkKeywords": ["Django", "Flask"],
+      "explanation": "Нужно понять, что запрос про ДРУГИЕ фреймворки, не про сам FastAPI.",
+      "rankingTrap": "Bi-encoder найдёт документ с FastAPI, но не поймёт что нужны альтернативы"
+    },
+    {
+      "id": "q8",
+      "query": "Почему Python популярен в машинном обучении?",
+      "scenario": "reasoning-query",
+      "expectedTopResult": "python-datascience",
+      "expectedChunkKeywords": ["data science", "машинного обучения", "библиотеки"],
+      "explanation": "Требует понимания причинно-следственной связи.",
+      "rankingTrap": "python-history тоже много говорит о Python"
+    },
+    {
+      "id": "q9",
+      "query": "Как хранить данные для очень быстрого доступа?",
+      "scenario": "implicit-requirement",
+      "expectedTopResult": "databases-overview",
+      "expectedChunkKeywords": ["Redis", "in-memory", "кэширование"],
+      "explanation": "Bi-encoder не свяжет 'быстрый доступ' с Redis. Cross-encoder понимает контекст.",
+      "rankingTrap": "Все базы данных 'хранят данные'"
+    },
+    {
+      "id": "q10",
+      "query": "Наша команда растёт до 20 человек, нужно ли менять архитектуру?",
+      "scenario": "contextual-threshold",
+      "expectedTopResult": "microservices-benefits",
+      "expectedChunkKeywords": ["крупных", "10+ разработчиков"],
+      "explanation": "20 человек > 10, значит микросервисы могут быть уместны.",
+      "rankingTrap": "microservices-antipatterns говорит про команды, но в негативном ключе"
+    }
+  ],
+  "evaluationMetrics": {
+    "MRR": "Mean Reciprocal Rank - позиция правильного документа",
+    "Precision@1": "Правильный ли первый результат",
+    "Precision@3": "Сколько правильных в топ-3",
+    "NDCG@5": "Normalized Discounted Cumulative Gain для топ-5"
+  }
+}
