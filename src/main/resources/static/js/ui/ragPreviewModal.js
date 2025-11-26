@@ -106,7 +106,7 @@ class RagPreviewModal {
      */
     show() {
         if (this.modal) {
-            this.modal.style.display = 'flex';
+            this.modal.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
     }
@@ -116,7 +116,7 @@ class RagPreviewModal {
      */
     hide() {
         if (this.modal) {
-            this.modal.style.display = 'none';
+            this.modal.classList.remove('active');
             document.body.style.overflow = '';
         }
     }

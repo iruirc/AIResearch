@@ -901,11 +901,23 @@
 .rag-preview-modal-content {
     max-width: 900px;
     width: 90%;
+    overflow: hidden;
+}
+
+/* Modal body (excludes header) */
+.rag-preview-modal-content > *:not(.modal-header) {
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+.rag-preview-modal-content > *:last-child {
+    margin-bottom: 20px;
 }
 
 .rag-preview-query {
     padding: 12px 16px;
     margin-bottom: 16px;
+    margin-top: 20px;
     background: var(--color-surface);
     border-radius: 8px;
     display: flex;

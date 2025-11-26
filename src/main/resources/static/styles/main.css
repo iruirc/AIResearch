@@ -16,17 +16,27 @@
     --text-secondary: #495057;
     --text-muted: #6c757d;
     --text-light: #868e96;
+    /* Aliases for RAG preview modal */
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-tertiary: var(--text-muted);
 
     /* Background colors */
     --bg-white: #ffffff;
     --bg-light: #f8f9fa;
     --bg-gray: #e9ecef;
     --bg-dark: #dee2e6;
+    /* Aliases for RAG preview modal */
+    --color-surface: var(--bg-white);
+    --color-surface-hover: var(--bg-light);
+    --color-background: var(--bg-light);
 
     /* Border colors */
     --border-light: #dee2e6;
     --border-medium: #adb5bd;
     --border-dark: #6c757d;
+    /* Alias for RAG preview modal */
+    --color-border: var(--border-light);
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
