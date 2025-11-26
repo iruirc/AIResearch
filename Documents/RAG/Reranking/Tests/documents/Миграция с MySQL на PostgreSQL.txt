@@ -1,0 +1,22 @@
+При миграции с MySQL на PostgreSQL учитывайте следующие различия:
+
+1. Типы данных:
+   - TINYINT → SMALLINT (нет TINYINT в PostgreSQL)
+   - DATETIME → TIMESTAMP
+   - AUTO_INCREMENT → SERIAL или IDENTITY
+   - ENUM → CHECK constraint или отдельная таблица
+
+2. Синтаксис:
+   - Обратные кавычки ` → двойные кавычки "
+   - LIMIT offset, count → LIMIT count OFFSET offset
+   - IFNULL() → COALESCE()
+
+3. Инструменты миграции:
+   - pgLoader — автоматическая миграция
+   - AWS DMS — для облачных баз
+   - Ручной экспорт через mysqldump + преобразование
+
+4. Проблемы:
+   - Разная обработка NULL в индексах
+   - Регистрозависимость идентификаторов
+   - Различия в работе транзакций
