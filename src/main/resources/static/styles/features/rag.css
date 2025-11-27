@@ -1620,9 +1620,11 @@
 }
 
 .rag-execution-actions .primary-button {
-    background: var(--accent-color);
+    background: #4A90D9;
     color: white;
     border: none;
+    opacity: 1;
+    visibility: visible;
 }
 
 .rag-execution-actions .primary-button:hover {
@@ -1650,4 +1652,9 @@
 .rag-test-action-button.execute-button svg {
     stroke: white;
     fill: white;
+}
+
+/* Hidden utility class for execution modal buttons */
+.rag-execution-actions .hidden {
+    display: none !important;
 }

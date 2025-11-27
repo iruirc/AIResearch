@@ -2004,7 +2004,8 @@ export class RAGModal {
         const closeButton = document.getElementById('closeRagExecutionModal');
         if (closeButton) {
             closeButton.onclick = () => {
-                if (this.currentExecution && !this.currentExecution.isCancelled) {
+                // Check if execution is still in progress (not finished and not cancelled)
+                if (this.currentExecution && !this.currentExecution.isComplete) {
                     if (confirm('Выполнение теста ещё не завершено. Вы уверены, что хотите закрыть окно и отменить выполнение?')) {
                         this.currentExecution.cancel();
                         this.stopExecutionTimer();
@@ -2100,24 +2101,31 @@ export class RAGModal {
      * @param {Object} result - Execution result object
      */
     handleExecutionComplete(result) {
+        console.log('handleExecutionComplete called with:', result);
+
         this.stopExecutionTimer();
         this.executionResults = result;
 
         // Update status
         this.updateExecutionStatus('✅', 'Выполнено!');
 
-        // Update progress to 100%
-        this.updateExecutionProgress(result.results.length, result.results.length, '-');
+        // Update progress to 100% (with defensive coding)
+        const totalResults = result?.results?.length || 0;
+        this.updateExecutionProgress(totalResults, totalResults, '-');
 
         // Show download button, hide cancel button
         const downloadButton = document.getElementById('ragExecutionDownloadButton');
         const cancelButton = document.getElementById('ragExecutionCancelButton');
 
+        console.log('Button elements found:', { downloadButton: !!downloadButton, cancelButton: !!cancelButton });
+
         if (downloadButton) {
             downloadButton.classList.remove('hidden');
             downloadButton.onclick = () => this.downloadResults();
         }
-        if (cancelButton) cancelButton.classList.add('hidden');
+        if (cancelButton) {
+            cancelButton.classList.add('hidden');
+        }
     }
 
     /**

@@ -206,6 +206,7 @@ export const ragTestApi = {
         const eventSource = new EventSource(url);
         let executionId = null;
         let isCancelled = false;
+        let isFinished = false;
 
         eventSource.onopen = () => {
             console.log('SSE connection opened for test execution');
@@ -231,6 +232,7 @@ export const ragTestApi = {
                         if (callbacks.onError) callbacks.onError(data);
                         break;
                     case 'finished':
+                        isFinished = true;
                         if (callbacks.onFinished) callbacks.onFinished(data);
                         eventSource.close();
                         break;
@@ -249,7 +251,7 @@ export const ragTestApi = {
 
         eventSource.onerror = (error) => {
             console.error('SSE connection error:', error);
-            if (!isCancelled && callbacks.onError) {
+            if (!isCancelled && !isFinished && callbacks.onError) {
                 callbacks.onError({
                     type: 'error',
                     message: 'Connection error',
@@ -263,6 +265,8 @@ export const ragTestApi = {
         return {
             get executionId() { return executionId; },
             get isCancelled() { return isCancelled; },
+            get isFinished() { return isFinished; },
+            get isComplete() { return isFinished || isCancelled; },
             cancel: async () => {
                 isCancelled = true;
                 eventSource.close();
