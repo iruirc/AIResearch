@@ -1,0 +1,118 @@
+{
+  "queries": [
+    {
+      "id": "q1",
+      "query": "Хочу посмотреть на Эйфелеву башню. Куда лучше поехать?",
+      "scenario": "disambiguation-location",
+      "expectedTopResult": "paris-france",
+      "expectedChunkKeywords": ["Эйфелева башня", "Франции", "Париж"],
+      "explanation": "Оба документа (Париж Франция и Париж Техас) содержат 'Эйфелева башня'. Cross-encoder понимает контекст 'посмотреть' и выбирает оригинал, а не копию.",
+      "rankingTrap": "paris-texas тоже содержит 'Эйфелева башня' и может получить высокий score"
+    },
+    {
+      "id": "q2",
+      "query": "Ищу маленький уютный американский городок с европейской атмосферой",
+      "scenario": "complex-context",
+      "expectedTopResult": "paris-texas",
+      "expectedChunkKeywords": ["небольшой город", "Техас", "американского"],
+      "explanation": "Cross-encoder понимает связь: американский городок + европейская атмосфера = Париж в Техасе (названный в честь французского).",
+      "rankingTrap": "Документы о европейских городах содержат больше упоминаний европейской атмосферы"
+    },
+    {
+      "id": "q3",
+      "query": "Куда НЕ стоит ехать летом из-за жары?",
+      "scenario": "negative-query",
+      "expectedTopResult": "beach-holidays",
+      "expectedChunkKeywords": ["слишком жарко", "НЕ рекомендуется", "45°C"],
+      "explanation": "Негативный запрос. Bi-encoder найдёт документы с 'летом', cross-encoder понимает 'НЕ стоит' и найдёт предостережения.",
+      "rankingTrap": "Все документы о пляжном отдыхе упоминают лето в позитивном ключе"
+    },
+    {
+      "id": "q4",
+      "query": "Хочу увидеть древние руины Римской империи",
+      "scenario": "disambiguation-history",
+      "expectedTopResult": "italy-rome",
+      "expectedChunkKeywords": ["Колизей", "Римский форум", "античности"],
+      "explanation": "Оба документа о 'Риме', но cross-encoder понимает исторический контекст и выбирает итальянский Рим.",
+      "rankingTrap": "rome-georgia тоже упоминает 'Рим' и историю (статуя Ромула и Рема)"
+    },
+    {
+      "id": "q5",
+      "query": "Путешествие для двоих на годовщину свадьбы",
+      "scenario": "implicit-requirement",
+      "expectedTopResult": "romantic-travel",
+      "expectedChunkKeywords": ["романтических", "для пар", "годовщин"],
+      "explanation": "Bi-encoder не свяжет 'годовщина свадьбы' с романтикой напрямую. Cross-encoder понимает контекст.",
+      "rankingTrap": "Многие документы о путешествиях подходят для двоих"
+    },
+    {
+      "id": "q6",
+      "query": "У нас ребёнок 2 года, куда можно поехать на море?",
+      "scenario": "contextual-constraint",
+      "expectedTopResult": "family-travel",
+      "expectedChunkKeywords": ["с детьми", "безопасные пляжи", "детская инфраструктура"],
+      "explanation": "Cross-encoder понимает, что 2 года = маленький ребёнок, нужны особые условия.",
+      "rankingTrap": "beach-holidays упоминает море чаще, но не учитывает специфику путешествий с малышом"
+    },
+    {
+      "id": "q7",
+      "query": "Хочу попробовать настоящую пасту карбонара",
+      "scenario": "lexical-vs-semantic",
+      "expectedTopResult": "italy-rome",
+      "expectedChunkKeywords": ["карбонара", "римское", "итальянской кухни"],
+      "explanation": "Cross-encoder понимает, что карбонара — римское блюдо, и направит в Рим.",
+      "rankingTrap": "france-overview тоже много говорит о кухне, но французской"
+    },
+    {
+      "id": "q8",
+      "query": "Где можно увидеть цветение сакуры?",
+      "scenario": "cultural-context",
+      "expectedTopResult": "japan-tokyo",
+      "expectedChunkKeywords": ["сакуры", "конец марта", "Токио"],
+      "explanation": "Сакура — японский культурный символ. Cross-encoder понимает эту связь.",
+      "rankingTrap": "Другие документы могут упоминать весну и цветы"
+    },
+    {
+      "id": "q9",
+      "query": "Планирую поездку, но денег мало - не больше 30 евро в день",
+      "scenario": "budget-constraint",
+      "expectedTopResult": "budget-travel",
+      "expectedChunkKeywords": ["бюджетные", "20-30 евро/день", "экономии"],
+      "explanation": "Cross-encoder понимает числовое ограничение и находит бюджетные варианты.",
+      "rankingTrap": "Все документы содержат информацию о ценах"
+    },
+    {
+      "id": "q10",
+      "query": "Хочу путешествовать экологично, без вреда природе",
+      "scenario": "value-based-query",
+      "expectedTopResult": "ecotourism",
+      "expectedChunkKeywords": ["экотуризм", "минимальным воздействием", "устойчивый"],
+      "explanation": "Cross-encoder понимает ценностный запрос об экологической ответственности.",
+      "rankingTrap": "Документы о природных направлениях (Япония, пляжи) не обязательно про экологичность"
+    },
+    {
+      "id": "q11",
+      "query": "Почему в Японии нельзя давать чаевые?",
+      "scenario": "reasoning-query",
+      "expectedTopResult": "japan-culture",
+      "expectedChunkKeywords": ["Чаевые не приняты", "оскорбление", "культур"],
+      "explanation": "Требуется понимание культурного контекста. Cross-encoder находит объяснение про этикет.",
+      "rankingTrap": "japan-tokyo упоминает Японию чаще, но не объясняет культурные нормы"
+    },
+    {
+      "id": "q12",
+      "query": "Альтернативы Мальдивам для пляжного отдыха подешевле",
+      "scenario": "alternative-seeking",
+      "expectedTopResult": "beach-holidays",
+      "expectedChunkKeywords": ["Таиланд", "бюджетный вариант", "пляжный отдых"],
+      "explanation": "Нужно найти альтернативы, а не сами Мальдивы. Cross-encoder понимает запрос на замену.",
+      "rankingTrap": "Bi-encoder найдёт документ с Мальдивами, но не поймёт что нужны альтернативы"
+    }
+  ],
+  "evaluationMetrics": {
+    "MRR": "Mean Reciprocal Rank - позиция правильного документа",
+    "Precision@1": "Правильный ли первый результат",
+    "Precision@3": "Сколько правильных в топ-3",
+    "NDCG@5": "Normalized Discounted Cumulative Gain для топ-5"
+  }
+}
