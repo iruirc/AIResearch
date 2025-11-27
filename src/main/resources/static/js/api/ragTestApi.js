@@ -219,7 +219,8 @@ export const ragTestApi = {
 
                 switch (data.type) {
                     case 'started':
-                        executionId = data.sessionId; // Use sessionId as executionId for tracking
+                        executionId = data.executionId; // Use executionId for cancellation
+                        console.log('Execution started with ID:', executionId);
                         if (callbacks.onStarted) callbacks.onStarted(data);
                         break;
                     case 'processing':
@@ -268,10 +269,25 @@ export const ragTestApi = {
             get isFinished() { return isFinished; },
             get isComplete() { return isFinished || isCancelled; },
             cancel: async () => {
+                if (isCancelled || isFinished) {
+                    return; // Already cancelled or finished
+                }
                 isCancelled = true;
+
+                // Call server-side cancel endpoint to stop the execution immediately
+                if (executionId) {
+                    try {
+                        console.log('Calling cancel endpoint for execution:', executionId);
+                        await fetch(`${API_CONFIG.RAG}/tests/executions/${executionId}/cancel`, {
+                            method: 'POST'
+                        });
+                    } catch (e) {
+                        console.error('Error calling cancel endpoint:', e);
+                    }
+                }
+
+                // Close the SSE connection
                 eventSource.close();
-                // Note: Server-side cancellation happens when connection closes
-                // The cancel endpoint can be called explicitly if needed
             },
             close: () => {
                 eventSource.close();

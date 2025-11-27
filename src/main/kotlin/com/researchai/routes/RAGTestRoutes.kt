@@ -326,8 +326,18 @@ fun Route.ragTestRoutes(
                         executionService.executeTest(testId)
                             .onEach { event ->
                                 val eventData = when (event) {
-                                    is com.researchai.domain.models.ExecutionStartedEvent ->
-                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.ExecutionStartedEvent -> {
+                                        // Add executionId to started event for cancellation support
+                                        val eventWithExecutionId = mapOf(
+                                            "type" to event.type,
+                                            "testId" to event.testId,
+                                            "testName" to event.testName,
+                                            "sessionId" to event.sessionId,
+                                            "totalQueries" to event.totalQueries,
+                                            "executionId" to executionId
+                                        )
+                                        sseJson.encodeToString(eventWithExecutionId)
+                                    }
                                     is com.researchai.domain.models.QueryProcessingEvent ->
                                         sseJson.encodeToString(event)
                                     is com.researchai.domain.models.QueryCompletedEvent ->

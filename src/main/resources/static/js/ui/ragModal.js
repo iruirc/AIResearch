@@ -1993,10 +1993,11 @@ export class RAGModal {
         // Setup cancel button
         const cancelButton = document.getElementById('ragExecutionCancelButton');
         if (cancelButton) {
-            cancelButton.onclick = () => {
+            cancelButton.onclick = async () => {
                 if (this.currentExecution && !this.currentExecution.isComplete) {
                     if (confirm('Вы уверены, что хотите отменить выполнение теста?')) {
-                        this.currentExecution.cancel();
+                        // Call server-side cancel to stop LLM requests
+                        await this.currentExecution.cancel();
                         // Manually trigger cancellation UI since SSE won't send cancelled event
                         // (handleExecutionCancel already calls stopExecutionTimer)
                         this.handleExecutionCancel(null);
@@ -2008,11 +2009,12 @@ export class RAGModal {
         // Setup close button
         const closeButton = document.getElementById('closeRagExecutionModal');
         if (closeButton) {
-            closeButton.onclick = () => {
+            closeButton.onclick = async () => {
                 // Check if execution is still in progress (not finished and not cancelled)
                 if (this.currentExecution && !this.currentExecution.isComplete) {
                     if (confirm('Выполнение теста ещё не завершено. Вы уверены, что хотите закрыть окно и отменить выполнение?')) {
-                        this.currentExecution.cancel();
+                        // Call server-side cancel to stop LLM requests
+                        await this.currentExecution.cancel();
                         this.stopExecutionTimer();
                         modalsUI.closeModal('ragTestExecutionModal');
                         modalsUI.openModal('ragModal');
