@@ -1,142 +1,22 @@
 /**
- * @fileoverview RAG Context Preview Modal
- * Allows users to preview and compare RAG search results with and without reranking
- * @module ui/ragPreviewModal
+ * @fileoverview RAG Preview Renderer
+ * Handles all rendering logic for RAG preview modal
+ * @module ui/ragPreview/RagPreviewRenderer
  */
-
-import { ragApi } from '../api/ragApi.js';
 
 /**
- * RAG Preview Modal manager
+ * RAG Preview Renderer class
+ * Responsible for rendering preview data, results, and UI states
  */
-class RagPreviewModal {
-    constructor() {
-        this.modal = null;
-        this.currentQuery = '';
-        this.previewData = null;
-        this.onSendCallback = null;
-        this.initialized = false;
-    }
-
+export class RagPreviewRenderer {
     /**
-     * Initialize modal elements and event handlers
-     * Should be called after DOM is loaded
+     * Render loading state
+     * @param {string} query - Current query text
      */
-    init() {
-        if (this.initialized) return;
-
-        this.modal = document.getElementById('ragPreviewModal');
-        if (!this.modal) {
-            console.warn('RAG Preview Modal not found in DOM');
-            return;
-        }
-
-        this.initialized = true;
-
-        // Close button
-        const closeBtn = document.getElementById('closeRagPreviewModal');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
-        }
-
-        // Close on backdrop click
-        // Track where mousedown started to prevent accidental closes during text selection
-        let mouseDownTarget = null;
-
-        this.modal.addEventListener('mousedown', (e) => {
-            mouseDownTarget = e.target;
-        });
-
-        this.modal.addEventListener('click', (e) => {
-            // Only close if both mousedown and click happened on the modal backdrop
-            if (e.target === this.modal && mouseDownTarget === this.modal) {
-                this.hide();
-            }
-            mouseDownTarget = null;
-        });
-
-        // Preview button in input area
-        const previewBtn = document.getElementById('previewContextButton');
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => this.showPreview());
-        }
-
-        // Send buttons
-        const sendWithoutBtn = document.getElementById('ragPreviewSendWithout');
-        const sendWithBtn = document.getElementById('ragPreviewSendWith');
-
-        if (sendWithoutBtn) {
-            sendWithoutBtn.addEventListener('click', () => this.sendMessage(false));
-        }
-        if (sendWithBtn) {
-            sendWithBtn.addEventListener('click', () => this.sendMessage(true));
-        }
-    }
-
-    /**
-     * Set callback for sending messages
-     * @param {Function} callback - Callback function(query, useReranking)
-     */
-    setOnSendCallback(callback) {
-        this.onSendCallback = callback;
-    }
-
-    /**
-     * Show preview modal with current input text
-     */
-    async showPreview() {
-        const messageInput = document.getElementById('messageInput');
-        if (!messageInput) return;
-
-        const query = messageInput.value.trim();
-        if (!query) {
-            // Show alert if query is empty
-            alert('Введите текст запроса для предпросмотра RAG контекста');
-            messageInput.focus();
-            return;
-        }
-
-        this.currentQuery = query;
-        this.show();
-        this.showLoading();
-
-        try {
-            const data = await ragApi.previewContext(query);
-            this.previewData = data;
-            this.renderPreview(data);
-        } catch (error) {
-            console.error('Failed to load preview:', error);
-            this.showError(error.message || 'Ошибка загрузки предпросмотра');
-        }
-    }
-
-    /**
-     * Show the modal
-     */
-    show() {
-        if (this.modal) {
-            this.modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    /**
-     * Hide the modal
-     */
-    hide() {
-        if (this.modal) {
-            this.modal.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-    }
-
-    /**
-     * Show loading state
-     */
-    showLoading() {
+    showLoading(query) {
         const queryEl = document.getElementById('ragPreviewQuery');
         if (queryEl) {
-            queryEl.textContent = this.currentQuery;
+            queryEl.textContent = query;
         }
 
         const withoutResults = document.getElementById('ragPreviewWithoutResults');
@@ -155,7 +35,7 @@ class RagPreviewModal {
     }
 
     /**
-     * Show error message
+     * Render error message
      * @param {string} message - Error message
      */
     showError(message) {
@@ -163,7 +43,7 @@ class RagPreviewModal {
         const withResults = document.getElementById('ragPreviewWithResults');
 
         if (withoutResults) {
-            withoutResults.innerHTML = `<div class="rag-preview-error">${message}</div>`;
+            withoutResults.innerHTML = `<div class="rag-preview-error">${this.escapeHtml(message)}</div>`;
         }
         if (withResults) {
             withResults.innerHTML = '';
@@ -182,6 +62,26 @@ class RagPreviewModal {
         }
 
         // Without reranking
+        this.renderWithoutReranking(data);
+
+        // With reranking
+        this.renderWithReranking(data);
+
+        // Statistics
+        this.renderStatistics(data);
+
+        // Update button states
+        const sendWithBtn = document.getElementById('ragPreviewSendWith');
+        if (sendWithBtn) {
+            sendWithBtn.disabled = !data.rerankingEnabled;
+        }
+    }
+
+    /**
+     * Render results without reranking
+     * @param {Object} data - Preview data
+     */
+    renderWithoutReranking(data) {
         const withoutResults = document.getElementById('ragPreviewWithoutResults');
         const withoutCount = document.getElementById('ragPreviewWithoutCount');
 
@@ -191,8 +91,13 @@ class RagPreviewModal {
                 withoutCount.textContent = `${data.withoutReranking.length} чанков`;
             }
         }
+    }
 
-        // With reranking
+    /**
+     * Render results with reranking
+     * @param {Object} data - Preview data
+     */
+    renderWithReranking(data) {
         const withResults = document.getElementById('ragPreviewWithResults');
         const withCount = document.getElementById('ragPreviewWithCount');
 
@@ -209,8 +114,13 @@ class RagPreviewModal {
                 }
             }
         }
+    }
 
-        // Statistics
+    /**
+     * Render statistics section
+     * @param {Object} data - Preview data
+     */
+    renderStatistics(data) {
         const statsEl = document.getElementById('ragPreviewStats');
         if (statsEl && data.rerankingEnabled && data.statistics) {
             statsEl.classList.remove('hidden');
@@ -230,12 +140,6 @@ class RagPreviewModal {
             }
         } else if (statsEl) {
             statsEl.classList.add('hidden');
-        }
-
-        // Update button states
-        const sendWithBtn = document.getElementById('ragPreviewSendWith');
-        if (sendWithBtn) {
-            sendWithBtn.disabled = !data.rerankingEnabled;
         }
     }
 
@@ -326,19 +230,4 @@ class RagPreviewModal {
         div.textContent = text;
         return div.innerHTML;
     }
-
-    /**
-     * Send message with selected reranking option
-     * @param {boolean} useReranking - Whether to use reranking
-     */
-    sendMessage(useReranking) {
-        this.hide();
-
-        if (this.onSendCallback) {
-            this.onSendCallback(this.currentQuery, useReranking);
-        }
-    }
 }
-
-// Export singleton instance
-export const ragPreviewModal = new RagPreviewModal();
