@@ -73,7 +73,7 @@ fun Application.configureRouting(
         ragRoutes(appModule.ragManager, appModule.ragPreferencesStorage)
 
         // API роуты для RAG тестов
-        ragTestRoutes(appModule.ragTestStorage)
+        ragTestRoutes(appModule.ragTestStorage, appModule.ragTestExecutionService)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

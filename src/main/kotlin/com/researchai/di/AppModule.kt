@@ -336,6 +336,18 @@ class AppModule(
     }
 
     /**
+     * RAG Test Execution Service - Handles batch test execution with progress streaming
+     */
+    val ragTestExecutionService: com.researchai.services.RAGTestExecutionService by lazy {
+        com.researchai.services.RAGTestExecutionService(
+            testStorage = ragTestStorage,
+            sendMessageUseCase = sendMessageUseCase,
+            sessionManager = chatSessionManager,
+            preferencesManager = preferencesManager
+        )
+    }
+
+    /**
      * Initialize RAG system
      */
     suspend fun initializeRAG() {

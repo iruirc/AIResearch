@@ -1000,6 +1000,68 @@
         </div>
     </div>
 
+    <!-- RAG Test Execution Progress Modal -->
+    <div id="ragTestExecutionModal" class="modal">
+        <div class="modal-content rag-execution-modal-content">
+            <div class="modal-header">
+                <h3 id="ragExecutionTitle">Выполнение теста</h3>
+                <button id="closeRagExecutionModal" class="close-button">&times;</button>
+            </div>
+            <div class="rag-execution-content">
+                <!-- Test name -->
+                <div class="rag-execution-test-name" id="ragExecutionTestName"></div>
+
+                <!-- Timer -->
+                <div class="rag-execution-timer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span id="ragExecutionTime">00:00</span>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="rag-execution-progress">
+                    <div class="rag-execution-progress-bar">
+                        <div class="rag-execution-progress-fill" id="ragExecutionProgressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="rag-execution-progress-text" id="ragExecutionProgressText">0 / 0</div>
+                </div>
+
+                <!-- Current query -->
+                <div class="rag-execution-current">
+                    <div class="rag-execution-current-label">Текущий запрос:</div>
+                    <div class="rag-execution-current-query" id="ragExecutionCurrentQuery">-</div>
+                </div>
+
+                <!-- Status -->
+                <div class="rag-execution-status" id="ragExecutionStatus">
+                    <span class="rag-execution-status-icon">⏳</span>
+                    <span class="rag-execution-status-text">Ожидание...</span>
+                </div>
+
+                <!-- Actions -->
+                <div class="rag-execution-actions">
+                    <button type="button" id="ragExecutionCancelButton" class="cancel-button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Отменить
+                    </button>
+                    <button type="button" id="ragExecutionDownloadButton" class="primary-button hidden">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Скачать результаты
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- RAG Context Preview Modal -->
     <div id="ragPreviewModal" class="modal">
         <div class="modal-content rag-preview-modal-content">

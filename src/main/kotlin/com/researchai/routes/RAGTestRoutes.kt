@@ -2,15 +2,24 @@ package com.researchai.routes
 
 import com.researchai.domain.models.RAGTest
 import com.researchai.domain.models.RAGTestQuery
+import com.researchai.domain.models.TestExecutionEvent
 import com.researchai.persistence.RAGTestStorage
+import com.researchai.services.RAGTestExecutionService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
 data class AddTestRequest(
@@ -70,10 +79,22 @@ private fun validateQueries(queries: List<RAGTestQuery>): List<InvalidQueryInfo>
     return invalidQueries
 }
 
+// JSON serializer for SSE events
+private val sseJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
+
+// Track active execution IDs for cancellation
+private val activeExecutionIds = ConcurrentHashMap<String, Job>()
+
 /**
  * Routes for RAG test management.
  */
-fun Route.ragTestRoutes(storage: RAGTestStorage) {
+fun Route.ragTestRoutes(
+    storage: RAGTestStorage,
+    executionService: RAGTestExecutionService? = null
+) {
     route("/rag/tests") {
         // POST /rag/tests - Add new test
         post {
@@ -238,6 +259,121 @@ fun Route.ragTestRoutes(storage: RAGTestStorage) {
                 call.respond(HttpStatusCode.NoContent)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, TestErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
+        // GET /rag/tests/{id}/execute - Execute test with SSE streaming
+        get("/{id}/execute") {
+            if (executionService == null) {
+                call.respond(HttpStatusCode.ServiceUnavailable, TestErrorResponse("Execution service not available"))
+                return@get
+            }
+
+            val testId = call.parameters["id"]
+            if (testId == null) {
+                call.respond(HttpStatusCode.BadRequest, TestErrorResponse("Test ID is required"))
+                return@get
+            }
+
+            // Check if test exists
+            val test = storage.load(testId)
+            if (test == null) {
+                call.respond(HttpStatusCode.NotFound, TestErrorResponse("Test not found"))
+                return@get
+            }
+
+            // Generate execution ID for tracking
+            val executionId = UUID.randomUUID().toString()
+
+            // Set SSE headers
+            call.response.headers.append(HttpHeaders.ContentType, "text/event-stream")
+            call.response.headers.append(HttpHeaders.CacheControl, "no-cache")
+            call.response.headers.append(HttpHeaders.Connection, "keep-alive")
+            call.response.headers.append("X-Execution-Id", executionId)
+
+            // Stream SSE events
+            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                val job = Job()
+                activeExecutionIds[executionId] = job
+
+                try {
+                    withContext(job) {
+                        executionService.executeTest(testId)
+                            .onEach { event ->
+                                val eventData = when (event) {
+                                    is com.researchai.domain.models.ExecutionStartedEvent ->
+                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.QueryProcessingEvent ->
+                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.QueryCompletedEvent ->
+                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.QueryErrorEvent ->
+                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.ExecutionFinishedEvent ->
+                                        sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.ExecutionCancelledEvent ->
+                                        sseJson.encodeToString(event)
+                                    else -> sseJson.encodeToString(event)
+                                }
+
+                                // SSE format: data: {json}\n\n
+                                write("data: $eventData\n\n")
+                                flush()
+                            }
+                            .catch { e ->
+                                if (e is CancellationException) {
+                                    // Send cancelled event
+                                    val cancelEvent = mapOf(
+                                        "type" to "cancelled",
+                                        "message" to "Execution was cancelled"
+                                    )
+                                    write("data: ${sseJson.encodeToString(cancelEvent)}\n\n")
+                                    flush()
+                                } else {
+                                    // Send error event
+                                    val errorEvent = mapOf(
+                                        "type" to "error",
+                                        "message" to (e.message ?: "Unknown error")
+                                    )
+                                    write("data: ${sseJson.encodeToString(errorEvent)}\n\n")
+                                    flush()
+                                }
+                            }
+                            .collect()
+                    }
+                } catch (e: CancellationException) {
+                    // Expected on cancellation
+                    val cancelEvent = mapOf(
+                        "type" to "cancelled",
+                        "message" to "Execution was cancelled"
+                    )
+                    write("data: ${sseJson.encodeToString(cancelEvent)}\n\n")
+                    flush()
+                } finally {
+                    activeExecutionIds.remove(executionId)
+                }
+            }
+        }
+
+        // POST /rag/tests/executions/{executionId}/cancel - Cancel test execution
+        post("/executions/{executionId}/cancel") {
+            val executionId = call.parameters["executionId"]
+            if (executionId == null) {
+                call.respond(HttpStatusCode.BadRequest, TestErrorResponse("Execution ID is required"))
+                return@post
+            }
+
+            val job = activeExecutionIds[executionId]
+            if (job == null) {
+                call.respond(HttpStatusCode.NotFound, TestErrorResponse("Execution not found or already completed"))
+                return@post
+            }
+
+            if (job.isActive) {
+                job.cancel()
+                call.respond(HttpStatusCode.OK, mapOf("status" to "cancelling", "executionId" to executionId))
+            } else {
+                call.respond(HttpStatusCode.OK, mapOf("status" to "already_completed", "executionId" to executionId))
             }
         }
     }

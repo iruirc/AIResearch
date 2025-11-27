@@ -180,4 +180,124 @@ export const ragTestApi = {
             throw new Error(errorData.error || `Failed to delete test: ${response.status}`);
         }
     },
+
+    /**
+     * Execute a RAG test and stream progress via SSE
+     * @param {string} testId - The test identifier
+     * @param {Object} callbacks - Event callbacks
+     * @param {Function} callbacks.onStarted - Called when execution starts
+     * @param {Function} callbacks.onProcessing - Called when processing each query
+     * @param {Function} callbacks.onCompleted - Called when a query completes
+     * @param {Function} callbacks.onError - Called when a query fails
+     * @param {Function} callbacks.onFinished - Called when all queries complete
+     * @param {Function} callbacks.onCancelled - Called when execution is cancelled
+     * @returns {Object} Control object with cancel() method and executionId
+     * @example
+     * const execution = ragTestApi.executeTest('test-123', {
+     *     onStarted: (data) => console.log('Started:', data),
+     *     onProcessing: (data) => console.log('Processing:', data),
+     *     onCompleted: (data) => console.log('Completed:', data),
+     *     onFinished: (data) => console.log('Finished:', data)
+     * });
+     * // To cancel: execution.cancel();
+     */
+    executeTest(testId, callbacks = {}) {
+        const url = `${API_CONFIG.RAG}/tests/${testId}/execute`;
+        const eventSource = new EventSource(url);
+        let executionId = null;
+        let isCancelled = false;
+
+        eventSource.onopen = () => {
+            console.log('SSE connection opened for test execution');
+        };
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('SSE event received:', data.type, data);
+
+                switch (data.type) {
+                    case 'started':
+                        executionId = data.sessionId; // Use sessionId as executionId for tracking
+                        if (callbacks.onStarted) callbacks.onStarted(data);
+                        break;
+                    case 'processing':
+                        if (callbacks.onProcessing) callbacks.onProcessing(data);
+                        break;
+                    case 'completed':
+                        if (callbacks.onCompleted) callbacks.onCompleted(data);
+                        break;
+                    case 'error':
+                        if (callbacks.onError) callbacks.onError(data);
+                        break;
+                    case 'finished':
+                        if (callbacks.onFinished) callbacks.onFinished(data);
+                        eventSource.close();
+                        break;
+                    case 'cancelled':
+                        isCancelled = true;
+                        if (callbacks.onCancelled) callbacks.onCancelled(data);
+                        eventSource.close();
+                        break;
+                    default:
+                        console.warn('Unknown SSE event type:', data.type);
+                }
+            } catch (e) {
+                console.error('Error parsing SSE event:', e, event.data);
+            }
+        };
+
+        eventSource.onerror = (error) => {
+            console.error('SSE connection error:', error);
+            if (!isCancelled && callbacks.onError) {
+                callbacks.onError({
+                    type: 'error',
+                    message: 'Connection error',
+                    error: error
+                });
+            }
+            eventSource.close();
+        };
+
+        // Return control object
+        return {
+            get executionId() { return executionId; },
+            get isCancelled() { return isCancelled; },
+            cancel: async () => {
+                isCancelled = true;
+                eventSource.close();
+                // Note: Server-side cancellation happens when connection closes
+                // The cancel endpoint can be called explicitly if needed
+            },
+            close: () => {
+                eventSource.close();
+            }
+        };
+    },
+
+    /**
+     * Cancel a running test execution
+     * @async
+     * @param {string} executionId - The execution identifier
+     * @returns {Promise<Object>} Cancellation status
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * await ragTestApi.cancelExecution('execution-123');
+     */
+    async cancelExecution(executionId) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.RAG}/tests/executions/${executionId}/cancel`,
+            {
+                method: 'POST',
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to cancel execution: ${response.status}`);
+        }
+
+        return await response.json();
+    },
 };

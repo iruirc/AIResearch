@@ -80,6 +80,21 @@ export class RAGModal {
         this.validateTestJSON = this.validateTestJSON.bind(this);
         this.showValidationError = this.showValidationError.bind(this);
         this.hideValidationError = this.hideValidationError.bind(this);
+
+        // Test execution methods
+        this.handleExecuteTest = this.handleExecuteTest.bind(this);
+        this.openExecutionModal = this.openExecutionModal.bind(this);
+        this.updateExecutionProgress = this.updateExecutionProgress.bind(this);
+        this.handleExecutionComplete = this.handleExecutionComplete.bind(this);
+        this.handleExecutionCancel = this.handleExecutionCancel.bind(this);
+        this.downloadResults = this.downloadResults.bind(this);
+        this.formatTime = this.formatTime.bind(this);
+
+        // Test execution state
+        this.currentExecution = null;
+        this.executionTimer = null;
+        this.executionStartTime = null;
+        this.executionResults = null;
     }
 
     /**
@@ -1286,6 +1301,21 @@ export class RAGModal {
                 await this.handleDeleteTest(test.id, test.name);
             });
 
+            // Execute button
+            const executeButton = document.createElement('button');
+            executeButton.className = 'rag-test-action-button execute-button';
+            executeButton.title = 'Выполнить тест';
+            executeButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            `;
+            executeButton.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await this.handleExecuteTest(test);
+            });
+
+            actionsDiv.appendChild(executeButton);
             actionsDiv.appendChild(editButton);
             actionsDiv.appendChild(deleteButton);
 
@@ -1910,6 +1940,270 @@ export class RAGModal {
         fileItem.appendChild(fileInfo);
         fileItem.appendChild(removeButton);
         filesList.appendChild(fileItem);
+    }
+
+    // ===== Test Execution Methods =====
+
+    /**
+     * Handle test execution
+     * @param {Object} test - Test object to execute
+     */
+    async handleExecuteTest(test) {
+        console.log(`Starting test execution: ${test.name}`);
+
+        // Close RAG modal and open execution modal
+        modalsUI.closeModal('ragModal');
+        this.openExecutionModal(test);
+
+        // Reset state
+        this.executionResults = null;
+        this.executionStartTime = Date.now();
+
+        // Start timer
+        this.startExecutionTimer();
+
+        // Set up execution event handlers
+        this.currentExecution = ragTestApi.executeTest(test.id, {
+            onStarted: (data) => {
+                console.log('Execution started:', data);
+                this.updateExecutionStatus('⏳', 'Выполнение...');
+            },
+            onProcessing: (data) => {
+                console.log('Processing query:', data);
+                this.updateExecutionProgress(data.current, data.total, data.query);
+            },
+            onCompleted: (data) => {
+                console.log('Query completed:', data);
+                this.updateExecutionProgress(data.current, data.total, data.result.query);
+            },
+            onError: (data) => {
+                console.error('Query error:', data);
+                this.updateExecutionStatus('⚠️', `Ошибка: ${data.message || data.error}`);
+            },
+            onFinished: (data) => {
+                console.log('Execution finished:', data);
+                this.handleExecutionComplete(data.result);
+            },
+            onCancelled: (data) => {
+                console.log('Execution cancelled:', data);
+                this.handleExecutionCancel(data.result);
+            }
+        });
+
+        // Setup cancel button
+        const cancelButton = document.getElementById('ragExecutionCancelButton');
+        if (cancelButton) {
+            cancelButton.onclick = () => {
+                if (this.currentExecution) {
+                    this.currentExecution.cancel();
+                }
+            };
+        }
+
+        // Setup close button
+        const closeButton = document.getElementById('closeRagExecutionModal');
+        if (closeButton) {
+            closeButton.onclick = () => {
+                if (this.currentExecution && !this.currentExecution.isCancelled) {
+                    if (confirm('Выполнение теста ещё не завершено. Вы уверены, что хотите закрыть окно и отменить выполнение?')) {
+                        this.currentExecution.cancel();
+                        this.stopExecutionTimer();
+                        modalsUI.closeModal('ragTestExecutionModal');
+                        modalsUI.openModal('ragModal');
+                    }
+                } else {
+                    this.stopExecutionTimer();
+                    modalsUI.closeModal('ragTestExecutionModal');
+                    modalsUI.openModal('ragModal');
+                }
+            };
+        }
+    }
+
+    /**
+     * Open the execution modal
+     * @param {Object} test - Test object
+     */
+    openExecutionModal(test) {
+        modalsUI.openModal('ragTestExecutionModal');
+
+        // Set test name
+        const testNameEl = document.getElementById('ragExecutionTestName');
+        if (testNameEl) {
+            testNameEl.textContent = test.name;
+        }
+
+        // Reset progress
+        this.updateExecutionProgress(0, test.queries.length, '-');
+
+        // Reset timer
+        const timerEl = document.getElementById('ragExecutionTime');
+        if (timerEl) {
+            timerEl.textContent = '00:00';
+        }
+
+        // Reset status
+        this.updateExecutionStatus('⏳', 'Подключение...');
+
+        // Hide download button, show cancel button
+        const downloadButton = document.getElementById('ragExecutionDownloadButton');
+        const cancelButton = document.getElementById('ragExecutionCancelButton');
+
+        if (downloadButton) downloadButton.classList.add('hidden');
+        if (cancelButton) cancelButton.classList.remove('hidden');
+    }
+
+    /**
+     * Update execution progress display
+     * @param {number} current - Current query index (1-based)
+     * @param {number} total - Total number of queries
+     * @param {string} query - Current query text
+     */
+    updateExecutionProgress(current, total, query) {
+        // Update progress bar
+        const progressFill = document.getElementById('ragExecutionProgressFill');
+        const progressText = document.getElementById('ragExecutionProgressText');
+        const currentQuery = document.getElementById('ragExecutionCurrentQuery');
+
+        const percentage = total > 0 ? (current / total) * 100 : 0;
+
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        if (progressText) {
+            progressText.textContent = `${current} / ${total}`;
+        }
+
+        if (currentQuery) {
+            currentQuery.textContent = query || '-';
+        }
+    }
+
+    /**
+     * Update execution status display
+     * @param {string} icon - Status icon emoji
+     * @param {string} text - Status text
+     */
+    updateExecutionStatus(icon, text) {
+        const statusEl = document.getElementById('ragExecutionStatus');
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <span class="rag-execution-status-icon">${icon}</span>
+                <span class="rag-execution-status-text">${text}</span>
+            `;
+        }
+    }
+
+    /**
+     * Handle execution completion
+     * @param {Object} result - Execution result object
+     */
+    handleExecutionComplete(result) {
+        this.stopExecutionTimer();
+        this.executionResults = result;
+
+        // Update status
+        this.updateExecutionStatus('✅', 'Выполнено!');
+
+        // Update progress to 100%
+        this.updateExecutionProgress(result.results.length, result.results.length, '-');
+
+        // Show download button, hide cancel button
+        const downloadButton = document.getElementById('ragExecutionDownloadButton');
+        const cancelButton = document.getElementById('ragExecutionCancelButton');
+
+        if (downloadButton) {
+            downloadButton.classList.remove('hidden');
+            downloadButton.onclick = () => this.downloadResults();
+        }
+        if (cancelButton) cancelButton.classList.add('hidden');
+    }
+
+    /**
+     * Handle execution cancellation
+     * @param {Object} result - Partial execution result
+     */
+    handleExecutionCancel(result) {
+        this.stopExecutionTimer();
+        this.executionResults = result;
+
+        // Update status
+        this.updateExecutionStatus('⚠️', 'Отменено');
+
+        // Show download button if there are partial results
+        const downloadButton = document.getElementById('ragExecutionDownloadButton');
+        const cancelButton = document.getElementById('ragExecutionCancelButton');
+
+        if (result && result.results && result.results.length > 0) {
+            if (downloadButton) {
+                downloadButton.classList.remove('hidden');
+                downloadButton.textContent = 'Скачать частичные результаты';
+                downloadButton.onclick = () => this.downloadResults();
+            }
+        }
+        if (cancelButton) cancelButton.classList.add('hidden');
+    }
+
+    /**
+     * Start the execution timer
+     */
+    startExecutionTimer() {
+        this.executionStartTime = Date.now();
+
+        this.executionTimer = setInterval(() => {
+            const elapsed = Date.now() - this.executionStartTime;
+            const timerEl = document.getElementById('ragExecutionTime');
+            if (timerEl) {
+                timerEl.textContent = this.formatTime(elapsed);
+            }
+        }, 1000);
+    }
+
+    /**
+     * Stop the execution timer
+     */
+    stopExecutionTimer() {
+        if (this.executionTimer) {
+            clearInterval(this.executionTimer);
+            this.executionTimer = null;
+        }
+    }
+
+    /**
+     * Format milliseconds as MM:SS
+     * @param {number} ms - Milliseconds
+     * @returns {string} Formatted time string
+     */
+    formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Download execution results as JSON
+     */
+    downloadResults() {
+        if (!this.executionResults) {
+            console.error('No results to download');
+            return;
+        }
+
+        const filename = `rag-test-results-${this.executionResults.testId}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        const blob = new Blob([JSON.stringify(this.executionResults, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log(`Downloaded results: ${filename}`);
     }
 }
 
