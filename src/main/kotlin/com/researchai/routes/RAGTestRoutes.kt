@@ -342,6 +342,8 @@ fun Route.ragTestRoutes(
                                     }
                                     is com.researchai.domain.models.QueryProcessingEvent ->
                                         sseJson.encodeToString(event)
+                                    is com.researchai.domain.models.ChunksReadyEvent ->
+                                        sseJson.encodeToString(event)
                                     is com.researchai.domain.models.QueryCompletedEvent ->
                                         sseJson.encodeToString(event)
                                     is com.researchai.domain.models.QueryErrorEvent ->

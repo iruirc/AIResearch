@@ -343,7 +343,9 @@ class AppModule(
             testStorage = ragTestStorage,
             sendMessageUseCase = sendMessageUseCase,
             sessionManager = chatSessionManager,
-            preferencesManager = preferencesManager
+            preferencesManager = preferencesManager,
+            ragManager = ragManager,
+            ragPreferencesStorage = ragPreferencesStorage
         )
     }
 

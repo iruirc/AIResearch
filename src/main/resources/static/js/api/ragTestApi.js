@@ -187,6 +187,7 @@ export const ragTestApi = {
      * @param {Object} callbacks - Event callbacks
      * @param {Function} callbacks.onStarted - Called when execution starts
      * @param {Function} callbacks.onProcessing - Called when processing each query
+     * @param {Function} callbacks.onChunksReady - Called when RAG chunks are ready (before LLM response)
      * @param {Function} callbacks.onCompleted - Called when a query completes
      * @param {Function} callbacks.onError - Called when a query fails
      * @param {Function} callbacks.onFinished - Called when all queries complete
@@ -196,6 +197,7 @@ export const ragTestApi = {
      * const execution = ragTestApi.executeTest('test-123', {
      *     onStarted: (data) => console.log('Started:', data),
      *     onProcessing: (data) => console.log('Processing:', data),
+     *     onChunksReady: (data) => console.log('Chunks ready:', data),
      *     onCompleted: (data) => console.log('Completed:', data),
      *     onFinished: (data) => console.log('Finished:', data)
      * });
@@ -225,6 +227,9 @@ export const ragTestApi = {
                         break;
                     case 'processing':
                         if (callbacks.onProcessing) callbacks.onProcessing(data);
+                        break;
+                    case 'chunks_ready':
+                        if (callbacks.onChunksReady) callbacks.onChunksReady(data);
                         break;
                     case 'completed':
                         if (callbacks.onCompleted) callbacks.onCompleted(data);

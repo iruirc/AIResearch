@@ -99,6 +99,21 @@ data class QueryProcessingEvent(
 ) : TestExecutionEvent()
 
 /**
+ * Event sent when RAG chunks are ready (before LLM response).
+ * This allows the UI to display chunks immediately without waiting for LLM.
+ */
+@Serializable
+data class ChunksReadyEvent(
+    override val type: String = "chunks_ready",
+    val current: Int,
+    val total: Int,
+    val queryId: String,
+    val query: String,
+    val withoutRerankingChunks: List<ChunkInfo>,
+    val withRerankingChunks: List<ChunkInfo>
+) : TestExecutionEvent()
+
+/**
  * Event sent when a query execution completes.
  */
 @Serializable

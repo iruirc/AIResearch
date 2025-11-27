@@ -93,6 +93,7 @@ export class RAGModal {
         // Previous request block methods
         this.hidePreviousRequestBlock = this.hidePreviousRequestBlock.bind(this);
         this.showPreviousRequestBlock = this.showPreviousRequestBlock.bind(this);
+        this.showPreviousRequestBlockWithChunksOnly = this.showPreviousRequestBlockWithChunksOnly.bind(this);
         this.togglePreviousRequestBlock = this.togglePreviousRequestBlock.bind(this);
         this.renderChunksForPreviousRequest = this.renderChunksForPreviousRequest.bind(this);
 
@@ -1978,10 +1979,15 @@ export class RAGModal {
                 console.log('Processing query:', data);
                 this.updateExecutionProgress(data.current, data.total, data.query);
             },
+            onChunksReady: (data) => {
+                console.log('Chunks ready:', data);
+                // Show previous request block with chunks only (before LLM response)
+                this.showPreviousRequestBlockWithChunksOnly(data);
+            },
             onCompleted: (data) => {
                 console.log('Query completed:', data);
                 this.updateExecutionProgress(data.current, data.total, data.result.query);
-                // Show previous request block with the completed result
+                // Update previous request block with the completed result (including LLM responses)
                 this.showPreviousRequestBlock(data.result);
             },
             onError: (data) => {
@@ -2310,6 +2316,74 @@ export class RAGModal {
                     <span class="rag-execution-previous-metadata-value">${totalTime} мс</span>
                 </div>
             `;
+        }
+    }
+
+    /**
+     * Show previous request block with only chunks (before LLM response arrives).
+     * Shows chunks immediately and displays "Waiting for response..." instead of actual responses.
+     * @param {Object} data - ChunksReady event data with chunks
+     */
+    showPreviousRequestBlockWithChunksOnly(data) {
+        const block = document.getElementById('ragExecutionPreviousRequest');
+        if (!block || !data) return;
+
+        // Show block and expand modal
+        block.classList.remove('hidden');
+        block.classList.remove('collapsed');
+        const modalContent = document.querySelector('.rag-execution-modal-content');
+        if (modalContent) {
+            modalContent.classList.add('expanded');
+        }
+
+        // Populate query text
+        const queryText = document.getElementById('ragExecutionPreviousQueryText');
+        if (queryText) {
+            queryText.textContent = data.query;
+        }
+
+        // Populate chunks count
+        const withoutCount = document.getElementById('ragExecutionPreviousWithoutCount');
+        const withCount = document.getElementById('ragExecutionPreviousWithCount');
+
+        const withoutChunksCount = data.withoutRerankingChunks?.length || 0;
+        const withChunksCount = data.withRerankingChunks?.length || 0;
+
+        if (withoutCount) {
+            withoutCount.textContent = `${withoutChunksCount} чанков`;
+        }
+        if (withCount) {
+            withCount.textContent = `${withChunksCount} чанков`;
+        }
+
+        // Populate chunks lists
+        const withoutChunksContainer = document.getElementById('ragExecutionPreviousWithoutChunks');
+        const withChunksContainer = document.getElementById('ragExecutionPreviousWithChunks');
+
+        if (withoutChunksContainer) {
+            this.renderChunksForPreviousRequest(withoutChunksContainer, data.withoutRerankingChunks || []);
+        }
+        if (withChunksContainer) {
+            this.renderChunksForPreviousRequest(withChunksContainer, data.withRerankingChunks || []);
+        }
+
+        // Show "Waiting for response..." instead of actual responses
+        const withoutResponse = document.getElementById('ragExecutionPreviousWithoutResponse');
+        const withResponse = document.getElementById('ragExecutionPreviousWithResponse');
+
+        const waitingHtml = '<span class="rag-execution-waiting">⏳ Ожидание ответа LLM...</span>';
+
+        if (withoutResponse) {
+            withoutResponse.innerHTML = waitingHtml;
+        }
+        if (withResponse) {
+            withResponse.innerHTML = waitingHtml;
+        }
+
+        // Clear metadata (will be populated when completed event arrives)
+        const metadata = document.getElementById('ragExecutionPreviousMetadata');
+        if (metadata) {
+            metadata.innerHTML = '';
         }
     }
 

@@ -21,7 +21,9 @@ class RAGTestExecutionService(
     private val testStorage: RAGTestStorage,
     private val sendMessageUseCase: SendMessageUseCase,
     private val sessionManager: ChatSessionManager,
-    private val preferencesManager: PreferencesManager
+    private val preferencesManager: PreferencesManager,
+    private val ragManager: RAGManager? = null,
+    private val ragPreferencesStorage: com.researchai.persistence.RAGPreferencesStorage? = null
 ) {
     private val logger = LoggerFactory.getLogger(RAGTestExecutionService::class.java)
 
@@ -86,6 +88,20 @@ class RAGTestExecutionService(
                 queryId = query.id,
                 query = query.query
             ))
+
+            // Get chunks BEFORE calling LLM and emit ChunksReadyEvent
+            val chunks = getChunksForQuery(query.query)
+            if (chunks != null) {
+                emit(ChunksReadyEvent(
+                    current = current,
+                    total = total,
+                    queryId = query.id,
+                    query = query.query,
+                    withoutRerankingChunks = chunks.first,
+                    withRerankingChunks = chunks.second
+                ))
+                logger.info("Query $current/$total: emitted ChunksReadyEvent with ${chunks.first.size}/${chunks.second.size} chunks")
+            }
 
             try {
                 // Execute both queries in PARALLEL for better performance
@@ -321,6 +337,73 @@ class RAGTestExecutionService(
             "huggingface" -> ProviderType.HUGGINGFACE
             "ollama" -> ProviderType.OLLAMA
             else -> ProviderType.CLAUDE
+        }
+    }
+
+    /**
+     * Get chunks for a query (both with and without reranking).
+     * Returns null if RAG is not available.
+     */
+    private suspend fun getChunksForQuery(query: String): Pair<List<ChunkInfo>, List<ChunkInfo>>? {
+        if (ragManager == null) {
+            logger.debug("RAGManager not available, skipping chunks retrieval")
+            return null
+        }
+
+        val ragPrefs = ragPreferencesStorage?.load()
+        val topK = ragPrefs?.searchTopK ?: 5
+        val minScore = ragPrefs?.searchMinScore ?: 0.7f
+
+        // Check if there are enabled documents
+        val documents = ragManager.getAllDocuments()
+        val enabledDocs = documents.filter { it.enabled }
+        if (enabledDocs.isEmpty()) {
+            logger.debug("No enabled RAG documents, skipping chunks retrieval")
+            return null
+        }
+
+        try {
+            // Get chunks WITHOUT reranking
+            val withoutRerankingResults = ragManager.searchRelevantContext(query, topK, minScore)
+            val withoutRerankingChunks = withoutRerankingResults.map { result ->
+                ChunkInfo(
+                    documentName = result.documentName,
+                    chunkIndex = result.chunkIndex,
+                    score = result.score,
+                    text = result.text
+                )
+            }
+
+            // Get chunks WITH reranking
+            val rerankerConfig = if (ragPrefs != null) {
+                RerankerConfig(
+                    strategy = ragPrefs.strategy,
+                    secondaryThreshold = ragPrefs.scoreThreshold,
+                    stdDevMultiplier = ragPrefs.stdDevMultiplier,
+                    minResultsToKeep = ragPrefs.minResultsToKeep,
+                    crossEncoderModel = ragPrefs.crossEncoderModel ?: "llama3.2:latest",
+                    crossEncoderMinScore = ragPrefs.crossEncoderMinScore
+                )
+            } else {
+                RerankerConfig()
+            }
+
+            val withRerankingResult = ragManager.searchWithReranking(query, topK, minScore, rerankerConfig)
+            val withRerankingChunks = withRerankingResult.results.map { searchResult ->
+                ChunkInfo(
+                    documentName = searchResult.documentName,
+                    chunkIndex = searchResult.chunkIndex,
+                    score = searchResult.rerankedScore ?: searchResult.score,
+                    text = searchResult.text
+                )
+            }
+
+            logger.info("Retrieved chunks for query: without reranking=${withoutRerankingChunks.size}, with reranking=${withRerankingChunks.size}")
+            return Pair(withoutRerankingChunks, withRerankingChunks)
+
+        } catch (e: Exception) {
+            logger.error("Error retrieving chunks: ${e.message}", e)
+            return null
         }
     }
 }
