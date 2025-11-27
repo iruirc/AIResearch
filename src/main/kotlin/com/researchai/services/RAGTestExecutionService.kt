@@ -1,6 +1,7 @@
 package com.researchai.services
 
 import com.researchai.domain.models.*
+import com.researchai.domain.usecase.MessageResult
 import com.researchai.domain.usecase.SendMessageUseCase
 import com.researchai.models.UserPreferences
 import com.researchai.persistence.RAGTestStorage
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Service for executing RAG tests with batch query processing.
  * Supports real-time progress streaming via Flow and cancellation.
+ * Each query is executed twice: without reranking and with reranking.
  */
 class RAGTestExecutionService(
     private val testStorage: RAGTestStorage,
@@ -28,6 +30,7 @@ class RAGTestExecutionService(
 
     /**
      * Execute a RAG test and stream progress events.
+     * Each query is executed twice: without reranking and with reranking.
      *
      * @param testId ID of the test to execute
      * @return Flow of TestExecutionEvent for real-time progress updates
@@ -40,24 +43,28 @@ class RAGTestExecutionService(
         val test = testStorage.load(testId)
             ?: throw IllegalArgumentException("Test not found: $testId")
 
-        logger.info("Starting RAG test execution: ${test.name} (${test.queries.size} queries)")
+        logger.info("Starting RAG test execution: ${test.name} (${test.queries.size} queries, dual mode: without/with reranking)")
 
         // Get global preferences for provider/model
         val preferences = preferencesManager.getPreferences()
         val providerId = parseProviderType(preferences.providerId)
         val model = preferences.model
 
-        // Create a dedicated session for this test execution
-        val sessionId = "rag-test-${test.id}-${System.currentTimeMillis()}"
-        val (actualSessionId, _) = sessionManager.getOrCreateSession(sessionId)
+        // Create two separate sessions for test execution (to avoid history accumulation)
+        val timestamp = System.currentTimeMillis()
+        val sessionIdWithoutReranking = "rag-test-${test.id}-no-rerank-$timestamp"
+        val sessionIdWithReranking = "rag-test-${test.id}-rerank-$timestamp"
 
-        logger.info("Using session: $actualSessionId, provider: $providerId, model: $model")
+        val (actualSessionIdNoRerank, _) = sessionManager.getOrCreateSession(sessionIdWithoutReranking)
+        val (actualSessionIdRerank, _) = sessionManager.getOrCreateSession(sessionIdWithReranking)
+
+        logger.info("Using sessions: noRerank=$actualSessionIdNoRerank, rerank=$actualSessionIdRerank, provider: $providerId, model: $model")
 
         // Emit started event
         emit(ExecutionStartedEvent(
             testId = test.id,
             testName = test.name,
-            sessionId = actualSessionId,
+            sessionId = actualSessionIdNoRerank, // Primary session ID for reference
             totalQueries = test.queries.size
         ))
 
@@ -80,66 +87,69 @@ class RAGTestExecutionService(
                 query = query.query
             ))
 
-            val queryStartTime = System.currentTimeMillis()
-
             try {
-                // Execute the query using SendMessageUseCase
-                val result = sendMessageUseCase(
+                // Execute query WITHOUT reranking
+                logger.info("Query $current/$total: executing WITHOUT reranking")
+                val withoutRerankingStartTime = System.currentTimeMillis()
+                val resultWithoutReranking = sendMessageUseCase(
                     message = query.query,
-                    sessionId = actualSessionId,
+                    sessionId = actualSessionIdNoRerank,
                     providerId = providerId,
                     model = model,
                     parameters = RequestParameters(
                         temperature = preferences.temperature,
                         maxTokens = preferences.maxTokens
                     ),
-                    useRerankingOverride = null // Use global RAG settings
+                    useRerankingOverride = false
                 )
 
-                result.onSuccess { messageResult ->
-                    val queryResult = QueryExecutionResult(
-                        queryId = query.id,
-                        query = query.query,
-                        explanation = query.explanation,
-                        response = messageResult.response,
-                        elapsedTimeMs = System.currentTimeMillis() - queryStartTime,
-                        tokensUsed = messageResult.usage.totalTokens,
-                        inputTokens = messageResult.usage.inputTokens,
-                        outputTokens = messageResult.usage.outputTokens,
-                        model = messageResult.model
-                    )
-                    results.add(queryResult)
+                // Check for cancellation between requests
+                currentCoroutineContext().ensureActive()
 
-                    // Emit completed event
-                    emit(QueryCompletedEvent(
-                        current = current,
-                        total = total,
-                        result = queryResult
-                    ))
+                // Execute query WITH reranking
+                logger.info("Query $current/$total: executing WITH reranking")
+                val withRerankingStartTime = System.currentTimeMillis()
+                val resultWithReranking = sendMessageUseCase(
+                    message = query.query,
+                    sessionId = actualSessionIdRerank,
+                    providerId = providerId,
+                    model = model,
+                    parameters = RequestParameters(
+                        temperature = preferences.temperature,
+                        maxTokens = preferences.maxTokens
+                    ),
+                    useRerankingOverride = true
+                )
 
-                    logger.info("Query $current/$total completed: ${query.id}")
-                }.onFailure { error ->
-                    logger.error("Query $current/$total failed: ${query.id}", error)
+                // Build QueryExecutionResult from both results
+                val withoutRerankingData = buildQueryResponseData(
+                    resultWithoutReranking,
+                    System.currentTimeMillis() - withoutRerankingStartTime
+                )
+                val withRerankingData = buildQueryResponseData(
+                    resultWithReranking,
+                    System.currentTimeMillis() - withRerankingStartTime
+                )
 
-                    // Add error result
-                    val errorResult = QueryExecutionResult(
-                        queryId = query.id,
-                        query = query.query,
-                        explanation = query.explanation,
-                        response = "ERROR: ${error.message}",
-                        elapsedTimeMs = System.currentTimeMillis() - queryStartTime
-                    )
-                    results.add(errorResult)
+                val queryResult = QueryExecutionResult(
+                    queryId = query.id,
+                    query = query.query,
+                    explanation = query.explanation,
+                    model = resultWithoutReranking.getOrNull()?.model ?: model,
+                    withoutReranking = withoutRerankingData,
+                    withReranking = withRerankingData
+                )
+                results.add(queryResult)
 
-                    // Emit error event
-                    emit(QueryErrorEvent(
-                        current = current,
-                        total = total,
-                        queryId = query.id,
-                        query = query.query,
-                        error = error.message ?: "Unknown error"
-                    ))
-                }
+                // Emit completed event
+                emit(QueryCompletedEvent(
+                    current = current,
+                    total = total,
+                    result = queryResult
+                ))
+
+                logger.info("Query $current/$total completed: ${query.id} (noRerank: ${withoutRerankingData.chunksCount} chunks, rerank: ${withRerankingData.chunksCount} chunks)")
+
             } catch (e: CancellationException) {
                 logger.info("Test execution cancelled at query $current/$total")
                 cancelled = true
@@ -147,12 +157,19 @@ class RAGTestExecutionService(
             } catch (e: Exception) {
                 logger.error("Unexpected error during query execution", e)
 
+                // Create error result with empty response data
+                val errorData = QueryResponseData(
+                    response = "ERROR: ${e.message}",
+                    elapsedTimeMs = 0,
+                    chunksCount = 0
+                )
                 val errorResult = QueryExecutionResult(
                     queryId = query.id,
                     query = query.query,
                     explanation = query.explanation,
-                    response = "ERROR: ${e.message}",
-                    elapsedTimeMs = System.currentTimeMillis() - queryStartTime
+                    model = model,
+                    withoutReranking = errorData,
+                    withReranking = errorData
                 )
                 results.add(errorResult)
 
@@ -172,7 +189,7 @@ class RAGTestExecutionService(
         val executionResult = TestExecutionResult(
             testId = test.id,
             testName = test.name,
-            sessionId = actualSessionId,
+            sessionId = actualSessionIdNoRerank,
             results = results,
             totalTimeMs = totalTime,
             executedAt = Clock.System.now(),
@@ -197,6 +214,44 @@ class RAGTestExecutionService(
         }
         logger.error("Error during test execution", e)
         throw e
+    }
+
+    /**
+     * Build QueryResponseData from SendMessageUseCase result.
+     */
+    private fun buildQueryResponseData(
+        result: Result<MessageResult>,
+        elapsedTimeMs: Long
+    ): QueryResponseData {
+        return result.fold(
+            onSuccess = { messageResult ->
+                val chunks = messageResult.ragDebugInfo?.usedResults?.map { searchResult ->
+                    ChunkInfo(
+                        documentName = searchResult.documentName,
+                        chunkIndex = searchResult.chunkIndex,
+                        score = searchResult.rerankedScore ?: searchResult.score,
+                        text = searchResult.text
+                    )
+                }
+
+                QueryResponseData(
+                    response = messageResult.response,
+                    elapsedTimeMs = elapsedTimeMs,
+                    tokensUsed = messageResult.usage.totalTokens,
+                    inputTokens = messageResult.usage.inputTokens,
+                    outputTokens = messageResult.usage.outputTokens,
+                    chunksCount = chunks?.size ?: 0,
+                    chunks = chunks
+                )
+            },
+            onFailure = { error ->
+                QueryResponseData(
+                    response = "ERROR: ${error.message}",
+                    elapsedTimeMs = elapsedTimeMs,
+                    chunksCount = 0
+                )
+            }
+        )
     }
 
     /**

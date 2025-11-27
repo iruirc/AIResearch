@@ -2192,6 +2192,7 @@ export class RAGModal {
 
     /**
      * Format execution results as Markdown
+     * Results include both without reranking and with reranking responses
      * @returns {string} Markdown formatted results
      */
     formatResultsAsMarkdown() {
@@ -2218,17 +2219,34 @@ export class RAGModal {
         lines.push(`- **Status:** ${result.cancelled ? 'Cancelled' : 'Completed'}`);
         lines.push('');
 
-        // Summary statistics
-        const totalTokens = result.results.reduce((sum, r) => sum + (r.tokensUsed || 0), 0);
-        const avgTime = result.results.length > 0
-            ? Math.round(result.results.reduce((sum, r) => sum + r.elapsedTimeMs, 0) / result.results.length)
-            : 0;
+        // Summary statistics (aggregated for both modes)
+        let totalTokensNoRerank = 0;
+        let totalTokensRerank = 0;
+        let totalChunksNoRerank = 0;
+        let totalChunksRerank = 0;
+
+        result.results.forEach(r => {
+            if (r.withoutReranking) {
+                totalTokensNoRerank += r.withoutReranking.tokensUsed || 0;
+                totalChunksNoRerank += r.withoutReranking.chunksCount || 0;
+            }
+            if (r.withReranking) {
+                totalTokensRerank += r.withReranking.tokensUsed || 0;
+                totalChunksRerank += r.withReranking.chunksCount || 0;
+            }
+        });
 
         lines.push('## Summary');
         lines.push('');
         lines.push(`- **Total Queries:** ${result.results.length}`);
-        lines.push(`- **Total Tokens Used:** ${totalTokens}`);
-        lines.push(`- **Average Response Time:** ${avgTime} ms`);
+        lines.push('');
+        lines.push('### Without Reranking');
+        lines.push(`- **Total Tokens Used:** ${totalTokensNoRerank}`);
+        lines.push(`- **Total Chunks Used:** ${totalChunksNoRerank}`);
+        lines.push('');
+        lines.push('### With Reranking');
+        lines.push(`- **Total Tokens Used:** ${totalTokensRerank}`);
+        lines.push(`- **Total Chunks Used:** ${totalChunksRerank}`);
         lines.push('');
 
         // Query Results
@@ -2246,26 +2264,85 @@ export class RAGModal {
             lines.push('');
             lines.push(`> ${queryResult.explanation}`);
             lines.push('');
-            lines.push('**Response:**');
-            lines.push('');
-            lines.push('```');
-            lines.push(queryResult.response);
-            lines.push('```');
-            lines.push('');
-            lines.push('**Metrics:**');
-            lines.push('');
-            lines.push(`- Time: ${queryResult.elapsedTimeMs} ms`);
-            if (queryResult.tokensUsed) {
-                lines.push(`- Tokens Used: ${queryResult.tokensUsed}`);
-            }
-            if (queryResult.inputTokens) {
-                lines.push(`- Input Tokens: ${queryResult.inputTokens}`);
-            }
-            if (queryResult.outputTokens) {
-                lines.push(`- Output Tokens: ${queryResult.outputTokens}`);
-            }
+
             if (queryResult.model) {
-                lines.push(`- Model: ${queryResult.model}`);
+                lines.push(`**Model:** ${queryResult.model}`);
+                lines.push('');
+            }
+
+            // Response WITHOUT Reranking
+            lines.push('#### Response WITHOUT Reranking');
+            lines.push('');
+            if (queryResult.withoutReranking) {
+                const noRerank = queryResult.withoutReranking;
+                lines.push(`**Chunks Used:** ${noRerank.chunksCount}`);
+                lines.push('');
+
+                // Show chunk details if available
+                if (noRerank.chunks && noRerank.chunks.length > 0) {
+                    lines.push('<details>');
+                    lines.push('<summary>Chunks Details</summary>');
+                    lines.push('');
+                    noRerank.chunks.forEach((chunk, i) => {
+                        lines.push(`${i + 1}. **${chunk.documentName}** (chunk #${chunk.chunkIndex}, score: ${chunk.score.toFixed(3)})`);
+                        lines.push(`   > ${chunk.text.substring(0, 200)}${chunk.text.length > 200 ? '...' : ''}`);
+                        lines.push('');
+                    });
+                    lines.push('</details>');
+                    lines.push('');
+                }
+
+                lines.push('**Response:**');
+                lines.push('');
+                lines.push('```');
+                lines.push(noRerank.response);
+                lines.push('```');
+                lines.push('');
+                lines.push('**Metrics:**');
+                lines.push(`- Time: ${noRerank.elapsedTimeMs} ms`);
+                if (noRerank.tokensUsed) lines.push(`- Tokens Used: ${noRerank.tokensUsed}`);
+                if (noRerank.inputTokens) lines.push(`- Input Tokens: ${noRerank.inputTokens}`);
+                if (noRerank.outputTokens) lines.push(`- Output Tokens: ${noRerank.outputTokens}`);
+            } else {
+                lines.push('*No data available*');
+            }
+            lines.push('');
+
+            // Response WITH Reranking
+            lines.push('#### Response WITH Reranking');
+            lines.push('');
+            if (queryResult.withReranking) {
+                const rerank = queryResult.withReranking;
+                lines.push(`**Chunks Used:** ${rerank.chunksCount}`);
+                lines.push('');
+
+                // Show chunk details if available
+                if (rerank.chunks && rerank.chunks.length > 0) {
+                    lines.push('<details>');
+                    lines.push('<summary>Chunks Details</summary>');
+                    lines.push('');
+                    rerank.chunks.forEach((chunk, i) => {
+                        lines.push(`${i + 1}. **${chunk.documentName}** (chunk #${chunk.chunkIndex}, score: ${chunk.score.toFixed(3)})`);
+                        lines.push(`   > ${chunk.text.substring(0, 200)}${chunk.text.length > 200 ? '...' : ''}`);
+                        lines.push('');
+                    });
+                    lines.push('</details>');
+                    lines.push('');
+                }
+
+                lines.push('**Response:**');
+                lines.push('');
+                lines.push('```');
+                lines.push(rerank.response);
+                lines.push('```');
+                lines.push('');
+                lines.push('**Metrics:**');
+                lines.push(`- Time: ${rerank.elapsedTimeMs} ms`);
+                if (rerank.tokensUsed) lines.push(`- Tokens Used: ${rerank.tokensUsed}`);
+                if (rerank.inputTokens) lines.push(`- Input Tokens: ${rerank.inputTokens}`);
+                if (rerank.outputTokens) lines.push(`- Output Tokens: ${rerank.outputTokens}`);
+            } else {
+                lines.push('*No data available*');
             }
             lines.push('');
             lines.push('---');

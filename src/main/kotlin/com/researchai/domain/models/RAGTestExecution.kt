@@ -4,19 +4,50 @@ import kotlinx.serialization.Serializable
 import kotlinx.datetime.Instant
 
 /**
+ * Data for a single response (with or without reranking).
+ */
+@Serializable
+data class QueryResponseData(
+    val response: String,
+    val elapsedTimeMs: Long,
+    val tokensUsed: Int? = null,
+    val inputTokens: Int? = null,
+    val outputTokens: Int? = null,
+    val chunksCount: Int = 0,
+    val chunks: List<ChunkInfo>? = null
+)
+
+/**
+ * Information about a single chunk used in RAG context.
+ */
+@Serializable
+data class ChunkInfo(
+    val documentName: String,
+    val chunkIndex: Int,
+    val score: Float,
+    val text: String
+)
+
+/**
  * Result of a single query execution during RAG test.
+ * Contains results for both with and without reranking.
  */
 @Serializable
 data class QueryExecutionResult(
     val queryId: String,
     val query: String,
     val explanation: String,
-    val response: String,
-    val elapsedTimeMs: Long,
-    val tokensUsed: Int? = null,
-    val inputTokens: Int? = null,
-    val outputTokens: Int? = null,
-    val model: String? = null
+    val model: String? = null,
+
+    /**
+     * Response without reranking
+     */
+    val withoutReranking: QueryResponseData,
+
+    /**
+     * Response with reranking
+     */
+    val withReranking: QueryResponseData
 )
 
 /**
