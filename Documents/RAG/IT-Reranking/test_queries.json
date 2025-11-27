@@ -1,0 +1,174 @@
+{
+  "queries": [
+    {
+      "id": "simple-1",
+      "query": "Какой фреймворк лучше для создания REST API на Python?",
+      "scenario": "simple-keyword",
+      "expectedTopResult": "01_python_frameworks",
+      "expectedChunkKeywords": ["FastAPI", "REST API", "производительность"],
+      "explanation": "Простой запрос с прямым соответствием ключевых слов. FastAPI прямо рекомендован для REST API.",
+      "rankingTrap": "Документ про Data Science тоже содержит Python"
+    },
+    {
+      "id": "simple-2",
+      "query": "Что такое Docker и для чего он нужен?",
+      "scenario": "simple-keyword",
+      "expectedTopResult": "08_docker_kubernetes",
+      "expectedChunkKeywords": ["Docker", "контейнер", "образ"],
+      "explanation": "Прямой запрос определения. Документ содержит подробное описание Docker.",
+      "rankingTrap": "DevOps документ тоже упоминает Docker"
+    },
+    {
+      "id": "simple-3",
+      "query": "Как работает SQL injection?",
+      "scenario": "simple-keyword",
+      "expectedTopResult": "12_security_basics",
+      "expectedChunkKeywords": ["SQL Injection", "параметризованные запросы", "внедрение"],
+      "explanation": "Прямое совпадение с разделом про Injection в документе безопасности.",
+      "rankingTrap": "Документ про SQL-базы данных содержит SQL, но не про injection"
+    },
+    {
+      "id": "simple-4",
+      "query": "Что такое unit-тесты?",
+      "scenario": "simple-keyword",
+      "expectedTopResult": "13_testing_practices",
+      "expectedChunkKeywords": ["Unit Tests", "изолированные", "F.I.R.S.T."],
+      "explanation": "Прямой запрос определения unit-тестов.",
+      "rankingTrap": "Многие документы могут упоминать тестирование в контексте CI/CD"
+    },
+    {
+      "id": "simple-5",
+      "query": "Какие есть типы NoSQL баз данных?",
+      "scenario": "simple-keyword",
+      "expectedTopResult": "04_databases_nosql",
+      "expectedChunkKeywords": ["документные", "Key-Value", "колоночные", "графовые"],
+      "explanation": "Документ про NoSQL содержит классификацию типов баз данных.",
+      "rankingTrap": "Документ про SQL тоже говорит о базах данных"
+    },
+    {
+      "id": "medium-1",
+      "query": "Как обеспечить быстрый доступ к часто запрашиваемым данным?",
+      "scenario": "semantic-understanding",
+      "expectedTopResult": "04_databases_nosql",
+      "expectedChunkKeywords": ["Redis", "кэширование", "in-memory"],
+      "explanation": "Семантический запрос: 'быстрый доступ' = кэширование = Redis. Bi-encoder может не связать эти концепции.",
+      "rankingTrap": "Все документы про БД говорят о хранении и доступе к данным"
+    },
+    {
+      "id": "medium-2",
+      "query": "Наш стартап растёт, команда уже 15 человек. Нужно ли менять архитектуру с монолита?",
+      "scenario": "contextual-threshold",
+      "expectedTopResult": "05_microservices",
+      "expectedChunkKeywords": ["10+ разработчиков", "крупные команды", "масштабирование"],
+      "explanation": "15 человек > 10, значит микросервисы могут быть уместны. Cross-encoder понимает числовой контекст.",
+      "rankingTrap": "Документ про монолит говорит о командах до 5-7 человек как о преимуществе"
+    },
+    {
+      "id": "medium-3",
+      "query": "Как настроить автоматическую проверку кода при каждом коммите?",
+      "scenario": "semantic-understanding",
+      "expectedTopResult": "07_devops_cicd",
+      "expectedChunkKeywords": ["CI", "Continuous Integration", "автоматическая сборка"],
+      "explanation": "Семантическое соответствие: 'проверка при коммите' = CI pipeline.",
+      "rankingTrap": "Документ про тестирование тоже говорит о проверках"
+    },
+    {
+      "id": "medium-4",
+      "query": "Какой облачный провайдер лучше для машинного обучения?",
+      "scenario": "semantic-understanding",
+      "expectedTopResult": "09_cloud_platforms",
+      "expectedChunkKeywords": ["GCP", "Vertex AI", "BigQuery", "ML"],
+      "explanation": "GCP явно отмечен как лидер в ML. Нужно семантическое понимание связи.",
+      "rankingTrap": "Документ про Data Science тоже говорит о ML, но не про облака"
+    },
+    {
+      "id": "medium-5",
+      "query": "Чем React отличается от Vue?",
+      "scenario": "comparison-query",
+      "expectedTopResult": "10_frontend_frameworks",
+      "expectedChunkKeywords": ["React", "Vue", "сравнение"],
+      "explanation": "Запрос на сравнение. Документ содержит таблицу сравнения фреймворков.",
+      "rankingTrap": "Bi-encoder найдёт документы с упоминанием React или Vue по отдельности"
+    },
+    {
+      "id": "hard-1",
+      "query": "Мы маленькая команда из 3 человек. Стоит ли нам использовать Kubernetes?",
+      "scenario": "negative-context",
+      "expectedTopResult": "06_monolith_architecture",
+      "expectedChunkKeywords": ["небольшие команды", "простота", "не нужен Kubernetes"],
+      "explanation": "3 человека = маленькая команда. Документ про монолит явно говорит, что K8s не нужен для небольших команд.",
+      "rankingTrap": "Документ про Kubernetes содержит больше ключевых слов про K8s"
+    },
+    {
+      "id": "hard-2",
+      "query": "Что НЕ умеет делать Django?",
+      "scenario": "negative-query",
+      "expectedTopResult": "01_python_frameworks",
+      "expectedChunkKeywords": ["ограничения", "не оптимален", "микросервисной"],
+      "explanation": "Негативный запрос. Cross-encoder должен понять отрицание и найти раздел 'Ограничения Django'.",
+      "rankingTrap": "Bi-encoder проигнорирует 'НЕ' и найдёт документы с положительными упоминаниями Django"
+    },
+    {
+      "id": "hard-3",
+      "query": "Альтернативы PostgreSQL для простых веб-приложений",
+      "scenario": "contextual-understanding",
+      "expectedTopResult": "03_databases_sql",
+      "expectedChunkKeywords": ["MySQL", "SQLite", "простых", "веб-приложения"],
+      "explanation": "Нужно понять, что запрос про ДРУГИЕ базы данных, не про сам PostgreSQL. MySQL и SQLite — альтернативы.",
+      "rankingTrap": "Bi-encoder найдёт документ с PostgreSQL, но не поймёт что нужны альтернативы"
+    },
+    {
+      "id": "hard-4",
+      "query": "Как защитить API от атак, если пользователь отправляет слишком много запросов?",
+      "scenario": "reasoning-query",
+      "expectedTopResult": "12_security_basics",
+      "expectedChunkKeywords": ["Rate Limiting", "ограничение частоты"],
+      "explanation": "Требует понимания, что 'слишком много запросов' = rate limiting. Семантическая связь.",
+      "rankingTrap": "Документ про API design тоже говорит о защите API"
+    },
+    {
+      "id": "hard-5",
+      "query": "Почему микросервисы могут быть плохим выбором для нового проекта?",
+      "scenario": "reasoning-negative",
+      "expectedTopResult": "06_monolith_architecture",
+      "expectedChunkKeywords": ["сложность", "стартапы", "прототипы"],
+      "explanation": "Негативный запрос про микросервисы. Ответ в документе про монолит, который объясняет преимущества начала с монолита.",
+      "rankingTrap": "Документ про микросервисы содержит больше ключевых слов, но говорит о преимуществах"
+    },
+    {
+      "id": "hard-6",
+      "query": "Как организовать код, чтобы потом было легко перейти на микросервисы?",
+      "scenario": "implicit-requirement",
+      "expectedTopResult": "06_monolith_architecture",
+      "expectedChunkKeywords": ["модульный монолит", "границы", "модули"],
+      "explanation": "Модульный монолит — это архитектура, которая позволяет легко извлечь микросервисы позже.",
+      "rankingTrap": "Bi-encoder найдёт документ про микросервисы из-за ключевого слова"
+    },
+    {
+      "id": "hard-7",
+      "query": "Мы используем MySQL. При миграции на другую базу какие проблемы нас ждут?",
+      "scenario": "complex-query",
+      "expectedTopResult": "03_databases_sql",
+      "expectedChunkKeywords": ["миграция", "MySQL", "PostgreSQL", "проблемы"],
+      "explanation": "Документ содержит раздел про миграцию MySQL → PostgreSQL с описанием проблем.",
+      "rankingTrap": "Документ про NoSQL тоже говорит о миграциях между базами данных"
+    }
+  ],
+  "evaluationMetrics": {
+    "MRR": "Mean Reciprocal Rank - средняя позиция правильного документа",
+    "Precision@1": "Правильный ли первый результат",
+    "Precision@3": "Сколько правильных в топ-3",
+    "NDCG@5": "Normalized Discounted Cumulative Gain для топ-5",
+    "RerankerGain": "Улучшение позиции после реранкинга относительно bi-encoder"
+  },
+  "testMetadata": {
+    "totalQueries": 17,
+    "simpleQueries": 5,
+    "mediumQueries": 5,
+    "hardQueries": 7,
+    "language": "Russian",
+    "knowledgeBaseSize": "~109KB",
+    "knowledgeBaseFiles": 13,
+    "createdAt": "2025-11-27"
+  }
+}
