@@ -1994,8 +1994,13 @@ export class RAGModal {
         const cancelButton = document.getElementById('ragExecutionCancelButton');
         if (cancelButton) {
             cancelButton.onclick = () => {
-                if (this.currentExecution) {
-                    this.currentExecution.cancel();
+                if (this.currentExecution && !this.currentExecution.isComplete) {
+                    if (confirm('Вы уверены, что хотите отменить выполнение теста?')) {
+                        this.currentExecution.cancel();
+                        // Manually trigger cancellation UI since SSE won't send cancelled event
+                        // (handleExecutionCancel already calls stopExecutionTimer)
+                        this.handleExecutionCancel(null);
+                    }
                 }
             };
         }
