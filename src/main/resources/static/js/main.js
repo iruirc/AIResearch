@@ -25,7 +25,7 @@ import { SchedulerModal } from './ui/schedulerModal.js';
 import { initializePipelinesModal } from './ui/pipelinesModal.js';
 import { initializeOllamaModal } from './ui/ollamaModal.js';
 import { initializeLlmModelModal } from './ui/llmModelModal.js';
-import { initializeRAGModal } from './ui/ragModal.js';
+import { initializeRAGModal } from './ui/rag/index.js';
 import { ragPreviewModal } from './ui/ragPreview/index.js';
 
 // Import utilities
