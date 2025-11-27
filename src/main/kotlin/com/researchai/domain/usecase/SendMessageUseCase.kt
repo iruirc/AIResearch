@@ -146,38 +146,21 @@ class SendMessageUseCase(
                         val topK = ragPrefs?.searchTopK ?: 5
                         val minScore = ragPrefs?.searchMinScore ?: 0.7f
 
-                        // Use debug method if debug mode is enabled
-                        if (ragPrefs?.debugMode == true) {
-                            val result = manager.getContextForChatWithDebug(
-                                query = message,
-                                topK = topK,
-                                minScore = minScore,
-                                useReranking = useReranking,
-                                rerankerConfig = rerankerConfig
-                            )
-                            ragDebugInfo = result.debugInfo
-                            if (result.context.isNotBlank()) {
-                                logger.info("RAG: Found relevant context (${result.context.length} characters, debug mode)")
-                                result.context
-                            } else {
-                                logger.info("RAG: No relevant context found")
-                                null
-                            }
+                        // Always collect debug info for RAG context (needed for tests and analytics)
+                        val result = manager.getContextForChatWithDebug(
+                            query = message,
+                            topK = topK,
+                            minScore = minScore,
+                            useReranking = useReranking,
+                            rerankerConfig = rerankerConfig
+                        )
+                        ragDebugInfo = result.debugInfo
+                        if (result.context.isNotBlank()) {
+                            logger.info("RAG: Found relevant context (${result.context.length} characters)")
+                            result.context
                         } else {
-                            val context = manager.getContextForChat(
-                                query = message,
-                                topK = topK,
-                                minScore = minScore,
-                                useReranking = useReranking,
-                                rerankerConfig = rerankerConfig
-                            )
-                            if (context.isNotBlank()) {
-                                logger.info("RAG: Found relevant context (${context.length} characters)")
-                                context
-                            } else {
-                                logger.info("RAG: No relevant context found")
-                                null
-                            }
+                            logger.info("RAG: No relevant context found")
+                            null
                         }
                     }
                 } catch (e: Exception) {
