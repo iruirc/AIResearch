@@ -88,47 +88,54 @@ class RAGTestExecutionService(
             ))
 
             try {
-                // Execute query WITHOUT reranking
-                logger.info("Query $current/$total: executing WITHOUT reranking")
-                val withoutRerankingStartTime = System.currentTimeMillis()
-                val resultWithoutReranking = sendMessageUseCase(
-                    message = query.query,
-                    sessionId = actualSessionIdNoRerank,
-                    providerId = providerId,
-                    model = model,
-                    parameters = RequestParameters(
-                        temperature = preferences.temperature,
-                        maxTokens = preferences.maxTokens
-                    ),
-                    useRerankingOverride = false
-                )
+                // Execute both queries in PARALLEL for better performance
+                logger.info("Query $current/$total: executing in parallel (without/with reranking)")
 
-                // Check for cancellation between requests
-                currentCoroutineContext().ensureActive()
+                val (resultWithoutReranking, withoutRerankingTime, resultWithReranking, withRerankingTime) = coroutineScope {
+                    val withoutRerankingStartTime = System.currentTimeMillis()
+                    val deferredWithoutReranking = async {
+                        sendMessageUseCase(
+                            message = query.query,
+                            sessionId = actualSessionIdNoRerank,
+                            providerId = providerId,
+                            model = model,
+                            parameters = RequestParameters(
+                                temperature = preferences.temperature,
+                                maxTokens = preferences.maxTokens
+                            ),
+                            useRerankingOverride = false
+                        ) to (System.currentTimeMillis() - withoutRerankingStartTime)
+                    }
 
-                // Execute query WITH reranking
-                logger.info("Query $current/$total: executing WITH reranking")
-                val withRerankingStartTime = System.currentTimeMillis()
-                val resultWithReranking = sendMessageUseCase(
-                    message = query.query,
-                    sessionId = actualSessionIdRerank,
-                    providerId = providerId,
-                    model = model,
-                    parameters = RequestParameters(
-                        temperature = preferences.temperature,
-                        maxTokens = preferences.maxTokens
-                    ),
-                    useRerankingOverride = true
-                )
+                    val withRerankingStartTime = System.currentTimeMillis()
+                    val deferredWithReranking = async {
+                        sendMessageUseCase(
+                            message = query.query,
+                            sessionId = actualSessionIdRerank,
+                            providerId = providerId,
+                            model = model,
+                            parameters = RequestParameters(
+                                temperature = preferences.temperature,
+                                maxTokens = preferences.maxTokens
+                            ),
+                            useRerankingOverride = true
+                        ) to (System.currentTimeMillis() - withRerankingStartTime)
+                    }
+
+                    val (resultNoRerank, timeNoRerank) = deferredWithoutReranking.await()
+                    val (resultRerank, timeRerank) = deferredWithReranking.await()
+
+                    Quadruple(resultNoRerank, timeNoRerank, resultRerank, timeRerank)
+                }
 
                 // Build QueryExecutionResult from both results
                 val withoutRerankingData = buildQueryResponseData(
                     resultWithoutReranking,
-                    System.currentTimeMillis() - withoutRerankingStartTime
+                    withoutRerankingTime
                 )
                 val withRerankingData = buildQueryResponseData(
                     resultWithReranking,
-                    System.currentTimeMillis() - withRerankingStartTime
+                    withRerankingTime
                 )
 
                 val queryResult = QueryExecutionResult(
@@ -317,3 +324,13 @@ class RAGTestExecutionService(
         }
     }
 }
+
+/**
+ * Helper data class for returning 4 values from coroutineScope.
+ */
+private data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
