@@ -1034,6 +1034,36 @@
                     <div class="rag-execution-current-query" id="ragExecutionCurrentQuery">-</div>
                 </div>
 
+                <!-- Current query chunks (shown after chunks_ready event, before LLM response) -->
+                <div id="ragExecutionCurrentChunks" class="rag-execution-current-chunks hidden">
+                    <div class="rag-execution-current-chunks-comparison">
+                        <!-- Left column - Without reranking -->
+                        <div class="rag-execution-current-chunks-column">
+                            <div class="rag-execution-current-chunks-column-header">
+                                <span class="rag-execution-current-chunks-column-title">Без реранкинга</span>
+                                <span id="ragExecutionCurrentWithoutCount" class="rag-execution-current-chunks-count">0 чанков</span>
+                            </div>
+                            <div id="ragExecutionCurrentWithoutChunks" class="rag-execution-current-chunks-list">
+                                <!-- Chunks will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Right column - With reranking -->
+                        <div class="rag-execution-current-chunks-column">
+                            <div class="rag-execution-current-chunks-column-header">
+                                <span class="rag-execution-current-chunks-column-title">С реранкингом</span>
+                                <span id="ragExecutionCurrentWithCount" class="rag-execution-current-chunks-count">0 чанков</span>
+                            </div>
+                            <div id="ragExecutionCurrentWithChunks" class="rag-execution-current-chunks-list">
+                                <!-- Chunks will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rag-execution-current-chunks-status">
+                        <span class="rag-execution-waiting">⏳ Ожидание ответа LLM...</span>
+                    </div>
+                </div>
+
                 <!-- Status -->
                 <div class="rag-execution-status" id="ragExecutionStatus">
                     <span class="rag-execution-status-icon">⏳</span>

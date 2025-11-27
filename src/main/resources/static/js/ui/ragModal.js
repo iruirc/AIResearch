@@ -97,6 +97,11 @@ export class RAGModal {
         this.togglePreviousRequestBlock = this.togglePreviousRequestBlock.bind(this);
         this.renderChunksForPreviousRequest = this.renderChunksForPreviousRequest.bind(this);
 
+        // Current query chunks methods
+        this.showCurrentQueryChunks = this.showCurrentQueryChunks.bind(this);
+        this.hideCurrentQueryChunks = this.hideCurrentQueryChunks.bind(this);
+        this.renderChunksForCurrentQuery = this.renderChunksForCurrentQuery.bind(this);
+
         // Test execution state
         this.currentExecution = null;
         this.executionTimer = null;
@@ -1981,12 +1986,14 @@ export class RAGModal {
             },
             onChunksReady: (data) => {
                 console.log('Chunks ready:', data);
-                // Show previous request block with chunks only (before LLM response)
-                this.showPreviousRequestBlockWithChunksOnly(data);
+                // Show current query chunks (before LLM response)
+                this.showCurrentQueryChunks(data);
             },
             onCompleted: (data) => {
                 console.log('Query completed:', data);
                 this.updateExecutionProgress(data.current, data.total, data.result.query);
+                // Hide current query chunks (LLM response arrived)
+                this.hideCurrentQueryChunks();
                 // Update previous request block with the completed result (including LLM responses)
                 this.showPreviousRequestBlock(data.result);
             },
@@ -2074,8 +2081,9 @@ export class RAGModal {
         if (downloadButton) downloadButton.classList.add('hidden');
         if (cancelButton) cancelButton.classList.remove('hidden');
 
-        // Hide previous request block and reset modal width
+        // Hide previous request block, current chunks, and reset modal width
         this.hidePreviousRequestBlock();
+        this.hideCurrentQueryChunks();
         const modalContent = document.querySelector('.rag-execution-modal-content');
         if (modalContent) {
             modalContent.classList.remove('expanded');
@@ -2236,6 +2244,93 @@ export class RAGModal {
             block.classList.remove('collapsed');
         }
     }
+
+    // ===== Current Query Chunks Methods =====
+
+    /**
+     * Hide the current query chunks section
+     */
+    hideCurrentQueryChunks() {
+        const block = document.getElementById('ragExecutionCurrentChunks');
+        if (block) {
+            block.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Show current query chunks (before LLM response arrives).
+     * Displays chunks immediately with "Waiting for LLM response..." indicator.
+     * @param {Object} data - ChunksReady event data with chunks
+     */
+    showCurrentQueryChunks(data) {
+        const block = document.getElementById('ragExecutionCurrentChunks');
+        if (!block || !data) return;
+
+        // Show block and expand modal
+        block.classList.remove('hidden');
+        const modalContent = document.querySelector('.rag-execution-modal-content');
+        if (modalContent) {
+            modalContent.classList.add('expanded');
+        }
+
+        // Populate chunks count
+        const withoutCount = document.getElementById('ragExecutionCurrentWithoutCount');
+        const withCount = document.getElementById('ragExecutionCurrentWithCount');
+
+        const withoutChunksCount = data.withoutRerankingChunks?.length || 0;
+        const withChunksCount = data.withRerankingChunks?.length || 0;
+
+        if (withoutCount) {
+            withoutCount.textContent = `${withoutChunksCount} чанков`;
+        }
+        if (withCount) {
+            withCount.textContent = `${withChunksCount} чанков`;
+        }
+
+        // Populate chunks lists
+        const withoutChunksContainer = document.getElementById('ragExecutionCurrentWithoutChunks');
+        const withChunksContainer = document.getElementById('ragExecutionCurrentWithChunks');
+
+        if (withoutChunksContainer) {
+            this.renderChunksForCurrentQuery(withoutChunksContainer, data.withoutRerankingChunks || []);
+        }
+        if (withChunksContainer) {
+            this.renderChunksForCurrentQuery(withChunksContainer, data.withRerankingChunks || []);
+        }
+    }
+
+    /**
+     * Render chunks into a container for the current query chunks section
+     * @param {HTMLElement} container - Container element for chunks
+     * @param {Array} chunks - Array of chunk objects
+     */
+    renderChunksForCurrentQuery(container, chunks) {
+        container.innerHTML = '';
+
+        if (!chunks || chunks.length === 0) {
+            container.innerHTML = '<div class="rag-execution-current-chunk-empty">Нет чанков</div>';
+            return;
+        }
+
+        chunks.forEach((chunk, index) => {
+            const chunkEl = document.createElement('div');
+            chunkEl.className = 'rag-execution-current-chunk';
+
+            const scorePercent = (chunk.score * 100).toFixed(1);
+
+            chunkEl.innerHTML = `
+                <div class="rag-execution-current-chunk-header">
+                    <span class="rag-execution-current-chunk-index">#${index + 1}</span>
+                    <span class="rag-execution-current-chunk-score">${scorePercent}%</span>
+                </div>
+                <div class="rag-execution-current-chunk-text">${this.escapeHtml(chunk.text)}</div>
+            `;
+
+            container.appendChild(chunkEl);
+        });
+    }
+
+    // ===== Previous Request Block Methods (continued) =====
 
     /**
      * Show and populate the previous request block with query result data

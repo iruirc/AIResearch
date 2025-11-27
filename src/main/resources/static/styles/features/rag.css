@@ -1666,6 +1666,156 @@
 }
 
 /* =========================================
+   RAG Execution - Current Query Chunks
+   (shown before LLM response arrives)
+   ========================================= */
+
+.rag-execution-current-chunks {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-secondary);
+    margin-top: 12px;
+}
+
+.rag-execution-current-chunks.hidden {
+    display: none;
+}
+
+.rag-execution-current-chunks-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+}
+
+.rag-execution-current-chunks-column {
+    background: var(--bg-primary);
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+}
+
+.rag-execution-current-chunks-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.rag-execution-current-chunks-column-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rag-execution-current-chunks-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.rag-execution-current-chunks-list {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.rag-execution-current-chunks-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.rag-execution-current-chunks-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.rag-execution-current-chunks-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+/* Individual chunk item */
+.rag-execution-current-chunk {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+}
+
+.rag-execution-current-chunk:last-child {
+    margin-bottom: 0;
+}
+
+.rag-execution-current-chunk-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.rag-execution-current-chunk-index {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color, #4A90D9);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.rag-execution-current-chunk-score {
+    font-size: 11px;
+    font-weight: 500;
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.rag-execution-current-chunk-text {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.rag-execution-current-chunk-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+}
+
+.rag-execution-current-chunks-status {
+    padding: 12px;
+    text-align: center;
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-tertiary);
+}
+
+/* Responsive: Stack columns on small screens */
+@media (max-width: 600px) {
+    .rag-execution-current-chunks-comparison {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
    RAG Execution - Previous Request Block
    ========================================= */
 
