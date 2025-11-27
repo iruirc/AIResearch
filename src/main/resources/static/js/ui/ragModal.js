@@ -2353,6 +2353,52 @@ export class RAGModal {
     }
 
     /**
+     * Format execution results as simplified Markdown (only Query, Explanation, Responses)
+     * @returns {string} Simplified Markdown formatted results
+     */
+    formatResultsAsSimpleMarkdown() {
+        if (!this.executionResults) {
+            return '';
+        }
+
+        const result = this.executionResults;
+        const lines = [];
+
+        result.results.forEach((queryResult, index) => {
+            if (index > 0) {
+                lines.push('---');
+                lines.push('');
+            }
+
+            // Query
+            lines.push('## Query');
+            lines.push('');
+            lines.push(queryResult.query);
+            lines.push('');
+
+            // Explanation
+            lines.push('## Explanation');
+            lines.push('');
+            lines.push(queryResult.explanation);
+            lines.push('');
+
+            // Response WITHOUT Reranking
+            lines.push('## Response WITHOUT Reranking');
+            lines.push('');
+            lines.push(queryResult.withoutReranking?.response || '*No data available*');
+            lines.push('');
+
+            // Response WITH Reranking
+            lines.push('## Response WITH Reranking');
+            lines.push('');
+            lines.push(queryResult.withReranking?.response || '*No data available*');
+            lines.push('');
+        });
+
+        return lines.join('\n');
+    }
+
+    /**
      * Download a single file
      * @param {string|Blob} content - File content (string or Blob)
      * @param {string} filename - File name
@@ -2388,6 +2434,7 @@ export class RAGModal {
         // Prepare file contents
         const jsonContent = JSON.stringify(this.executionResults, null, 2);
         const mdContent = this.formatResultsAsMarkdown();
+        const mdSimpleContent = this.formatResultsAsSimpleMarkdown();
 
         // Create ZIP archive using JSZip
         if (typeof JSZip === 'undefined') {
@@ -2397,6 +2444,9 @@ export class RAGModal {
             setTimeout(() => {
                 this.downloadFile(mdContent, `${baseFilename}.md`, 'text/markdown');
             }, 100);
+            setTimeout(() => {
+                this.downloadFile(mdSimpleContent, `${baseFilename}-comparison.md`, 'text/markdown');
+            }, 200);
             return;
         }
 
@@ -2406,6 +2456,7 @@ export class RAGModal {
             // Add files to archive
             zip.file(`${baseFilename}.json`, jsonContent);
             zip.file(`${baseFilename}.md`, mdContent);
+            zip.file(`${baseFilename}-comparison.md`, mdSimpleContent);
 
             // Generate ZIP and download
             const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -2421,6 +2472,9 @@ export class RAGModal {
             setTimeout(() => {
                 this.downloadFile(mdContent, `${baseFilename}.md`, 'text/markdown');
             }, 100);
+            setTimeout(() => {
+                this.downloadFile(mdSimpleContent, `${baseFilename}-comparison.md`, 'text/markdown');
+            }, 200);
         }
     }
 }
