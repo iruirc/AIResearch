@@ -2191,16 +2191,98 @@ export class RAGModal {
     }
 
     /**
-     * Download execution results as JSON
+     * Format execution results as Markdown
+     * @returns {string} Markdown formatted results
      */
-    downloadResults() {
+    formatResultsAsMarkdown() {
         if (!this.executionResults) {
-            console.error('No results to download');
-            return;
+            return '';
         }
 
-        const filename = `rag-test-results-${this.executionResults.testId}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        const blob = new Blob([JSON.stringify(this.executionResults, null, 2)], { type: 'application/json' });
+        const result = this.executionResults;
+        const lines = [];
+
+        // Header
+        lines.push(`# RAG Test Results: ${result.testName}`);
+        lines.push('');
+
+        // Metadata
+        lines.push('## Metadata');
+        lines.push('');
+        lines.push(`- **Test ID:** ${result.testId}`);
+        lines.push(`- **Session ID:** ${result.sessionId}`);
+        lines.push(`- **Provider:** ${result.provider}`);
+        lines.push(`- **Model:** ${result.model}`);
+        lines.push(`- **Executed At:** ${result.executedAt}`);
+        lines.push(`- **Total Time:** ${result.totalTimeMs} ms`);
+        lines.push(`- **Status:** ${result.cancelled ? 'Cancelled' : 'Completed'}`);
+        lines.push('');
+
+        // Summary statistics
+        const totalTokens = result.results.reduce((sum, r) => sum + (r.tokensUsed || 0), 0);
+        const avgTime = result.results.length > 0
+            ? Math.round(result.results.reduce((sum, r) => sum + r.elapsedTimeMs, 0) / result.results.length)
+            : 0;
+
+        lines.push('## Summary');
+        lines.push('');
+        lines.push(`- **Total Queries:** ${result.results.length}`);
+        lines.push(`- **Total Tokens Used:** ${totalTokens}`);
+        lines.push(`- **Average Response Time:** ${avgTime} ms`);
+        lines.push('');
+
+        // Query Results
+        lines.push('## Query Results');
+        lines.push('');
+
+        result.results.forEach((queryResult, index) => {
+            lines.push(`### ${index + 1}. ${queryResult.queryId}`);
+            lines.push('');
+            lines.push('**Query:**');
+            lines.push('');
+            lines.push(`> ${queryResult.query}`);
+            lines.push('');
+            lines.push('**Explanation:**');
+            lines.push('');
+            lines.push(`> ${queryResult.explanation}`);
+            lines.push('');
+            lines.push('**Response:**');
+            lines.push('');
+            lines.push('```');
+            lines.push(queryResult.response);
+            lines.push('```');
+            lines.push('');
+            lines.push('**Metrics:**');
+            lines.push('');
+            lines.push(`- Time: ${queryResult.elapsedTimeMs} ms`);
+            if (queryResult.tokensUsed) {
+                lines.push(`- Tokens Used: ${queryResult.tokensUsed}`);
+            }
+            if (queryResult.inputTokens) {
+                lines.push(`- Input Tokens: ${queryResult.inputTokens}`);
+            }
+            if (queryResult.outputTokens) {
+                lines.push(`- Output Tokens: ${queryResult.outputTokens}`);
+            }
+            if (queryResult.model) {
+                lines.push(`- Model: ${queryResult.model}`);
+            }
+            lines.push('');
+            lines.push('---');
+            lines.push('');
+        });
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Download a single file
+     * @param {string|Blob} content - File content (string or Blob)
+     * @param {string} filename - File name
+     * @param {string} mimeType - MIME type (ignored if content is Blob)
+     */
+    downloadFile(content, filename, mimeType) {
+        const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
 
         const a = document.createElement('a');
@@ -2211,7 +2293,58 @@ export class RAGModal {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        console.log(`Downloaded results: ${filename}`);
+        console.log(`Downloaded: ${filename}`);
+    }
+
+    /**
+     * Download execution results as ZIP archive containing JSON and Markdown files
+     */
+    async downloadResults() {
+        if (!this.executionResults) {
+            console.error('No results to download');
+            return;
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const baseFilename = `rag-test-results-${this.executionResults.testId}-${timestamp}`;
+
+        // Prepare file contents
+        const jsonContent = JSON.stringify(this.executionResults, null, 2);
+        const mdContent = this.formatResultsAsMarkdown();
+
+        // Create ZIP archive using JSZip
+        if (typeof JSZip === 'undefined') {
+            console.error('JSZip library not loaded, falling back to separate downloads');
+            // Fallback to separate downloads
+            this.downloadFile(jsonContent, `${baseFilename}.json`, 'application/json');
+            setTimeout(() => {
+                this.downloadFile(mdContent, `${baseFilename}.md`, 'text/markdown');
+            }, 100);
+            return;
+        }
+
+        try {
+            const zip = new JSZip();
+
+            // Add files to archive
+            zip.file(`${baseFilename}.json`, jsonContent);
+            zip.file(`${baseFilename}.md`, mdContent);
+
+            // Generate ZIP and download
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const zipFilename = `${baseFilename}.zip`;
+
+            this.downloadFile(zipBlob, zipFilename, 'application/zip');
+            console.log(`Downloaded results archive: ${zipFilename}`);
+
+        } catch (error) {
+            console.error('Error creating ZIP archive:', error);
+            // Fallback to separate downloads
+            this.downloadFile(jsonContent, `${baseFilename}.json`, 'application/json');
+            setTimeout(() => {
+                this.downloadFile(mdContent, `${baseFilename}.md`, 'text/markdown');
+            }, 100);
+        }
     }
 }
 
