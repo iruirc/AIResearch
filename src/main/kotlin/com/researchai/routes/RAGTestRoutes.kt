@@ -18,6 +18,8 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -79,6 +81,28 @@ private fun validateQueries(queries: List<RAGTestQuery>): List<InvalidQueryInfo>
     return invalidQueries
 }
 
+/**
+ * Generate a unique test ID based on current timestamp.
+ * Format: "yyyy-MM-dd_HH:mm:ss"
+ * If ID already exists, appends "_1", "_2", etc.
+ */
+private suspend fun generateUniqueTestId(storage: RAGTestStorage): String {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss")
+    val baseId = LocalDateTime.now().format(formatter)
+
+    // Check if base ID is available
+    if (!storage.exists(baseId)) {
+        return baseId
+    }
+
+    // Find unique suffix
+    var suffix = 1
+    while (storage.exists("${baseId}_$suffix")) {
+        suffix++
+    }
+    return "${baseId}_$suffix"
+}
+
 // JSON serializer for SSE events
 private val sseJson = Json {
     ignoreUnknownKeys = true
@@ -131,8 +155,9 @@ fun Route.ragTestRoutes(
                 }
 
                 val now = Clock.System.now()
+                val testId = generateUniqueTestId(storage)
                 val test = RAGTest(
-                    id = UUID.randomUUID().toString(),
+                    id = testId,
                     name = request.name,
                     queries = request.queries,
                     evaluationMetrics = request.evaluationMetrics,

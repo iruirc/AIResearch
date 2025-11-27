@@ -2428,8 +2428,8 @@ export class RAGModal {
             return;
         }
 
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const baseFilename = `rag-test-results-${this.executionResults.testId}-${timestamp}`;
+        // Use testId (timestamp format: yyyy-MM-dd_HH:mm:ss), replace : with - for filename safety
+        const baseFilename = this.executionResults.testId.replace(/:/g, '-');
 
         // Prepare file contents
         const jsonContent = JSON.stringify(this.executionResults, null, 2);
@@ -2453,10 +2453,10 @@ export class RAGModal {
         try {
             const zip = new JSZip();
 
-            // Add files to archive
-            zip.file(`${baseFilename}.json`, jsonContent);
-            zip.file(`${baseFilename}.md`, mdContent);
-            zip.file(`${baseFilename}-comparison.md`, mdSimpleContent);
+            // Add files to archive with simple names
+            zip.file('results.json', jsonContent);
+            zip.file('report.md', mdContent);
+            zip.file('comparison.md', mdSimpleContent);
 
             // Generate ZIP and download
             const zipBlob = await zip.generateAsync({ type: 'blob' });
