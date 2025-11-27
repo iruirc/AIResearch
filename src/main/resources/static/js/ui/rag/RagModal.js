@@ -175,7 +175,7 @@ export class RagModal {
     openAddDocumentForm() {
         this.documentEventHandler.reset();
         modalsUI.closeModal('ragModal');
-        modalsUI.openModal('ragDocumentFormModal');
+        modalsUI.openModal('ragFormModal');
 
         this.documentRenderer.setupAddForm({
             onSubmit: () => this.handleAddDocument(),
@@ -197,7 +197,7 @@ export class RagModal {
             const doc = await this.documentManager.getDocument(docId);
 
             modalsUI.closeModal('ragModal');
-            modalsUI.openModal('ragDocumentFormModal');
+            modalsUI.openModal('ragFormModal');
 
             this.documentRenderer.setupEditForm(doc, {
                 onSubmit: () => this.handleUpdateDocument(docId),
@@ -540,7 +540,7 @@ export class RagModal {
      * Return to main RAG modal
      */
     returnToMainModal() {
-        modalsUI.closeModal('ragDocumentFormModal');
+        modalsUI.closeModal('ragFormModal');
         modalsUI.closeModal('ragTestFormModal');
         modalsUI.openModal('ragModal');
     }

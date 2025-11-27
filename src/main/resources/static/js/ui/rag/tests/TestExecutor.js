@@ -347,10 +347,10 @@ export class TestExecutor {
         const withChunksContainer = document.getElementById('ragExecutionCurrentWithChunks');
 
         if (withoutChunksContainer) {
-            this.chunksRenderer.renderCurrentQueryChunks(withoutChunksContainer, data.withoutRerankingChunks || []);
+            this.chunksRenderer.renderChunksForCurrentQuery(withoutChunksContainer, data.withoutRerankingChunks || []);
         }
         if (withChunksContainer) {
-            this.chunksRenderer.renderCurrentQueryChunks(withChunksContainer, data.withRerankingChunks || []);
+            this.chunksRenderer.renderChunksForCurrentQuery(withChunksContainer, data.withRerankingChunks || []);
         }
     }
 
@@ -418,10 +418,10 @@ export class TestExecutor {
         const withChunksContainer = document.getElementById('ragExecutionPreviousWithChunks');
 
         if (withoutChunksContainer) {
-            this.chunksRenderer.renderPreviousRequestChunks(withoutChunksContainer, result.withoutReranking?.chunks || []);
+            this.chunksRenderer.renderChunksForPreviousRequest(withoutChunksContainer, result.withoutReranking?.chunks || []);
         }
         if (withChunksContainer) {
-            this.chunksRenderer.renderPreviousRequestChunks(withChunksContainer, result.withReranking?.chunks || []);
+            this.chunksRenderer.renderChunksForPreviousRequest(withChunksContainer, result.withReranking?.chunks || []);
         }
 
         // Populate responses
