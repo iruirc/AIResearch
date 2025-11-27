@@ -18,6 +18,8 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -328,15 +330,15 @@ fun Route.ragTestRoutes(
                                 val eventData = when (event) {
                                     is com.researchai.domain.models.ExecutionStartedEvent -> {
                                         // Add executionId to started event for cancellation support
-                                        val eventWithExecutionId = mapOf(
-                                            "type" to event.type,
-                                            "testId" to event.testId,
-                                            "testName" to event.testName,
-                                            "sessionId" to event.sessionId,
-                                            "totalQueries" to event.totalQueries,
-                                            "executionId" to executionId
-                                        )
-                                        sseJson.encodeToString(eventWithExecutionId)
+                                        val eventWithExecutionId = buildJsonObject {
+                                            put("type", event.type)
+                                            put("testId", event.testId)
+                                            put("testName", event.testName)
+                                            put("sessionId", event.sessionId)
+                                            put("totalQueries", event.totalQueries)
+                                            put("executionId", executionId)
+                                        }
+                                        eventWithExecutionId.toString()
                                     }
                                     is com.researchai.domain.models.QueryProcessingEvent ->
                                         sseJson.encodeToString(event)
@@ -358,19 +360,19 @@ fun Route.ragTestRoutes(
                             .catch { e ->
                                 if (e is CancellationException) {
                                     // Send cancelled event
-                                    val cancelEvent = mapOf(
-                                        "type" to "cancelled",
-                                        "message" to "Execution was cancelled"
-                                    )
-                                    write("data: ${sseJson.encodeToString(cancelEvent)}\n\n")
+                                    val cancelEvent = buildJsonObject {
+                                        put("type", "cancelled")
+                                        put("message", "Execution was cancelled")
+                                    }
+                                    write("data: $cancelEvent\n\n")
                                     flush()
                                 } else {
                                     // Send error event
-                                    val errorEvent = mapOf(
-                                        "type" to "error",
-                                        "message" to (e.message ?: "Unknown error")
-                                    )
-                                    write("data: ${sseJson.encodeToString(errorEvent)}\n\n")
+                                    val errorEvent = buildJsonObject {
+                                        put("type", "error")
+                                        put("message", e.message ?: "Unknown error")
+                                    }
+                                    write("data: $errorEvent\n\n")
                                     flush()
                                 }
                             }
@@ -378,11 +380,11 @@ fun Route.ragTestRoutes(
                     }
                 } catch (e: CancellationException) {
                     // Expected on cancellation
-                    val cancelEvent = mapOf(
-                        "type" to "cancelled",
-                        "message" to "Execution was cancelled"
-                    )
-                    write("data: ${sseJson.encodeToString(cancelEvent)}\n\n")
+                    val cancelEvent = buildJsonObject {
+                        put("type", "cancelled")
+                        put("message", "Execution was cancelled")
+                    }
+                    write("data: $cancelEvent\n\n")
                     flush()
                 } finally {
                     activeExecutionIds.remove(executionId)
@@ -406,9 +408,17 @@ fun Route.ragTestRoutes(
 
             if (job.isActive) {
                 job.cancel()
-                call.respond(HttpStatusCode.OK, mapOf("status" to "cancelling", "executionId" to executionId))
+                val response = buildJsonObject {
+                    put("status", "cancelling")
+                    put("executionId", executionId)
+                }
+                call.respondText(response.toString(), ContentType.Application.Json)
             } else {
-                call.respond(HttpStatusCode.OK, mapOf("status" to "already_completed", "executionId" to executionId))
+                val response = buildJsonObject {
+                    put("status", "already_completed")
+                    put("executionId", executionId)
+                }
+                call.respondText(response.toString(), ContentType.Application.Json)
             }
         }
     }

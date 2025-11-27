@@ -90,6 +90,12 @@ export class RAGModal {
         this.downloadResults = this.downloadResults.bind(this);
         this.formatTime = this.formatTime.bind(this);
 
+        // Previous request block methods
+        this.hidePreviousRequestBlock = this.hidePreviousRequestBlock.bind(this);
+        this.showPreviousRequestBlock = this.showPreviousRequestBlock.bind(this);
+        this.togglePreviousRequestBlock = this.togglePreviousRequestBlock.bind(this);
+        this.renderChunksForPreviousRequest = this.renderChunksForPreviousRequest.bind(this);
+
         // Test execution state
         this.currentExecution = null;
         this.executionTimer = null;
@@ -1975,6 +1981,8 @@ export class RAGModal {
             onCompleted: (data) => {
                 console.log('Query completed:', data);
                 this.updateExecutionProgress(data.current, data.total, data.result.query);
+                // Show previous request block with the completed result
+                this.showPreviousRequestBlock(data.result);
             },
             onError: (data) => {
                 console.error('Query error:', data);
@@ -2059,6 +2067,19 @@ export class RAGModal {
 
         if (downloadButton) downloadButton.classList.add('hidden');
         if (cancelButton) cancelButton.classList.remove('hidden');
+
+        // Hide previous request block and reset modal width
+        this.hidePreviousRequestBlock();
+        const modalContent = document.querySelector('.rag-execution-modal-content');
+        if (modalContent) {
+            modalContent.classList.remove('expanded');
+        }
+
+        // Setup toggle handler for previous request block header
+        const prevHeader = document.getElementById('ragExecutionPreviousHeader');
+        if (prevHeader) {
+            prevHeader.onclick = () => this.togglePreviousRequestBlock();
+        }
     }
 
     /**
@@ -2195,6 +2216,154 @@ export class RAGModal {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // ===== Previous Request Block Methods =====
+
+    /**
+     * Hide the previous request block
+     */
+    hidePreviousRequestBlock() {
+        const block = document.getElementById('ragExecutionPreviousRequest');
+        if (block) {
+            block.classList.add('hidden');
+            block.classList.remove('collapsed');
+        }
+    }
+
+    /**
+     * Show and populate the previous request block with query result data
+     * @param {Object} result - QueryExecutionResult object
+     */
+    showPreviousRequestBlock(result) {
+        const block = document.getElementById('ragExecutionPreviousRequest');
+        if (!block || !result) return;
+
+        // Show block and expand modal
+        block.classList.remove('hidden');
+        block.classList.remove('collapsed');
+        const modalContent = document.querySelector('.rag-execution-modal-content');
+        if (modalContent) {
+            modalContent.classList.add('expanded');
+        }
+
+        // Populate query text
+        const queryText = document.getElementById('ragExecutionPreviousQueryText');
+        if (queryText) {
+            queryText.textContent = result.query;
+        }
+
+        // Populate chunks count
+        const withoutCount = document.getElementById('ragExecutionPreviousWithoutCount');
+        const withCount = document.getElementById('ragExecutionPreviousWithCount');
+
+        const withoutChunksCount = result.withoutReranking?.chunksCount || 0;
+        const withChunksCount = result.withReranking?.chunksCount || 0;
+
+        if (withoutCount) {
+            withoutCount.textContent = `${withoutChunksCount} чанков`;
+        }
+        if (withCount) {
+            withCount.textContent = `${withChunksCount} чанков`;
+        }
+
+        // Populate chunks lists
+        const withoutChunksContainer = document.getElementById('ragExecutionPreviousWithoutChunks');
+        const withChunksContainer = document.getElementById('ragExecutionPreviousWithChunks');
+
+        if (withoutChunksContainer) {
+            this.renderChunksForPreviousRequest(withoutChunksContainer, result.withoutReranking?.chunks || []);
+        }
+        if (withChunksContainer) {
+            this.renderChunksForPreviousRequest(withChunksContainer, result.withReranking?.chunks || []);
+        }
+
+        // Populate responses
+        const withoutResponse = document.getElementById('ragExecutionPreviousWithoutResponse');
+        const withResponse = document.getElementById('ragExecutionPreviousWithResponse');
+
+        if (withoutResponse) {
+            withoutResponse.textContent = result.withoutReranking?.response || 'Нет данных';
+        }
+        if (withResponse) {
+            withResponse.textContent = result.withReranking?.response || 'Нет данных';
+        }
+
+        // Populate metadata
+        const metadata = document.getElementById('ragExecutionPreviousMetadata');
+        if (metadata) {
+            const withoutTime = result.withoutReranking?.elapsedTimeMs || 0;
+            const withTime = result.withReranking?.elapsedTimeMs || 0;
+            const totalTime = withoutTime + withTime;
+
+            metadata.innerHTML = `
+                <div class="rag-execution-previous-metadata-item">
+                    <span class="rag-execution-previous-metadata-label">Время без реранкинга:</span>
+                    <span class="rag-execution-previous-metadata-value">${withoutTime} мс</span>
+                </div>
+                <div class="rag-execution-previous-metadata-item">
+                    <span class="rag-execution-previous-metadata-label">Время с реранкингом:</span>
+                    <span class="rag-execution-previous-metadata-value">${withTime} мс</span>
+                </div>
+                <div class="rag-execution-previous-metadata-item">
+                    <span class="rag-execution-previous-metadata-label">Общее время:</span>
+                    <span class="rag-execution-previous-metadata-value">${totalTime} мс</span>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Toggle the previous request block collapse/expand state
+     */
+    togglePreviousRequestBlock() {
+        const block = document.getElementById('ragExecutionPreviousRequest');
+        if (block) {
+            block.classList.toggle('collapsed');
+        }
+    }
+
+    /**
+     * Render chunks into a container for the previous request block
+     * @param {HTMLElement} container - Container element for chunks
+     * @param {Array} chunks - Array of chunk objects
+     */
+    renderChunksForPreviousRequest(container, chunks) {
+        container.innerHTML = '';
+
+        if (!chunks || chunks.length === 0) {
+            container.innerHTML = '<div class="rag-execution-previous-chunk-empty">Нет чанков</div>';
+            return;
+        }
+
+        chunks.forEach((chunk, index) => {
+            const chunkEl = document.createElement('div');
+            chunkEl.className = 'rag-execution-previous-chunk';
+
+            const scorePercent = (chunk.score * 100).toFixed(1);
+
+            chunkEl.innerHTML = `
+                <div class="rag-execution-previous-chunk-header">
+                    <span class="rag-execution-previous-chunk-index">${index + 1}</span>
+                    <span class="rag-execution-previous-chunk-doc">${chunk.documentName}</span>
+                    <span class="rag-execution-previous-chunk-score">${scorePercent}%</span>
+                </div>
+                <div class="rag-execution-previous-chunk-text">${this.escapeHtml(chunk.text)}</div>
+            `;
+
+            container.appendChild(chunkEl);
+        });
+    }
+
+    /**
+     * Escape HTML special characters
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped text
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     /**

@@ -1040,6 +1040,65 @@
                     <span class="rag-execution-status-text">Ожидание...</span>
                 </div>
 
+                <!-- Previous Request Results (shown after first query completes) -->
+                <div id="ragExecutionPreviousRequest" class="rag-execution-previous hidden">
+                    <div class="rag-execution-previous-header" id="ragExecutionPreviousHeader">
+                        <svg class="rag-execution-previous-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                        <span>Предыдущий запрос</span>
+                    </div>
+                    <div class="rag-execution-previous-content" id="ragExecutionPreviousContent">
+                        <!-- Original query -->
+                        <div class="rag-execution-previous-query">
+                            <span class="rag-execution-previous-label">Запрос:</span>
+                            <span id="ragExecutionPreviousQueryText" class="rag-execution-previous-query-text"></span>
+                        </div>
+
+                        <!-- Chunks comparison -->
+                        <div class="rag-execution-previous-comparison">
+                            <!-- Left column - Without reranking -->
+                            <div class="rag-execution-previous-column">
+                                <div class="rag-execution-previous-column-header">
+                                    <span class="rag-execution-previous-column-title">Без реранкинга</span>
+                                    <span id="ragExecutionPreviousWithoutCount" class="rag-execution-previous-count">0 чанков</span>
+                                </div>
+                                <div id="ragExecutionPreviousWithoutChunks" class="rag-execution-previous-chunks">
+                                    <!-- Chunks will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Right column - With reranking -->
+                            <div class="rag-execution-previous-column">
+                                <div class="rag-execution-previous-column-header">
+                                    <span class="rag-execution-previous-column-title">С реранкингом</span>
+                                    <span id="ragExecutionPreviousWithCount" class="rag-execution-previous-count">0 чанков</span>
+                                </div>
+                                <div id="ragExecutionPreviousWithChunks" class="rag-execution-previous-chunks">
+                                    <!-- Chunks will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Responses -->
+                        <div class="rag-execution-previous-responses">
+                            <div class="rag-execution-previous-response">
+                                <div class="rag-execution-previous-response-header">Ответ без реранкинга:</div>
+                                <div id="ragExecutionPreviousWithoutResponse" class="rag-execution-previous-response-text"></div>
+                            </div>
+                            <div class="rag-execution-previous-response">
+                                <div class="rag-execution-previous-response-header">Ответ с реранкингом:</div>
+                                <div id="ragExecutionPreviousWithResponse" class="rag-execution-previous-response-text"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metadata -->
+                        <div class="rag-execution-previous-metadata" id="ragExecutionPreviousMetadata">
+                            <!-- Metadata will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="rag-execution-actions">
                     <button type="button" id="ragExecutionCancelButton" class="cancel-button">
