@@ -39,7 +39,8 @@ export class RagModal {
         this.documentRenderer = new DocumentRenderer({
             onAddDocument: () => this.openAddDocumentForm(),
             onEditDocument: (id) => this.openEditDocumentForm(id),
-            onDeleteDocument: (id, name) => this.handleDeleteDocument(id, name)
+            onDeleteDocument: (id, name) => this.handleDeleteDocument(id, name),
+            onToggleDocument: (id, enabled) => this.handleToggleDocument(id, enabled)
         });
         this.documentEventHandler = new DocumentEventHandler({
             onFileAdded: () => this.documentRenderer.renderFilesList(
@@ -98,6 +99,9 @@ export class RagModal {
     async initialize() {
         console.log('Initializing RAG Modal...');
 
+        // Setup modal open/close buttons
+        this.setupModalButtons();
+
         // Setup tab navigation
         this.tabManager.setup();
 
@@ -105,7 +109,38 @@ export class RagModal {
         this.documentEventHandler.setup();
         this.settingsEventHandler.setup();
 
-        // Load initial data
+        console.log('RAG Modal initialized');
+    }
+
+    /**
+     * Setup modal open/close button handlers
+     */
+    setupModalButtons() {
+        // Open modal button
+        const ragButton = document.getElementById('ragButton');
+        if (ragButton) {
+            ragButton.addEventListener('click', async () => {
+                await this.open();
+            });
+        }
+
+        // Close modal button
+        const closeButton = document.getElementById('closeRagModal');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                modalsUI.closeModal('ragModal');
+            });
+        }
+    }
+
+    /**
+     * Open the RAG modal and load all data
+     */
+    async open() {
+        console.log('Opening RAG modal...');
+        modalsUI.openModal('ragModal');
+
+        // Load all data
         await Promise.all([
             this.documentManager.loadDocuments().catch(err => {
                 console.error('Failed to load documents:', err);
@@ -119,8 +154,6 @@ export class RagModal {
                 this.testRenderer.showError(err.message);
             })
         ]);
-
-        console.log('RAG Modal initialized');
     }
 
     /**
@@ -247,6 +280,20 @@ export class RagModal {
         } catch (error) {
             console.error('Error deleting document:', error);
             alert(`Ошибка при удалении документа: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle toggling document enabled/disabled state
+     * @param {string} docId - Document ID
+     * @param {boolean} enabled - New enabled state
+     */
+    async handleToggleDocument(docId, enabled) {
+        try {
+            await this.documentManager.handleToggleDocument(docId, enabled);
+        } catch (error) {
+            console.error('Error toggling document:', error);
+            alert(`Ошибка при изменении статуса документа: ${error.message}`);
         }
     }
 

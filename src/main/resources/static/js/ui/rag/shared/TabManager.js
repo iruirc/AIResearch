@@ -8,11 +8,27 @@
  * Tab Manager class for managing tab switching
  */
 export class TabManager {
-    constructor() {
+    /**
+     * Create a TabManager
+     * @param {Object} options - Configuration options
+     * @param {string} options.tabsContainerId - ID of tabs container (optional)
+     * @param {Function} options.onTabChange - Callback when tab changes (optional)
+     */
+    constructor(options = {}) {
         this.activeTab = 'text';
         this.activeModalTab = 'documents';
         this.activeTestTab = 'text';
-        this.onModalTabChanged = null;
+        this.onModalTabChanged = options.onTabChange || null;
+        this.tabsContainerId = options.tabsContainerId || null;
+    }
+
+    /**
+     * Setup all tab handlers (main entry point)
+     */
+    setup() {
+        this.setupModalTabs();
+        this.setupDocumentTabs();
+        this.setupTestTabs();
     }
 
     /**
