@@ -129,8 +129,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 16*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 16*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -140,8 +140,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 64*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 64*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -151,8 +151,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 16*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 16*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -162,8 +162,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 16*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 16*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -173,8 +173,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 16*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 16*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -184,8 +184,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = true,
                     supportsStreaming = true,
-                    maxTokens = 8*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 8*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -195,8 +195,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 8*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 8*1000,
+                    contextWindow = 200*1000
                 )
             ),
             AIModel(
@@ -206,8 +206,8 @@ class ClaudeProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = true,
                     supportsStreaming = true,
-                    maxTokens = 4*1024,
-                    contextWindow = 200*1024
+                    maxTokens = 4*1000,
+                    contextWindow = 200*1000
                 )
             )
         )

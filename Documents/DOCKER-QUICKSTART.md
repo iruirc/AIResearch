@@ -173,7 +173,7 @@ docker-compose logs -f
 # .env файл
 CLAUDE_API_KEY=sk-ant-api03-...           # ОБЯЗАТЕЛЬНО
 CLAUDE_MODEL=claude-haiku-4-5-20251001   # Опционально
-CLAUDE_MAX_TOKENS=1024                   # Опционально
+CLAUDE_MAX_TOKENS=1000                   # Опционально
 CLAUDE_TEMPERATURE=1.0                   # Опционально
 ```
 

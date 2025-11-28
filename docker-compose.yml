@@ -53,7 +53,7 @@ services:
     environment:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-haiku-4-5-20251001}
-      - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-1024}
+      - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-1000}
       - CLAUDE_TEMPERATURE=${CLAUDE_TEMPERATURE:-1.0}
       - DATABASE_URL=jdbc:postgresql://postgres:5432/${DATABASE_NAME:-researchai}
       - DATABASE_USER=${DATABASE_USER:-researchai}

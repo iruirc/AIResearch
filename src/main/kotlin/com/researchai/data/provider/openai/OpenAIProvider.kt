@@ -126,8 +126,8 @@ class OpenAIProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 128*1024,
-                    contextWindow = 400*1024
+                    maxTokens = 128*1000,
+                    contextWindow = 400*1000
                 )
             ),
             AIModel(
@@ -137,8 +137,8 @@ class OpenAIProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 128*1024,
-                    contextWindow = 400*1024
+                    maxTokens = 128*1000,
+                    contextWindow = 400*1000
                 )
             ),
             AIModel(
@@ -148,8 +148,8 @@ class OpenAIProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = true,
                     supportsStreaming = true,
-                    maxTokens = 128*1024,
-                    contextWindow = 400*1024
+                    maxTokens = 128*1000,
+                    contextWindow = 400*1000
                 )
             ),
             AIModel(
@@ -159,8 +159,8 @@ class OpenAIProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = true,
                     supportsStreaming = true,
-                    maxTokens = 272*1024,
-                    contextWindow = 400*1024
+                    maxTokens = 272*1000,
+                    contextWindow = 400*1000
                 )
             )
         )

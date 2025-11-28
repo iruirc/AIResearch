@@ -34,7 +34,7 @@ INFO  Application - POST /chat - 200 OK
 ### 2. Запросы к Claude API
 ```
 INFO  c.e.services.ClaudeService - Sending message to Claude API: Привет!
-INFO  c.e.services.ClaudeService - Claude Request: model=claude-haiku-4-5-20251001, maxTokens=1024
+INFO  c.e.services.ClaudeService - Claude Request: model=claude-haiku-4-5-20251001, maxTokens=1000
 ```
 
 ### 3. Ответы от Claude API

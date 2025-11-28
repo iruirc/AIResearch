@@ -125,8 +125,8 @@ class HuggingFaceProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 32*1024,
-                    contextWindow = 128*1024
+                    maxTokens = 32*1000,
+                    contextWindow = 128*1000
                 )
             ),
             AIModel(
@@ -136,8 +136,8 @@ class HuggingFaceProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 32*1024,
-                    contextWindow = 128*1024
+                    maxTokens = 32*1000,
+                    contextWindow = 128*1000
                 )
             ),
             AIModel(
@@ -147,8 +147,8 @@ class HuggingFaceProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 8*1024,
-                    contextWindow = 128*1024
+                    maxTokens = 8*1000,
+                    contextWindow = 128*1000
                 )
             ),
             AIModel(
@@ -158,8 +158,8 @@ class HuggingFaceProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 8*1024,
-                    contextWindow = 32*1024
+                    maxTokens = 8*1000,
+                    contextWindow = 32*1000
                 )
             ),
             AIModel(
@@ -169,8 +169,8 @@ class HuggingFaceProvider(
                 capabilities = ModelCapabilities(
                     supportsVision = false,
                     supportsStreaming = true,
-                    maxTokens = 2*1024,
-                    contextWindow = 128*1024
+                    maxTokens = 2*1000,
+                    contextWindow = 128*1000
                 )
             )
         )
