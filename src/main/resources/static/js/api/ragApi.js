@@ -69,12 +69,18 @@ export const ragApi = {
      * @param {string} content - Document content (text)
      * @param {string} chunkingStrategy - Chunking strategy (FIXED_SIZE, RECURSIVE, SEMANTIC)
      * @param {boolean} enabled - Whether the document should be enabled
+     * @param {string|null} originalFileName - Original file name (for source file storage)
      * @returns {Promise<Object>} Created document data
      * @throws {Error} If the HTTP request fails
      * @example
      * const document = await ragApi.addDocument('My Document', 'Content...', 'FIXED_SIZE', true);
      */
-    async addDocument(name, content, chunkingStrategy = 'FIXED_SIZE', enabled = true) {
+    async addDocument(name, content, chunkingStrategy = 'FIXED_SIZE', enabled = true, originalFileName = null) {
+        const body = { name, content, chunkingStrategy, enabled };
+        if (originalFileName !== null) {
+            body.originalFileName = originalFileName;
+        }
+
         const response = await fetchWithTimeout(
             `${API_CONFIG.RAG}/documents`,
             {
@@ -82,7 +88,7 @@ export const ragApi = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name, content, chunkingStrategy, enabled }),
+                body: JSON.stringify(body),
             },
             API_CONFIG.REQUEST_TIMEOUT
         );
@@ -93,6 +99,48 @@ export const ragApi = {
                 throw new Error(`DUPLICATE_NAME:${errorData.error || 'Знание с таким именем уже существует'}`);
             }
             throw new Error(errorData.error || `Failed to add document: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
+     * Add multiple RAG documents in batch
+     * @async
+     * @param {Array<Object>} documents - Array of document objects
+     * @param {string} documents[].name - Document name
+     * @param {string} documents[].content - Document content
+     * @param {string|null} documents[].originalFileName - Original file name (null for text)
+     * @param {string} chunkingStrategy - Chunking strategy for all documents
+     * @param {boolean} enabled - Whether documents should be enabled
+     * @returns {Promise<Object>} Response with created documents and errors
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const result = await ragApi.addDocumentsBatch([
+     *     { name: 'file1.txt', content: '...', originalFileName: 'file1.txt' },
+     *     { name: 'file2.md', content: '...', originalFileName: 'file2.md' }
+     * ], 'FIXED_SIZE', true);
+     */
+    async addDocumentsBatch(documents, chunkingStrategy = 'FIXED_SIZE', enabled = true) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.RAG}/documents/batch`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    documents,
+                    chunkingStrategy,
+                    enabled
+                }),
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to add documents: ${response.status}`);
         }
 
         return await response.json();

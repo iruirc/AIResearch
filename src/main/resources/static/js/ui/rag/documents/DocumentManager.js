@@ -110,34 +110,52 @@ export class DocumentManager {
                     throw new Error('Пожалуйста, введите содержимое документа');
                 }
 
-                console.log(`Adding document: ${name}`);
+                console.log(`Adding text document: ${name}`);
                 await ragApi.addDocument(name, content, strategy, enabled);
                 console.log('Document added successfully');
 
             } else {
-                // Files mode: combine all files into single document
+                // Files mode: each file becomes a separate document
                 const selectedFiles = this.getSelectedFiles();
 
                 if (selectedFiles.length === 0) {
                     throw new Error('Пожалуйста, выберите хотя бы один файл');
                 }
 
-                console.log(`Combining ${selectedFiles.length} file(s) into single document`);
-
-                // Read all files and combine their content
-                const contentParts = [];
-                for (const file of selectedFiles) {
+                if (selectedFiles.length === 1) {
+                    // Single file: use regular addDocument with originalFileName
+                    const file = selectedFiles[0];
                     const fileContent = await readFileContent(file);
-                    // Add file header for clarity
-                    contentParts.push(`--- Файл: ${file.name} ---\n${fileContent}`);
+
+                    console.log(`Adding single file document: ${file.name}`);
+                    await ragApi.addDocument(file.name, fileContent, strategy, enabled, file.name);
+                    console.log('File document added successfully');
+
+                } else {
+                    // Multiple files: use batch endpoint, each file = separate document
+                    console.log(`Adding ${selectedFiles.length} documents via batch`);
+
+                    const documents = [];
+                    for (const file of selectedFiles) {
+                        const fileContent = await readFileContent(file);
+                        documents.push({
+                            name: file.name,
+                            content: fileContent,
+                            originalFileName: file.name
+                        });
+                    }
+
+                    const result = await ragApi.addDocumentsBatch(documents, strategy, enabled);
+
+                    console.log(`Created ${result.created.length} documents`);
+                    if (result.errors && result.errors.length > 0) {
+                        const errorMessages = result.errors.map(e => `${e.name}: ${e.error}`).join('\n');
+                        console.warn('Some documents failed:', errorMessages);
+                        if (result.created.length === 0) {
+                            throw new Error(`Не удалось добавить документы:\n${errorMessages}`);
+                        }
+                    }
                 }
-
-                // Combine all file contents with separator
-                const combinedContent = contentParts.join('\n\n');
-
-                console.log(`Adding combined document: ${name}`);
-                await ragApi.addDocument(name, combinedContent, strategy, enabled);
-                console.log('Combined document added successfully');
             }
 
             // Reload documents
@@ -259,34 +277,49 @@ export class DocumentManager {
     }
 
     /**
-     * Add documents from files (combines all files into one document)
+     * Add documents from files (each file becomes a separate document)
      * @param {File[]} files - Array of files
-     * @param {string} name - Document name (uses first file name if not provided)
+     * @param {string} name - Ignored (each file uses its own name)
      * @param {string} strategy - Chunking strategy (default: FIXED_SIZE)
-     * @param {boolean} enabled - Whether document is enabled (default: true)
+     * @param {boolean} enabled - Whether documents are enabled (default: true)
      */
     async addDocumentsFromFiles(files, name = null, strategy = 'FIXED_SIZE', enabled = true) {
         if (!files || files.length === 0) {
             throw new Error('Пожалуйста, выберите хотя бы один файл');
         }
 
-        const docName = name || files[0].name.replace(/\.[^/.]+$/, '');
-
         try {
-            console.log(`Combining ${files.length} file(s) into single document`);
-
-            // Read all files and combine their content
-            const contentParts = [];
-            for (const file of files) {
+            if (files.length === 1) {
+                // Single file: use regular addDocument
+                const file = files[0];
                 const fileContent = await readFileContent(file);
-                contentParts.push(`--- Файл: ${file.name} ---\n${fileContent}`);
+
+                console.log(`Adding single file document: ${file.name}`);
+                await ragApi.addDocument(file.name, fileContent, strategy, enabled, file.name);
+                console.log('File document added successfully');
+
+            } else {
+                // Multiple files: use batch endpoint
+                console.log(`Adding ${files.length} documents via batch`);
+
+                const documents = [];
+                for (const file of files) {
+                    const fileContent = await readFileContent(file);
+                    documents.push({
+                        name: file.name,
+                        content: fileContent,
+                        originalFileName: file.name
+                    });
+                }
+
+                const result = await ragApi.addDocumentsBatch(documents, strategy, enabled);
+
+                console.log(`Created ${result.created.length} documents`);
+                if (result.errors && result.errors.length > 0) {
+                    const errorMessages = result.errors.map(e => `${e.name}: ${e.error}`).join('\n');
+                    console.warn('Some documents failed:', errorMessages);
+                }
             }
-
-            const combinedContent = contentParts.join('\n\n');
-
-            console.log(`Adding combined document: ${docName}`);
-            await ragApi.addDocument(docName, combinedContent, strategy, enabled);
-            console.log('Combined document added successfully');
 
             await this.loadDocuments();
         } catch (error) {

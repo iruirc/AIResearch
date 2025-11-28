@@ -10,6 +10,7 @@ import com.researchai.domain.rag.VectorSearchService
 import com.researchai.persistence.RAGDocumentStorage
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.util.*
 
 /**
@@ -36,7 +37,8 @@ class RAGManager(
         name: String,
         content: String,
         chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
-        enabled: Boolean = config.enabledByDefault
+        enabled: Boolean = config.enabledByDefault,
+        originalFileName: String? = null
     ): RAGDocument {
         // Check if document with this name already exists
         if (storage.existsByName(name)) {
@@ -44,6 +46,9 @@ class RAGManager(
         }
 
         val documentId = UUID.randomUUID().toString()
+
+        // Save source file
+        val sourceFilePath = saveSourceFile(documentId, content, originalFileName)
 
         val chunker = getChunker(chunkingStrategy)
         val textChunks = chunker.chunk(content)
@@ -71,7 +76,8 @@ class RAGManager(
             chunkingStrategy = chunkingStrategy,
             enabled = enabled,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            sourceFilePath = sourceFilePath
         )
 
         storage.save(document)
@@ -137,9 +143,10 @@ class RAGManager(
     }
 
     suspend fun deleteDocument(documentId: String): Boolean {
-        if (!storage.exists(documentId)) {
-            return false
-        }
+        val document = storage.load(documentId) ?: return false
+
+        // Delete source file first
+        deleteSourceFile(document.sourceFilePath)
 
         storage.delete(documentId)
         vectorSearch.removeDocument(documentId)
@@ -330,6 +337,37 @@ class RAGManager(
         )
 
         return ContextWithDebugInfo(context, debugInfo)
+    }
+
+    private fun saveSourceFile(documentId: String, content: String, originalFileName: String?): String {
+        val sourceDir = File("data/rag/source_files")
+        sourceDir.mkdirs()
+
+        val fileName = if (originalFileName != null) {
+            "${documentId}_${originalFileName}"
+        } else {
+            "${documentId}.txt"
+        }
+
+        val file = File(sourceDir, fileName)
+        file.writeText(content)
+
+        logger.info("Saved source file: ${file.absolutePath}")
+        return file.absolutePath
+    }
+
+    private fun deleteSourceFile(sourceFilePath: String?) {
+        if (sourceFilePath == null) return
+
+        try {
+            val file = File(sourceFilePath)
+            if (file.exists()) {
+                file.delete()
+                logger.info("Deleted source file: $sourceFilePath")
+            }
+        } catch (e: Exception) {
+            logger.warn("Failed to delete source file: $sourceFilePath", e)
+        }
     }
 
     private fun getChunker(strategy: ChunkingStrategy): TextChunker {

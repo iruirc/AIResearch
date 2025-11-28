@@ -19,7 +19,8 @@ data class AddDocumentRequest(
     val name: String,
     val content: String,
     val chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val originalFileName: String? = null
 )
 
 @Serializable
@@ -72,6 +73,32 @@ data class ErrorResponse(
     val error: String
 )
 
+@Serializable
+data class AddDocumentBatchRequest(
+    val documents: List<DocumentInput>,
+    val chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
+    val enabled: Boolean = true
+)
+
+@Serializable
+data class DocumentInput(
+    val name: String,
+    val content: String,
+    val originalFileName: String? = null
+)
+
+@Serializable
+data class AddDocumentBatchResponse(
+    val created: List<com.researchai.domain.models.RAGDocument>,
+    val errors: List<BatchError> = emptyList()
+)
+
+@Serializable
+data class BatchError(
+    val name: String,
+    val error: String
+)
+
 fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesStorage) {
     route("/rag") {
         // POST /rag/documents - Add new document
@@ -93,12 +120,58 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                     name = request.name,
                     content = request.content,
                     chunkingStrategy = request.chunkingStrategy,
-                    enabled = request.enabled
+                    enabled = request.enabled,
+                    originalFileName = request.originalFileName
                 )
 
                 call.respond(HttpStatusCode.Created, document)
             } catch (e: DuplicateDocumentNameException) {
                 call.respond(HttpStatusCode.Conflict, ErrorResponse(e.message ?: "Document with this name already exists"))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
+        // POST /rag/documents/batch - Add multiple documents
+        post("/documents/batch") {
+            try {
+                val request = call.receive<AddDocumentBatchRequest>()
+
+                if (request.documents.isEmpty()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Documents list cannot be empty"))
+                    return@post
+                }
+
+                val created = mutableListOf<com.researchai.domain.models.RAGDocument>()
+                val errors = mutableListOf<BatchError>()
+
+                for (input in request.documents) {
+                    if (input.name.isBlank()) {
+                        errors.add(BatchError(input.name.ifBlank { "(empty)" }, "Document name cannot be empty"))
+                        continue
+                    }
+                    if (input.content.isBlank()) {
+                        errors.add(BatchError(input.name, "Document content cannot be empty"))
+                        continue
+                    }
+
+                    try {
+                        val document = ragManager.addDocument(
+                            name = input.name,
+                            content = input.content,
+                            chunkingStrategy = request.chunkingStrategy,
+                            enabled = request.enabled,
+                            originalFileName = input.originalFileName
+                        )
+                        created.add(document)
+                    } catch (e: DuplicateDocumentNameException) {
+                        errors.add(BatchError(input.name, "Document with this name already exists"))
+                    } catch (e: Exception) {
+                        errors.add(BatchError(input.name, e.message ?: "Unknown error"))
+                    }
+                }
+
+                call.respond(HttpStatusCode.Created, AddDocumentBatchResponse(created, errors))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }

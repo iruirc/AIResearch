@@ -12,7 +12,8 @@ data class RAGDocument(
     val chunkingStrategy: ChunkingStrategy,
     val enabled: Boolean,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val sourceFilePath: String? = null
 )
 
 @Serializable
