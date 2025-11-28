@@ -115,47 +115,34 @@ export class DocumentManager {
                 console.log('Document added successfully');
 
             } else {
-                // Files mode: each file becomes a separate document
+                // Files mode: all files combined into one knowledge document
                 const selectedFiles = this.getSelectedFiles();
 
                 if (selectedFiles.length === 0) {
                     throw new Error('Пожалуйста, выберите хотя бы один файл');
                 }
 
-                if (selectedFiles.length === 1) {
-                    // Single file: use regular addDocument with originalFileName
-                    const file = selectedFiles[0];
+                // Combine all files into one document with the user-provided name
+                const sourceFileNames = selectedFiles.map(f => f.name);
+                let combinedContent = '';
+
+                for (const file of selectedFiles) {
                     const fileContent = await readFileContent(file);
-
-                    console.log(`Adding single file document: ${file.name}`);
-                    await ragApi.addDocument(file.name, fileContent, strategy, enabled, file.name);
-                    console.log('File document added successfully');
-
-                } else {
-                    // Multiple files: use batch endpoint, each file = separate document
-                    console.log(`Adding ${selectedFiles.length} documents via batch`);
-
-                    const documents = [];
-                    for (const file of selectedFiles) {
-                        const fileContent = await readFileContent(file);
-                        documents.push({
-                            name: file.name,
-                            content: fileContent,
-                            originalFileName: file.name
-                        });
-                    }
-
-                    const result = await ragApi.addDocumentsBatch(documents, strategy, enabled);
-
-                    console.log(`Created ${result.created.length} documents`);
-                    if (result.errors && result.errors.length > 0) {
-                        const errorMessages = result.errors.map(e => `${e.name}: ${e.error}`).join('\n');
-                        console.warn('Some documents failed:', errorMessages);
-                        if (result.created.length === 0) {
-                            throw new Error(`Не удалось добавить документы:\n${errorMessages}`);
-                        }
-                    }
+                    // Add separator with file name for source tracking
+                    combinedContent += `=== ${file.name} ===\n`;
+                    combinedContent += fileContent;
+                    combinedContent += '\n\n';
                 }
+
+                combinedContent = combinedContent.trim();
+
+                console.log(`Adding combined document "${name}" from ${selectedFiles.length} files: ${sourceFileNames.join(', ')}`);
+
+                // Use sourceFiles parameter to track original files (comma-separated for now)
+                const sourceFilesStr = sourceFileNames.join(', ');
+                await ragApi.addDocument(name, combinedContent, strategy, enabled, sourceFilesStr);
+
+                console.log(`Document "${name}" created from ${selectedFiles.length} files`);
             }
 
             // Reload documents
@@ -277,53 +264,48 @@ export class DocumentManager {
     }
 
     /**
-     * Add documents from files (each file becomes a separate document)
+     * Add knowledge from files (all files combined into one knowledge document)
      * @param {File[]} files - Array of files
-     * @param {string} name - Ignored (each file uses its own name)
+     * @param {string} name - Knowledge name (required)
      * @param {string} strategy - Chunking strategy (default: FIXED_SIZE)
-     * @param {boolean} enabled - Whether documents are enabled (default: true)
+     * @param {boolean} enabled - Whether document is enabled (default: true)
      */
-    async addDocumentsFromFiles(files, name = null, strategy = 'FIXED_SIZE', enabled = true) {
+    async addDocumentsFromFiles(files, name, strategy = 'FIXED_SIZE', enabled = true) {
         if (!files || files.length === 0) {
             throw new Error('Пожалуйста, выберите хотя бы один файл');
         }
 
+        if (!name) {
+            throw new Error('Пожалуйста, укажите название знания');
+        }
+
         try {
-            if (files.length === 1) {
-                // Single file: use regular addDocument
-                const file = files[0];
+            // Combine all files into one document with user-provided name
+            const sourceFileNames = files.map(f => f.name);
+            let combinedContent = '';
+
+            for (const file of files) {
                 const fileContent = await readFileContent(file);
-
-                console.log(`Adding single file document: ${file.name}`);
-                await ragApi.addDocument(file.name, fileContent, strategy, enabled, file.name);
-                console.log('File document added successfully');
-
-            } else {
-                // Multiple files: use batch endpoint
-                console.log(`Adding ${files.length} documents via batch`);
-
-                const documents = [];
-                for (const file of files) {
-                    const fileContent = await readFileContent(file);
-                    documents.push({
-                        name: file.name,
-                        content: fileContent,
-                        originalFileName: file.name
-                    });
-                }
-
-                const result = await ragApi.addDocumentsBatch(documents, strategy, enabled);
-
-                console.log(`Created ${result.created.length} documents`);
-                if (result.errors && result.errors.length > 0) {
-                    const errorMessages = result.errors.map(e => `${e.name}: ${e.error}`).join('\n');
-                    console.warn('Some documents failed:', errorMessages);
-                }
+                // Add separator with file name for source tracking
+                combinedContent += `=== ${file.name} ===\n`;
+                combinedContent += fileContent;
+                combinedContent += '\n\n';
             }
+
+            combinedContent = combinedContent.trim();
+
+            console.log(`Adding knowledge "${name}" from ${files.length} file(s): ${sourceFileNames.join(', ')}`);
+
+            // For single file - use filename, for multiple files - use null (will be saved as {id}.txt)
+            // Source file names are embedded in content with === separators
+            const originalFileName = files.length === 1 ? files[0].name : null;
+            await ragApi.addDocument(name, combinedContent, strategy, enabled, originalFileName);
+
+            console.log(`Knowledge "${name}" created from ${files.length} file(s)`);
 
             await this.loadDocuments();
         } catch (error) {
-            console.error('Error adding documents from files:', error);
+            console.error('Error adding knowledge from files:', error);
             throw error;
         }
     }
@@ -332,11 +314,11 @@ export class DocumentManager {
      * Update an existing document
      * @param {string} docId - Document ID
      * @param {string} name - New document name
-     * @param {string|null} content - New content (ignored for existing documents)
+     * @param {string|null} _content - New content (ignored for existing documents)
      * @param {string} strategy - Chunking strategy
      * @param {boolean} enabled - Whether document is enabled
      */
-    async updateDocument(docId, name, content = null, strategy = null, enabled = null) {
+    async updateDocument(docId, name, _content = null, strategy = null, enabled = null) {
         try {
             console.log(`Updating document: ${docId}`);
             await ragApi.updateDocument(docId, name, enabled, strategy);

@@ -210,8 +210,8 @@ export class DocumentEventHandler {
         const contentParts = [];
         for (const file of this.selectedFiles) {
             const fileContent = await readFileContent(file);
-            // Add file header for clarity
-            contentParts.push(`--- Файл: ${file.name} ---\n${fileContent}`);
+            // Add file header for source tracking (consistent with DocumentManager format)
+            contentParts.push(`=== ${file.name} ===\n${fileContent}`);
         }
 
         return contentParts.join('\n\n');

@@ -213,28 +213,31 @@ export class RagModal {
      * Handle adding a new document
      */
     async handleAddDocument() {
-        const { name, content } = this.documentRenderer.getFormValues();
+        const { name, content, strategy, enabled } = this.documentRenderer.getFormValues();
         const activeTab = this.documentEventHandler.getActiveTab();
 
+        // Name is always required
         if (!name) {
-            alert('Пожалуйста, укажите название документа');
+            alert('Пожалуйста, укажите название знания');
             return;
         }
 
         try {
             if (activeTab === 'text') {
+                // Text mode: content required
                 if (!content) {
                     alert('Пожалуйста, введите содержимое документа');
                     return;
                 }
-                await this.documentManager.addDocument(name, content);
+                await this.documentManager.addDocument(name, content, strategy, enabled);
             } else {
+                // Files mode: all files combined into one knowledge with user-provided name
                 const files = this.documentEventHandler.getSelectedFiles();
                 if (files.length === 0) {
                     alert('Пожалуйста, выберите файлы');
                     return;
                 }
-                await this.documentManager.addDocumentsFromFiles(files);
+                await this.documentManager.addDocumentsFromFiles(files, name, strategy, enabled);
             }
 
             this.returnToMainModal();
