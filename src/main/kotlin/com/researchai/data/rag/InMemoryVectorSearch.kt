@@ -38,6 +38,13 @@ class InMemoryVectorSearch : VectorSearchService {
                     document.chunks.forEachIndexed { index, chunk ->
                         val similarity = cosineSimilarity(queryEmbedding, chunk.embedding)
                         if (similarity >= minScore) {
+                            // Get source file from chunk metadata (set during document creation)
+                            // or try to detect from chunk text or position (for existing documents)
+                            val chunkSourceFile = chunk.metadata["sourceFile"]
+                                ?: detectSourceFileFromText(chunk.text)
+                                ?: findSourceFileByPosition(chunk.text, document.content)
+                                ?: extractFileName(document.sourceFilePath)
+
                             results.add(
                                 SearchResult(
                                     documentId = document.id,
@@ -45,7 +52,8 @@ class InMemoryVectorSearch : VectorSearchService {
                                     chunkIndex = index,
                                     text = chunk.text,
                                     score = similarity,
-                                    sourceFileName = extractFileName(document.sourceFilePath)
+                                    sourceFileName = chunkSourceFile,
+                                    sourceFilePaths = document.sourceFilePaths
                                 )
                             )
                         }
@@ -90,6 +98,46 @@ class InMemoryVectorSearch : VectorSearchService {
         } else {
             fileName
         }
+    }
+
+    /**
+     * Try to detect source file name from chunk text.
+     * Looks for pattern "=== filename.ext ===" in the text.
+     * Fallback for existing documents without sourceFile metadata.
+     */
+    private fun detectSourceFileFromText(text: String): String? {
+        val markerPattern = Regex("""===\s*([^=]+\.\w+)\s*===""")
+        val match = markerPattern.find(text)
+        return match?.groupValues?.get(1)?.trim()
+    }
+
+    /**
+     * Find source file by locating chunk position in document content.
+     * Uses the last marker before chunk position to determine source file.
+     */
+    private fun findSourceFileByPosition(chunkText: String, documentContent: String): String? {
+        val chunkPosition = documentContent.indexOf(chunkText)
+        if (chunkPosition < 0) return null
+
+        // Find all source file markers and their positions
+        val markerPattern = Regex("""===\s*([^=]+\.\w+)\s*===""")
+        val markers = markerPattern.findAll(documentContent)
+            .map { Pair(it.range.first, it.groupValues[1].trim()) }
+            .toList()
+
+        if (markers.isEmpty()) return null
+
+        // Find the last marker before chunk position
+        var sourceFile: String? = null
+        for ((markerPos, fileName) in markers) {
+            if (markerPos <= chunkPosition) {
+                sourceFile = fileName
+            } else {
+                break
+            }
+        }
+
+        return sourceFile
     }
 
     private fun cosineSimilarity(vec1: List<Float>, vec2: List<Float>): Float {

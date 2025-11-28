@@ -40,7 +40,11 @@ data class SearchResult(
     /**
      * Original source file name (if document was created from a file)
      */
-    val sourceFileName: String? = null
+    val sourceFileName: String? = null,
+    /**
+     * List of source file paths (when document was created from multiple files)
+     */
+    val sourceFilePaths: List<String> = emptyList()
 )
 
 /**

@@ -84,8 +84,16 @@ class CitationExtractor {
 
                 citedIds.forEach { id ->
                     sourceMapping[id]?.let { source ->
-                        val sourceFilePrefix = source.sourceFileName?.let { "[$it] " } ?: ""
-                        appendLine("[$id]$sourceFilePrefix${source.documentName} (релевантность: ${String.format("%.2f", source.score)})")
+                        appendLine("[$id] **${source.documentName}** — релевантность: ${String.format("%.2f", source.score)}")
+
+                        // Show source files with full paths
+                        val sourceFilesInfo = getSourceFilesInfo(source)
+                        if (sourceFilesInfo.isNotEmpty()) {
+                            sourceFilesInfo.forEach { (fileName, fullPath) ->
+                                appendLine("    📄 $fileName")
+                                appendLine("       `$fullPath`")
+                            }
+                        }
                     }
                 }
             } else {
@@ -102,5 +110,47 @@ class CitationExtractor {
      */
     fun createNoContextResponse(): String {
         return NO_CONTEXT_MESSAGE
+    }
+
+    /**
+     * Data class to hold file name and full path
+     */
+    private data class SourceFileInfo(val fileName: String, val fullPath: String)
+
+    /**
+     * Get source file info from SearchResult.
+     * Uses sourceFileName (from chunk metadata) and finds matching full path.
+     *
+     * @param source The search result
+     * @return SourceFileInfo or null if no source file
+     */
+    private fun getSourceFilesInfo(source: SearchResult): List<SourceFileInfo> {
+        val fileName = source.sourceFileName ?: return emptyList()
+
+        // Find matching full path in sourceFilePaths
+        val matchingPath = source.sourceFilePaths.find { path ->
+            extractFileNameFromPath(path) == fileName
+        }
+
+        val fullPath = matchingPath ?: "data/rag/source_files/$fileName"
+        return listOf(SourceFileInfo(fileName, fullPath))
+    }
+
+    /**
+     * Extract file name from full path, removing UUID prefix if present.
+     */
+    private fun extractFileNameFromPath(path: String): String {
+        val fileName = path.substringAfterLast("/").substringAfterLast("\\")
+
+        // Check if file name has UUID prefix (format: {uuid}_{originalName})
+        val uuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_")
+        val match = uuidPattern.find(fileName)
+
+        return if (match != null) {
+            // Remove UUID prefix, return original file name
+            fileName.substring(match.range.last + 1)
+        } else {
+            fileName
+        }
     }
 }

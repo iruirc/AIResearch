@@ -65,17 +65,28 @@ class RAGManager(
         val chunker = getChunker(chunkingStrategy)
         val textChunks = chunker.chunk(content)
 
+        // Build source file map for multi-file documents
+        val sourceFileMap = buildSourceFileMap(content)
+
         val embeddings = embeddingService.generateEmbeddings(textChunks)
 
         val chunks = textChunks.mapIndexed { index, text ->
+            // Find source file for this chunk
+            val chunkSourceFile = findSourceFileForChunk(text, content, sourceFileMap)
+
+            val metadata = mutableMapOf(
+                "chunkSize" to text.length.toString(),
+                "strategy" to chunkingStrategy.name
+            )
+            if (chunkSourceFile != null) {
+                metadata["sourceFile"] = chunkSourceFile
+            }
+
             DocumentChunk(
                 text = text,
                 embedding = embeddings[index],
                 chunkIndex = index,
-                metadata = mapOf(
-                    "chunkSize" to text.length.toString(),
-                    "strategy" to chunkingStrategy.name
-                )
+                metadata = metadata
             )
         }
 
@@ -426,5 +437,53 @@ class RAGManager(
                 embeddingService = embeddingService
             )
         }
+    }
+
+    /**
+     * Build a map of character positions to source file names.
+     * Parses markers like "=== filename.ext ===" in the content.
+     *
+     * @return List of pairs (startPosition, fileName) sorted by position
+     */
+    private fun buildSourceFileMap(content: String): List<Pair<Int, String>> {
+        val markerPattern = Regex("""===\s*([^=]+\.\w+)\s*===""")
+        val matches = markerPattern.findAll(content)
+
+        return matches.map { match ->
+            Pair(match.range.first, match.groupValues[1].trim())
+        }.toList()
+    }
+
+    /**
+     * Find the source file for a chunk based on its position in the original content.
+     *
+     * @param chunkText The text of the chunk
+     * @param fullContent The full document content
+     * @param sourceFileMap Map of positions to source files
+     * @return The source file name, or null if not found
+     */
+    private fun findSourceFileForChunk(
+        chunkText: String,
+        fullContent: String,
+        sourceFileMap: List<Pair<Int, String>>
+    ): String? {
+        if (sourceFileMap.isEmpty()) return null
+
+        // Find where this chunk appears in the full content
+        val chunkPosition = fullContent.indexOf(chunkText)
+        if (chunkPosition < 0) return null
+
+        // Find the source file that contains this position
+        // (the last marker before the chunk position)
+        var currentSourceFile: String? = null
+        for ((markerPosition, fileName) in sourceFileMap) {
+            if (markerPosition <= chunkPosition) {
+                currentSourceFile = fileName
+            } else {
+                break
+            }
+        }
+
+        return currentSourceFile
     }
 }
