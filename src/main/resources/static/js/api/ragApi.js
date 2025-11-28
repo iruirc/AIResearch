@@ -69,16 +69,20 @@ export const ragApi = {
      * @param {string} content - Document content (text)
      * @param {string} chunkingStrategy - Chunking strategy (FIXED_SIZE, RECURSIVE, SEMANTIC)
      * @param {boolean} enabled - Whether the document should be enabled
-     * @param {string|null} originalFileName - Original file name (for source file storage)
+     * @param {string|null} originalFileName - Original file name (for single file storage)
+     * @param {Array<{fileName: string, content: string}>|null} sourceFiles - Source files for multi-file upload
      * @returns {Promise<Object>} Created document data
      * @throws {Error} If the HTTP request fails
      * @example
      * const document = await ragApi.addDocument('My Document', 'Content...', 'FIXED_SIZE', true);
      */
-    async addDocument(name, content, chunkingStrategy = 'FIXED_SIZE', enabled = true, originalFileName = null) {
+    async addDocument(name, content, chunkingStrategy = 'FIXED_SIZE', enabled = true, originalFileName = null, sourceFiles = null) {
         const body = { name, content, chunkingStrategy, enabled };
         if (originalFileName !== null) {
             body.originalFileName = originalFileName;
+        }
+        if (sourceFiles !== null && sourceFiles.length > 0) {
+            body.sourceFiles = sourceFiles;
         }
 
         const response = await fetchWithTimeout(

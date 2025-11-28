@@ -13,7 +13,9 @@ data class RAGDocument(
     val enabled: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val sourceFilePath: String? = null
+    val sourceFilePath: String? = null,
+    /** List of paths to individual source files (when document created from multiple files) */
+    val sourceFilePaths: List<String> = emptyList()
 )
 
 @Serializable

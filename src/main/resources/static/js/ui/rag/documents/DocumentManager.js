@@ -280,13 +280,18 @@ export class DocumentManager {
         }
 
         try {
-            // Combine all files into one document with user-provided name
-            const sourceFileNames = files.map(f => f.name);
+            // Read all files and prepare sourceFiles array
+            const sourceFiles = [];
             let combinedContent = '';
 
             for (const file of files) {
                 const fileContent = await readFileContent(file);
-                // Add separator with file name for source tracking
+                // Store each file separately for source_files directory
+                sourceFiles.push({
+                    fileName: file.name,
+                    content: fileContent
+                });
+                // Add separator with file name for combined content
                 combinedContent += `=== ${file.name} ===\n`;
                 combinedContent += fileContent;
                 combinedContent += '\n\n';
@@ -294,12 +299,11 @@ export class DocumentManager {
 
             combinedContent = combinedContent.trim();
 
+            const sourceFileNames = sourceFiles.map(f => f.fileName);
             console.log(`Adding knowledge "${name}" from ${files.length} file(s): ${sourceFileNames.join(', ')}`);
 
-            // For single file - use filename, for multiple files - use null (will be saved as {id}.txt)
-            // Source file names are embedded in content with === separators
-            const originalFileName = files.length === 1 ? files[0].name : null;
-            await ragApi.addDocument(name, combinedContent, strategy, enabled, originalFileName);
+            // Pass sourceFiles array - each file will be saved separately in source_files/
+            await ragApi.addDocument(name, combinedContent, strategy, enabled, null, sourceFiles);
 
             console.log(`Knowledge "${name}" created from ${files.length} file(s)`);
 

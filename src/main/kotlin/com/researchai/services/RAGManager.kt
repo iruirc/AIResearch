@@ -38,7 +38,8 @@ class RAGManager(
         content: String,
         chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
         enabled: Boolean = config.enabledByDefault,
-        originalFileName: String? = null
+        originalFileName: String? = null,
+        sourceFiles: List<Pair<String, String>>? = null
     ): RAGDocument {
         // Check if document with this name already exists
         if (storage.existsByName(name)) {
@@ -47,8 +48,19 @@ class RAGManager(
 
         val documentId = UUID.randomUUID().toString()
 
-        // Save source file
-        val sourceFilePath = saveSourceFile(documentId, content, originalFileName)
+        // Save source files
+        val sourceFilePaths: List<String>
+        val sourceFilePath: String?
+
+        if (!sourceFiles.isNullOrEmpty()) {
+            // Multiple source files: save each separately
+            sourceFilePaths = saveSourceFiles(documentId, sourceFiles)
+            sourceFilePath = null // Don't use single file path when we have multiple
+        } else {
+            // Single file or text: use legacy behavior
+            sourceFilePath = saveSourceFile(documentId, content, originalFileName)
+            sourceFilePaths = emptyList()
+        }
 
         val chunker = getChunker(chunkingStrategy)
         val textChunks = chunker.chunk(content)
@@ -77,7 +89,8 @@ class RAGManager(
             enabled = enabled,
             createdAt = now,
             updatedAt = now,
-            sourceFilePath = sourceFilePath
+            sourceFilePath = sourceFilePath,
+            sourceFilePaths = sourceFilePaths
         )
 
         storage.save(document)
@@ -145,8 +158,9 @@ class RAGManager(
     suspend fun deleteDocument(documentId: String): Boolean {
         val document = storage.load(documentId) ?: return false
 
-        // Delete source file first
+        // Delete source files first
         deleteSourceFile(document.sourceFilePath)
+        deleteSourceFiles(document.sourceFilePaths)
 
         storage.delete(documentId)
         vectorSearch.removeDocument(documentId)
@@ -356,6 +370,29 @@ class RAGManager(
         return file.absolutePath
     }
 
+    /**
+     * Save multiple source files for a document.
+     * Each file is saved with format: {documentId}_{originalFileName}
+     * @return List of absolute paths to saved files
+     */
+    private fun saveSourceFiles(documentId: String, sourceFiles: List<Pair<String, String>>): List<String> {
+        val sourceDir = File("data/rag/source_files")
+        sourceDir.mkdirs()
+
+        val savedPaths = mutableListOf<String>()
+
+        for ((fileName, content) in sourceFiles) {
+            val safeFileName = "${documentId}_${fileName}"
+            val file = File(sourceDir, safeFileName)
+            file.writeText(content)
+            savedPaths.add(file.absolutePath)
+            logger.info("Saved source file: ${file.absolutePath}")
+        }
+
+        logger.info("Saved ${savedPaths.size} source files for document $documentId")
+        return savedPaths
+    }
+
     private fun deleteSourceFile(sourceFilePath: String?) {
         if (sourceFilePath == null) return
 
@@ -367,6 +404,12 @@ class RAGManager(
             }
         } catch (e: Exception) {
             logger.warn("Failed to delete source file: $sourceFilePath", e)
+        }
+    }
+
+    private fun deleteSourceFiles(sourceFilePaths: List<String>) {
+        for (path in sourceFilePaths) {
+            deleteSourceFile(path)
         }
     }
 

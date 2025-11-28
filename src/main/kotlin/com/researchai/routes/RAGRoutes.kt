@@ -15,12 +15,20 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class SourceFileInput(
+    val fileName: String,
+    val content: String
+)
+
+@Serializable
 data class AddDocumentRequest(
     val name: String,
     val content: String,
     val chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
     val enabled: Boolean = true,
-    val originalFileName: String? = null
+    val originalFileName: String? = null,
+    /** List of source files to save separately (for multi-file uploads) */
+    val sourceFiles: List<SourceFileInput>? = null
 )
 
 @Serializable
@@ -121,7 +129,8 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                     content = request.content,
                     chunkingStrategy = request.chunkingStrategy,
                     enabled = request.enabled,
-                    originalFileName = request.originalFileName
+                    originalFileName = request.originalFileName,
+                    sourceFiles = request.sourceFiles?.map { it.fileName to it.content }
                 )
 
                 call.respond(HttpStatusCode.Created, document)
