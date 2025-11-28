@@ -605,6 +605,91 @@
 }
 
 /* ========================================
+   Existing Files (Edit Mode - Read Only)
+   ======================================== */
+
+.rag-files-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #5a6ac7;
+}
+
+.rag-files-info svg {
+    flex-shrink: 0;
+    stroke: #667eea;
+}
+
+.rag-files-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.rag-file-item.existing {
+    background: var(--bg-primary);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.rag-file-item.existing:hover {
+    border-color: #667eea;
+}
+
+.rag-file-view {
+    flex-shrink: 0;
+    padding: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rag-file-view:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.rag-file-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.rag-file-delete {
+    flex-shrink: 0;
+    padding: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rag-file-delete:hover {
+    background: #fff5f5;
+    border-color: var(--error);
+    color: var(--error);
+}
+
+/* ========================================
    Hidden Tabs in Edit Mode
    ======================================== */
 

@@ -5,6 +5,7 @@
  */
 
 import { modalsUI } from '../modalsUI.js';
+import { ragApi } from '../../api/ragApi.js';
 
 // Documents module
 import { DocumentManager, DocumentRenderer, DocumentEventHandler } from './documents/index.js';
@@ -195,17 +196,48 @@ export class RagModal {
     async openEditDocumentForm(docId) {
         try {
             const doc = await this.documentManager.getDocument(docId);
+            this.editingDocument = doc;
 
             modalsUI.closeModal('ragModal');
             modalsUI.openModal('ragFormModal');
 
             this.documentRenderer.setupEditForm(doc, {
                 onSubmit: () => this.handleUpdateDocument(docId),
-                onCancel: () => this.returnToMainModal()
+                onCancel: () => this.returnToMainModal(),
+                onDeleteFile: (fileName) => this.handleDeleteSourceFile(docId, fileName)
             });
         } catch (error) {
             console.error('Error loading document for editing:', error);
             alert(`Ошибка загрузки документа: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle deleting a source file from a document
+     * @param {string} docId - Document ID
+     * @param {string} fileName - File name to delete
+     */
+    async handleDeleteSourceFile(docId, fileName) {
+        if (!confirm(`Вы уверены, что хотите удалить файл "${fileName}"?\nСодержимое файла будет удалено из знания.`)) {
+            return;
+        }
+
+        try {
+            console.log(`Deleting source file '${fileName}' from document ${docId}`);
+            const updatedDoc = await ragApi.deleteSourceFile(docId, fileName);
+            console.log('Source file deleted successfully');
+
+            // Update local reference
+            this.editingDocument = updatedDoc;
+
+            // Re-render the files list
+            this.documentRenderer.renderExistingSourceFiles(updatedDoc, (fn) => this.handleDeleteSourceFile(docId, fn));
+
+            // Reload documents list in background
+            await this.documentManager.loadDocuments();
+        } catch (error) {
+            console.error('Error deleting source file:', error);
+            alert(`Ошибка при удалении файла: ${error.message}`);
         }
     }
 

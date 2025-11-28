@@ -197,6 +197,132 @@ class RAGManager(
         return true
     }
 
+    /**
+     * Delete a single source file from a document.
+     * This removes the file from disk, updates the document content, and regenerates embeddings.
+     *
+     * @param documentId The document ID
+     * @param fileName The original file name to delete (without documentId prefix)
+     * @return Updated document or null if document/file not found
+     */
+    suspend fun deleteSourceFile(documentId: String, fileName: String): RAGDocument? {
+        val document = storage.load(documentId) ?: return null
+
+        // Find the file path that matches the fileName
+        val matchingPath = document.sourceFilePaths.find { path ->
+            val fullFileName = path.substringAfterLast("/").substringAfterLast("\\")
+            val expectedPrefix = "${documentId}_"
+            fullFileName == "$expectedPrefix$fileName"
+        } ?: return null
+
+        // Delete the physical file
+        try {
+            val file = File(matchingPath)
+            if (file.exists()) {
+                file.delete()
+                logger.info("Deleted source file: $matchingPath")
+            }
+        } catch (e: Exception) {
+            logger.warn("Failed to delete source file: $matchingPath", e)
+        }
+
+        // Update sourceFilePaths list
+        val updatedSourceFilePaths = document.sourceFilePaths.filter { it != matchingPath }
+
+        // Remove the file's content from the document content
+        // Content format: === filename.ext ===\n<content>\n\n
+        val fileMarker = "=== $fileName ==="
+        val newContent = removeFileContentFromDocument(document.content, fileMarker)
+
+        // Regenerate chunks and embeddings with new content
+        val chunker = getChunker(document.chunkingStrategy)
+        val textChunks = chunker.chunk(newContent)
+
+        // Build source file map for remaining files
+        val sourceFileMap = buildSourceFileMap(newContent)
+
+        val embeddings = embeddingService.generateEmbeddings(textChunks)
+
+        var searchStartPosition = 0
+        val chunks = textChunks.mapIndexed { index, text ->
+            val chunkPosition = newContent.indexOf(text, searchStartPosition)
+            if (chunkPosition >= 0) {
+                searchStartPosition = chunkPosition + 1
+            }
+
+            val chunkSourceFile = if (chunkPosition >= 0 && sourceFileMap.isNotEmpty()) {
+                findSourceFileByPosition(chunkPosition, sourceFileMap)
+            } else {
+                null
+            }
+
+            val metadata = mutableMapOf(
+                "chunkSize" to text.length.toString(),
+                "strategy" to document.chunkingStrategy.name
+            )
+            if (chunkSourceFile != null) {
+                metadata["sourceFile"] = chunkSourceFile
+            }
+            if (chunkPosition >= 0) {
+                metadata["chunkStartPosition"] = chunkPosition.toString()
+            }
+
+            DocumentChunk(
+                text = text,
+                embedding = embeddings[index],
+                chunkIndex = index,
+                metadata = metadata
+            )
+        }
+
+        // Create updated document
+        val updatedDocument = document.copy(
+            content = newContent,
+            chunks = chunks,
+            sourceFilePaths = updatedSourceFilePaths,
+            updatedAt = kotlinx.datetime.Clock.System.now()
+        )
+
+        // Save and reindex
+        storage.save(updatedDocument)
+        vectorSearch.removeDocument(documentId)
+        vectorSearch.indexDocument(updatedDocument)
+
+        logger.info("Removed source file '$fileName' from document '$documentId'. Remaining files: ${updatedSourceFilePaths.size}")
+
+        return updatedDocument
+    }
+
+    /**
+     * Remove a file's content section from the document content.
+     * Looks for === filename === marker and removes everything until the next marker or end.
+     */
+    private fun removeFileContentFromDocument(content: String, fileMarker: String): String {
+        val markerIndex = content.indexOf(fileMarker)
+        if (markerIndex == -1) return content
+
+        // Find the end of this file's content (next marker or end of string)
+        val nextMarkerPattern = Regex("\n=== .+? ===\n")
+        val afterMarker = content.substring(markerIndex + fileMarker.length)
+        val nextMarkerMatch = nextMarkerPattern.find(afterMarker)
+
+        val endIndex = if (nextMarkerMatch != null) {
+            markerIndex + fileMarker.length + nextMarkerMatch.range.first
+        } else {
+            content.length
+        }
+
+        // Remove the file content section
+        val before = content.substring(0, markerIndex).trimEnd()
+        val after = if (endIndex < content.length) {
+            content.substring(endIndex)
+        } else {
+            ""
+        }
+
+        return (before + after).trim()
+    }
+
     suspend fun getDocument(documentId: String): RAGDocument? {
         return storage.load(documentId)
     }

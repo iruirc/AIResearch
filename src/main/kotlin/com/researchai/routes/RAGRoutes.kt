@@ -269,6 +269,35 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
             }
         }
 
+        // DELETE /rag/documents/{id}/source-files/{fileName} - Delete a source file from document
+        delete("/documents/{id}/source-files/{fileName}") {
+            try {
+                val documentId = call.parameters["id"]
+                val fileName = call.parameters["fileName"]
+
+                if (documentId == null) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Document ID is required"))
+                    return@delete
+                }
+                if (fileName == null) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("File name is required"))
+                    return@delete
+                }
+
+                // Decode URL-encoded filename
+                val decodedFileName = URLDecoder.decode(fileName, "UTF-8")
+
+                val updatedDocument = ragManager.deleteSourceFile(documentId, decodedFileName)
+                if (updatedDocument != null) {
+                    call.respond(HttpStatusCode.OK, updatedDocument)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse("Document or file not found"))
+                }
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
         // POST /rag/search - Search relevant context (first stage only)
         post("/search") {
             try {

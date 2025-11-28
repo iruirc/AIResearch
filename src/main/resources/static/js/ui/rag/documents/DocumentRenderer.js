@@ -216,6 +216,18 @@ export class DocumentRenderer {
             tabsContainer.classList.remove('hidden');
         }
 
+        // Reset dropzone visibility (may have been hidden in edit mode)
+        const dropzone = document.getElementById('ragDropzone');
+        if (dropzone) {
+            dropzone.style.display = '';
+        }
+
+        // Clear files list
+        const filesList = document.getElementById('ragFilesList');
+        if (filesList) {
+            filesList.innerHTML = '';
+        }
+
         // Setup form submission
         const form = document.getElementById('ragDocumentForm');
         if (form && options.onSubmit) {
@@ -238,6 +250,7 @@ export class DocumentRenderer {
      * @param {Object} options - Form options
      * @param {Function} options.onSubmit - Form submit callback
      * @param {Function} options.onCancel - Cancel button callback
+     * @param {Function} options.onDeleteFile - Callback when a source file should be deleted
      */
     setupEditForm(doc, options = {}) {
         // Set form title
@@ -246,10 +259,24 @@ export class DocumentRenderer {
             formTitle.textContent = 'Редактировать документ';
         }
 
-        // Hide tabs in edit mode (content cannot be changed)
+        // Check if document has source files
+        const hasSourceFiles = doc.sourceFilePaths && doc.sourceFilePaths.length > 0;
+        const hasTextContent = doc.originalContent && doc.originalContent.trim().length > 0;
+
+        // Show/hide tabs based on content type
         const tabsContainer = document.getElementById('ragSourceTabs');
         if (tabsContainer) {
-            tabsContainer.classList.add('hidden');
+            if (hasSourceFiles) {
+                // Show tabs but make them read-only indicators
+                tabsContainer.classList.remove('hidden');
+                // Switch to files tab and show existing files
+                this.switchDocTab('files');
+                // Render existing source files with delete callback
+                this.renderExistingSourceFiles(doc, options.onDeleteFile || null);
+            } else {
+                // Text-only document - hide tabs
+                tabsContainer.classList.add('hidden');
+            }
         }
 
         // Fill form with document data
@@ -283,6 +310,145 @@ export class DocumentRenderer {
         if (cancelButton && options.onCancel) {
             cancelButton.onclick = options.onCancel;
         }
+    }
+
+    /**
+     * Render existing source files for edit mode
+     * @param {Object} doc - Document object with sourceFilePaths
+     * @param {Function} onDeleteFile - Callback when delete button is clicked (fileName) => void
+     */
+    renderExistingSourceFiles(doc, onDeleteFile = null) {
+        const filesList = document.getElementById('ragFilesList');
+        const dropzone = document.getElementById('ragDropzone');
+
+        if (!filesList) return;
+
+        filesList.innerHTML = '';
+
+        // Hide dropzone in edit mode
+        if (dropzone) {
+            dropzone.style.display = 'none';
+        }
+
+        // Add info message about attached files
+        const infoMessage = document.createElement('div');
+        infoMessage.className = 'rag-files-info';
+        infoMessage.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+            <span>Прикреплённые файлы</span>
+        `;
+        filesList.appendChild(infoMessage);
+
+        if (!doc.sourceFilePaths || doc.sourceFilePaths.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'rag-files-empty';
+            emptyMessage.textContent = 'Нет прикреплённых файлов';
+            filesList.appendChild(emptyMessage);
+            return;
+        }
+
+        // Render each source file
+        doc.sourceFilePaths.forEach((filePath) => {
+            const fileName = this.extractFileNameFromPath(filePath, doc.id);
+            const fileItem = this.createExistingFileItem(fileName, filePath, doc.id, onDeleteFile);
+            filesList.appendChild(fileItem);
+        });
+    }
+
+    /**
+     * Extract original file name from source file path
+     * Path format: /path/to/data/rag/source_files/{documentId}_{originalFileName}
+     * @param {string} filePath - Full file path
+     * @param {string} documentId - Document ID
+     * @returns {string} Original file name
+     */
+    extractFileNameFromPath(filePath, documentId) {
+        // Get just the file name from the full path
+        const fullFileName = filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
+
+        // Remove the documentId_ prefix
+        const prefix = documentId + '_';
+        if (fullFileName.startsWith(prefix)) {
+            return fullFileName.substring(prefix.length);
+        }
+
+        return fullFileName;
+    }
+
+    /**
+     * Create an existing file item element for edit mode with view and delete buttons
+     * @param {string} fileName - File name
+     * @param {string} filePath - Full file path
+     * @param {string} documentId - Document ID
+     * @param {Function} onDelete - Callback when delete button is clicked
+     * @returns {HTMLElement} File item element
+     */
+    createExistingFileItem(fileName, filePath, documentId, onDelete = null) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'rag-file-item existing';
+
+        const fileIcon = document.createElement('div');
+        fileIcon.className = 'rag-file-icon';
+        fileIcon.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+        `;
+
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'rag-file-info';
+
+        const fileNameEl = document.createElement('div');
+        fileNameEl.className = 'rag-file-name';
+        fileNameEl.textContent = fileName;
+
+        fileInfo.appendChild(fileNameEl);
+
+        // Actions container
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'rag-file-actions';
+
+        // Add view link
+        const viewLink = document.createElement('a');
+        viewLink.className = 'rag-file-view';
+        viewLink.href = `/rag/source-files/${documentId}/${encodeURIComponent(fileName)}`;
+        viewLink.target = '_blank';
+        viewLink.title = 'Открыть файл';
+        viewLink.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+        `;
+        actionsContainer.appendChild(viewLink);
+
+        // Add delete button
+        if (onDelete) {
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'rag-file-delete';
+            deleteButton.title = 'Удалить файл';
+            deleteButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            `;
+            deleteButton.onclick = () => onDelete(fileName);
+            actionsContainer.appendChild(deleteButton);
+        }
+
+        fileItem.appendChild(fileIcon);
+        fileItem.appendChild(fileInfo);
+        fileItem.appendChild(actionsContainer);
+
+        return fileItem;
     }
 
     /**

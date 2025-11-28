@@ -216,6 +216,33 @@ export const ragApi = {
     },
 
     /**
+     * Delete a source file from a RAG document
+     * @async
+     * @param {string} documentId - The document identifier
+     * @param {string} fileName - The source file name to delete
+     * @returns {Promise<Object>} Updated document object
+     * @throws {Error} If the HTTP request fails
+     * @example
+     * const doc = await ragApi.deleteSourceFile('doc-123', 'file.txt');
+     */
+    async deleteSourceFile(documentId, fileName) {
+        const response = await fetchWithTimeout(
+            `${API_CONFIG.RAG}/documents/${documentId}/source-files/${encodeURIComponent(fileName)}`,
+            {
+                method: 'DELETE',
+            },
+            API_CONFIG.REQUEST_TIMEOUT
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to delete source file: ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
      * Search for relevant context using RAG
      * @async
      * @param {string} query - Search query
