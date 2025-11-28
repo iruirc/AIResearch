@@ -85,7 +85,7 @@ class CitationExtractor {
 
                 citedIds.forEach { id ->
                     sourceMapping[id]?.let { source ->
-                        appendLine("[$id] **${source.documentName}** — релевантность: ${String.format("%.2f", source.score)}")
+                        appendLine("[chunk $id] **${source.documentName}** — релевантность: ${String.format("%.2f", source.score)}")
 
                         // Show source files as clickable links
                         val sourceFilesInfo = getSourceFilesInfo(source)

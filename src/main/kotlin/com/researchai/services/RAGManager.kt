@@ -70,9 +70,23 @@ class RAGManager(
 
         val embeddings = embeddingService.generateEmbeddings(textChunks)
 
+        // Track position sequentially to avoid indexOf bug with duplicate text
+        var searchStartPosition = 0
+
         val chunks = textChunks.mapIndexed { index, text ->
-            // Find source file for this chunk
-            val chunkSourceFile = findSourceFileForChunk(text, content, sourceFileMap)
+            // Find this chunk's position starting from current position (not from beginning)
+            // This ensures we find chunks in order, even if text repeats
+            val chunkPosition = content.indexOf(text, searchStartPosition)
+            if (chunkPosition >= 0) {
+                searchStartPosition = chunkPosition + 1  // Move past this occurrence for next search
+            }
+
+            // Find source file using the actual position (not indexOf from start)
+            val chunkSourceFile = if (chunkPosition >= 0 && sourceFileMap.isNotEmpty()) {
+                findSourceFileByPosition(chunkPosition, sourceFileMap)
+            } else {
+                null
+            }
 
             val metadata = mutableMapOf(
                 "chunkSize" to text.length.toString(),
@@ -80,6 +94,10 @@ class RAGManager(
             )
             if (chunkSourceFile != null) {
                 metadata["sourceFile"] = chunkSourceFile
+            }
+            // Store chunk position for accurate source file detection during search
+            if (chunkPosition >= 0) {
+                metadata["chunkStartPosition"] = chunkPosition.toString()
             }
 
             DocumentChunk(
@@ -457,21 +475,15 @@ class RAGManager(
     /**
      * Find the source file for a chunk based on its position in the original content.
      *
-     * @param chunkText The text of the chunk
-     * @param fullContent The full document content
-     * @param sourceFileMap Map of positions to source files
+     * @param chunkPosition The position of the chunk in the document content
+     * @param sourceFileMap Map of marker positions to source file names, sorted by position
      * @return The source file name, or null if not found
      */
-    private fun findSourceFileForChunk(
-        chunkText: String,
-        fullContent: String,
+    private fun findSourceFileByPosition(
+        chunkPosition: Int,
         sourceFileMap: List<Pair<Int, String>>
     ): String? {
         if (sourceFileMap.isEmpty()) return null
-
-        // Find where this chunk appears in the full content
-        val chunkPosition = fullContent.indexOf(chunkText)
-        if (chunkPosition < 0) return null
 
         // Find the source file that contains this position
         // (the last marker before the chunk position)
