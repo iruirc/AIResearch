@@ -28,7 +28,8 @@ class SendMessageUseCase(
     private val mcpOrchestrationService: MCPOrchestrationService? = null,
     private val ollamaConnectionManager: OllamaConnectionManager? = null,
     private val ragManager: com.researchai.services.RAGManager? = null,
-    private val ragPreferencesStorage: com.researchai.persistence.RAGPreferencesStorage? = null
+    private val ragPreferencesStorage: com.researchai.persistence.RAGPreferencesStorage? = null,
+    private val citationExtractor: com.researchai.services.CitationExtractor? = null
 ) {
     private val logger = LoggerFactory.getLogger(SendMessageUseCase::class.java)
     private val claudeMapper = ClaudeMapper()
@@ -234,12 +235,23 @@ class SendMessageUseCase(
 
             logger.info("Response received from provider: ${finalResponse.usage.totalTokens} tokens")
 
+            // 10.5. Format response with citations if RAG was used
+            val formattedResponse = if (citationExtractor != null && ragDebugInfo != null) {
+                citationExtractor.formatWithSources(
+                    response = finalResponse.content,
+                    sourceMapping = ragDebugInfo.sourceMapping,
+                    ragContextWasProvided = ragContext != null
+                )
+            } else {
+                finalResponse.content
+            }
+
             // 11. Сохраняем ответ в историю (включая информацию о tool uses если были)
             val responseContent = if (toolResults.isNotEmpty()) {
                 val toolInfo = toolResults.joinToString("\n") { "[Tool: ${it.toolName}]" }
-                "${finalResponse.content}\n\n$toolInfo"
+                "${formattedResponse}\n\n$toolInfo"
             } else {
-                finalResponse.content
+                formattedResponse
             }
 
             val assistantMessage = Message(
@@ -248,7 +260,7 @@ class SendMessageUseCase(
             )
             sessionRepository.addMessage(session.id, assistantMessage).getOrThrow()
 
-            // 11. Обновляем lastAccessedAt
+            // 12. Обновляем lastAccessedAt
             sessionRepository.updateSession(
                 session.copy(lastAccessedAt = System.currentTimeMillis())
             ).getOrThrow()
@@ -257,7 +269,7 @@ class SendMessageUseCase(
 
             Result.success(
                 MessageResult(
-                    response = finalResponse.content,
+                    response = formattedResponse,
                     sessionId = session.id,
                     usage = finalResponse.usage,
                     model = finalResponse.model,

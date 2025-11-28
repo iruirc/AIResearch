@@ -186,7 +186,8 @@ class AppModule(
             mcpOrchestrationService = mcpOrchestrationService,
             ollamaConnectionManager = ollamaConnectionManager,
             ragManager = ragManager,
-            ragPreferencesStorage = ragPreferencesStorage
+            ragPreferencesStorage = ragPreferencesStorage,
+            citationExtractor = citationExtractor
         )
     }
 
@@ -333,6 +334,13 @@ class AppModule(
             config = ragConfig,
             rerankerService = rerankerService
         )
+    }
+
+    /**
+     * Citation Extractor - Formats RAG responses with source citations
+     */
+    val citationExtractor: com.researchai.services.CitationExtractor by lazy {
+        com.researchai.services.CitationExtractor()
     }
 
     /**

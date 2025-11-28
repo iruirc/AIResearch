@@ -74,5 +74,11 @@ data class RAGDebugInfo(
     /**
      * Token count estimate for the context
      */
-    val estimatedTokens: Int = 0
+    val estimatedTokens: Int = 0,
+
+    /**
+     * Mapping of source numbers to SearchResults for citation formatting.
+     * Key is 1-based index (e.g., 1 -> first result, 2 -> second result)
+     */
+    val sourceMapping: Map<Int, SearchResult> = emptyMap()
 )

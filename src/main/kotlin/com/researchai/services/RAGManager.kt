@@ -288,17 +288,30 @@ class RAGManager(
 
         val processingTime = System.currentTimeMillis() - startTime
 
+        // Build source mapping (1-based indexing for user-friendly citations)
+        val sourceMapping = usedResults.mapIndexed { index, result ->
+            (index + 1) to result
+        }.toMap()
+
         val context = if (usedResults.isEmpty()) {
             ""
         } else {
             buildString {
-                appendLine("Relevant context from knowledge base:")
+                appendLine("КОНТЕКСТ ИЗ БАЗЫ ЗНАНИЙ:")
                 appendLine()
                 usedResults.forEachIndexed { index, result ->
-                    appendLine("${index + 1}. From document '${result.documentName}' (relevance: ${String.format("%.2f", result.score)}):")
+                    val sourceNum = index + 1
+                    appendLine("(источник $sourceNum) Документ \"${result.documentName}\" [релевантность: ${String.format("%.2f", result.score)}]:")
                     appendLine(result.text)
                     appendLine()
                 }
+                appendLine("---")
+                appendLine("ИНСТРУКЦИЯ ПО ИСПОЛЬЗОВАНИЮ КОНТЕКСТА:")
+                appendLine("1. Если в контексте выше есть релевантная информация — используйте её и указывайте источник в формате (источник N).")
+                appendLine("2. Отвечайте ТОЛЬКО \"Информация не найдена в базе знаний.\" если контекст ПОЛНОСТЬЮ не относится к вопросу.")
+                appendLine("3. Не начинайте ответ с \"Информация не найдена\", если затем собираетесь привести данные из контекста.")
+                appendLine("4. Не придумывайте факты, которых нет в контексте.")
+                appendLine("---")
             }
         }
 
@@ -312,7 +325,8 @@ class RAGManager(
             rerankingEnabled = useReranking,
             rerankingStrategy = if (useReranking) rerankerConfig.strategy.name else null,
             processingTimeMs = processingTime,
-            estimatedTokens = estimatedTokens
+            estimatedTokens = estimatedTokens,
+            sourceMapping = sourceMapping
         )
 
         return ContextWithDebugInfo(context, debugInfo)
