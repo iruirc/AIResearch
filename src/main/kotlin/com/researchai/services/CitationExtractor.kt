@@ -1,6 +1,7 @@
 package com.researchai.services
 
 import com.researchai.domain.models.SearchResult
+import java.net.URLEncoder
 
 /**
  * Service for extracting and formatting citations in AI responses.
@@ -86,12 +87,13 @@ class CitationExtractor {
                     sourceMapping[id]?.let { source ->
                         appendLine("[$id] **${source.documentName}** — релевантность: ${String.format("%.2f", source.score)}")
 
-                        // Show source files with full paths
+                        // Show source files as clickable links
                         val sourceFilesInfo = getSourceFilesInfo(source)
                         if (sourceFilesInfo.isNotEmpty()) {
-                            sourceFilesInfo.forEach { (fileName, fullPath) ->
-                                appendLine("    📄 $fileName")
-                                appendLine("       `$fullPath`")
+                            sourceFilesInfo.forEach { (fileName, _) ->
+                                val encodedFileName = URLEncoder.encode(fileName, "UTF-8")
+                                val fileUrl = "/rag/source-files/${source.documentId}/$encodedFileName"
+                                appendLine("    [$fileName]($fileUrl)")
                             }
                         }
                     }

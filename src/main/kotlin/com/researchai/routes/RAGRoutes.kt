@@ -8,11 +8,14 @@ import com.researchai.persistence.RAGPreferencesStorage
 import com.researchai.services.DuplicateDocumentNameException
 import com.researchai.services.RAGManager
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import java.io.File
+import java.net.URLDecoder
 
 @Serializable
 data class SourceFileInput(
@@ -513,6 +516,51 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to preview context"))
             }
+        }
+
+        // GET /rag/source-files/{documentId}/{fileName} - Serve source file for viewing
+        get("/source-files/{documentId}/{fileName}") {
+            val documentId = call.parameters["documentId"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing documentId"))
+            val fileName = call.parameters["fileName"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("Missing fileName"))
+
+            // Decode URL-encoded filename
+            val decodedFileName = URLDecoder.decode(fileName, "UTF-8")
+
+            // Construct file path: data/rag/source_files/{documentId}_{fileName}
+            val sourceDir = File("data/rag/source_files")
+            val file = File(sourceDir, "${documentId}_${decodedFileName}")
+
+            if (!file.exists() || !file.isFile) {
+                return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("File not found"))
+            }
+
+            // Security: ensure file is within source_files directory (prevent path traversal)
+            if (!file.canonicalPath.startsWith(sourceDir.canonicalPath)) {
+                return@get call.respond(HttpStatusCode.Forbidden, ErrorResponse("Access denied"))
+            }
+
+            // Determine content type based on file extension
+            val contentType = when (file.extension.lowercase()) {
+                "md" -> ContentType.Text.Plain.withCharset(Charsets.UTF_8)
+                "txt" -> ContentType.Text.Plain.withCharset(Charsets.UTF_8)
+                "json" -> ContentType.Application.Json.withCharset(Charsets.UTF_8)
+                "xml" -> ContentType.Application.Xml.withCharset(Charsets.UTF_8)
+                "log" -> ContentType.Text.Plain.withCharset(Charsets.UTF_8)
+                "pdf" -> ContentType.Application.Pdf
+                else -> ContentType.Application.OctetStream
+            }
+
+            // Set content disposition to inline (display in browser)
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Inline.withParameter(
+                    ContentDisposition.Parameters.FileName, decodedFileName
+                ).toString()
+            )
+
+            call.respondFile(file)
         }
     }
 }

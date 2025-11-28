@@ -8,6 +8,44 @@ let requestStartTime = null;
 let timerInterval = null;
 
 /**
+ * Render markdown text to HTML with links opening in new tab
+ * @param {string} text - Markdown text
+ * @returns {string} HTML string
+ */
+function renderMarkdown(text) {
+    if (typeof marked === 'undefined') {
+        // Fallback if marked.js not loaded
+        console.warn('marked.js not loaded, falling back to plain text');
+        return escapeHtmlForFallback(text);
+    }
+
+    // Configure marked to open links in new tab
+    const renderer = new marked.Renderer();
+    const originalLinkRenderer = renderer.link.bind(renderer);
+
+    renderer.link = (href, title, text) => {
+        const html = originalLinkRenderer(href, title, text);
+        // Add target="_blank" and rel="noopener noreferrer" for security
+        return html.replace('<a ', '<a target="_blank" rel="noopener noreferrer" ');
+    };
+
+    // Parse markdown with custom renderer
+    return marked.parse(text, { renderer });
+}
+
+/**
+ * Escape HTML special characters for fallback when marked.js is not available
+ * @param {string} text - Plain text
+ * @returns {string} Escaped text with line breaks converted to <br>
+ */
+function escapeHtmlForFallback(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    // Convert newlines to <br> for proper display
+    return div.innerHTML.replace(/\n/g, '<br>');
+}
+
+/**
  * Initialize messages UI with DOM element
  * @param {HTMLElement} container - Messages container element
  */
@@ -56,7 +94,7 @@ export const messagesUI = {
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = text;
+        contentDiv.innerHTML = renderMarkdown(text);
 
         // Add metadata for assistant messages
         if (metadata && type === 'assistant') {
