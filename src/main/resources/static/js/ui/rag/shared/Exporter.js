@@ -266,8 +266,14 @@ export class Exporter {
 
     /**
      * Download execution results as ZIP archive containing JSON and Markdown files
+     * @param {Object} [results] - Optional results object. If not provided, uses stored results.
      */
-    async downloadResults() {
+    async downloadResults(results) {
+        // Use provided results or fall back to stored results
+        if (results) {
+            this.executionResults = results;
+        }
+
         if (!this.executionResults) {
             console.error('No results to download');
             return;
