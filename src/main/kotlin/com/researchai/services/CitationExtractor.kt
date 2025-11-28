@@ -84,7 +84,8 @@ class CitationExtractor {
 
                 citedIds.forEach { id ->
                     sourceMapping[id]?.let { source ->
-                        appendLine("[$id] ${source.documentName} (релевантность: ${String.format("%.2f", source.score)})")
+                        val sourceFilePrefix = source.sourceFileName?.let { "[$it] " } ?: ""
+                        appendLine("[$id]$sourceFilePrefix${source.documentName} (релевантность: ${String.format("%.2f", source.score)})")
                     }
                 }
             } else {

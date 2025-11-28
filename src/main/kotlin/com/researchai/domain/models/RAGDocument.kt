@@ -34,7 +34,11 @@ data class SearchResult(
     /**
      * Score after reranking (if applicable)
      */
-    val rerankedScore: Float? = null
+    val rerankedScore: Float? = null,
+    /**
+     * Original source file name (if document was created from a file)
+     */
+    val sourceFileName: String? = null
 )
 
 /**

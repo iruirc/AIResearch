@@ -44,7 +44,8 @@ class InMemoryVectorSearch : VectorSearchService {
                                     documentName = document.name,
                                     chunkIndex = index,
                                     text = chunk.text,
-                                    score = similarity
+                                    score = similarity,
+                                    sourceFileName = extractFileName(document.sourceFilePath)
                                 )
                             )
                         }
@@ -64,6 +65,30 @@ class InMemoryVectorSearch : VectorSearchService {
     override suspend fun isEnabled(documentId: String): Boolean {
         return mutex.withLock {
             documents[documentId]?.enabled ?: false
+        }
+    }
+
+    /**
+     * Extract file name from source file path.
+     * Removes document ID prefix if present (e.g., "{uuid}_{filename}" -> "{filename}")
+     */
+    private fun extractFileName(sourceFilePath: String?): String? {
+        if (sourceFilePath == null) return null
+
+        val fileName = sourceFilePath.substringAfterLast("/").substringAfterLast("\\")
+
+        // Check if file name has UUID prefix (format: {uuid}_{originalName} or {uuid}.txt)
+        val uuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_")
+        val match = uuidPattern.find(fileName)
+
+        return if (match != null) {
+            // Remove UUID prefix, return original file name
+            fileName.substring(match.range.last + 1)
+        } else if (fileName.matches(Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\.txt$"))) {
+            // File is {uuid}.txt (text input) - no original file name
+            null
+        } else {
+            fileName
         }
     }
 
