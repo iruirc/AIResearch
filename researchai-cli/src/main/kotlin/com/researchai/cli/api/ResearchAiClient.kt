@@ -6,18 +6,21 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class ResearchAiClient(private val baseUrl: String) {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
+            json(json)
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 300_000 // 5 minutes for long AI responses
@@ -25,11 +28,23 @@ class ResearchAiClient(private val baseUrl: String) {
         }
     }
 
-    suspend fun sendMessage(message: String, sessionId: String?): ChatResponse {
-        return client.post("$baseUrl/chat") {
+    suspend fun sendMessage(message: String, sessionId: String?, model: String? = null): ChatResponse {
+        val response = client.post("$baseUrl/chat") {
             contentType(ContentType.Application.Json)
-            setBody(ChatRequest(message = message, sessionId = sessionId))
-        }.body()
+            setBody(ChatRequest(message = message, sessionId = sessionId, model = model))
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val errorMessage = try {
+                json.decodeFromString<ErrorResponse>(errorBody).error
+            } catch (e: Exception) {
+                errorBody
+            }
+            throw RuntimeException(errorMessage)
+        }
+
+        return response.body()
     }
 
     suspend fun clearSession(sessionId: String) {
@@ -62,4 +77,9 @@ data class ChatResponse(
     val response: String,
     val sessionId: String,
     val tokensUsed: Int? = null
+)
+
+@Serializable
+data class ErrorResponse(
+    val error: String
 )

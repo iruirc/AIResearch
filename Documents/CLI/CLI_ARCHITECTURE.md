@@ -83,46 +83,91 @@ mkdir -p ~/.researchai
 cp researchai-cli/build/libs/researchai-cli-0.0.1-all.jar ~/.researchai/researchai-cli.jar
 ```
 
+## Configuration
+
+CLI configuration is stored in `~/.researchai/config.properties`:
+
+```properties
+# ResearchAI CLI Configuration
+server.url=http://localhost:8080
+default.model=gpt-4-turbo
+```
+
+### Configuration Priority
+
+1. Command-line options (highest priority)
+2. Config file (`~/.researchai/config.properties`)
+3. Built-in defaults
+
+### Create Config File
+```bash
+mkdir -p ~/.researchai
+cat > ~/.researchai/config.properties << 'EOF'
+# ResearchAI CLI Configuration
+server.url=http://localhost:8080
+default.model=gpt-4-turbo
+EOF
+```
+
 ## Usage
 
-### Start interactive chat
+### Command Line Options
+
 ```bash
+# Start chat with default settings
 rai chat
-```
 
-### Connect to custom server
-```bash
+# Specify server URL
 rai chat --server http://myserver:8080
-```
+rai chat -s http://myserver:8080
 
-### Continue existing session
-```bash
+# Specify model
+rai chat --model gpt-4-turbo
+rai chat -m claude-sonnet-4-5-20241022
+rai chat -m llama3:latest
+
+# Continue existing session
 rai chat --session abc123-def456
-```
 
-### Show help
-```bash
+# Combine options
+rai chat -s http://myserver:8080 -m gpt-4-turbo --session abc123
+
+# Show help
 rai --help
 rai chat --help
 ```
+
+### Model Selection
+
+The model determines which AI provider is used:
+
+| Model Pattern | Provider | Examples |
+|---------------|----------|----------|
+| `gpt-*` | OpenAI | `gpt-4-turbo`, `gpt-4o` |
+| `claude-*` | Claude | `claude-sonnet-4-5-20241022`, `claude-haiku-4-5-20251001` |
+| `*:*` | Ollama | `llama3:latest`, `mistral:7b`, `codellama:13b` |
+| `*/` or `deepseek` | HuggingFace | `deepseek-ai/DeepSeek-R1` |
 
 ## Interactive Commands
 
 During chat session, you can use these commands:
 
-| Command    | Description                    |
-|------------|--------------------------------|
-| `/exit`    | Exit the chat                  |
-| `/help`    | Show available commands        |
-| `/clear`   | Clear current session history  |
-| `/session` | Show current session ID        |
-| `/new`     | Start a new session            |
+| Command | Description |
+|---------|-------------|
+| `/exit` | Exit the chat |
+| `/help` | Show available commands |
+| `/clear` | Clear current session history |
+| `/session` | Show current session ID |
+| `/new` | Start a new session |
+| `/model` | Show current model |
+| `/model <name>` | Change model (e.g., `/model gpt-4-turbo`) |
 
 ## Example Session
 
 ```
 $ rai chat
 ResearchAI CLI v0.1.0
+Model: gpt-4-turbo
 Connecting to http://localhost:8080...
 Connected!
 Type /exit to quit, /help for commands
@@ -131,6 +176,16 @@ You: Hello, how are you?
 
 AI: I'm doing well, thank you for asking! How can I assist you today?
 
+You: /model
+Current model: gpt-4-turbo
+
+You: /model llama3:latest
+Model changed to: llama3:latest
+
+You: Tell me a joke
+
+AI: Why do programmers prefer dark mode? Because light attracts bugs!
+
 You: /session
 Current session: abc123-def456-789
 
@@ -138,34 +193,23 @@ You: /exit
 Goodbye!
 ```
 
-## Configuration
-
-CLI configuration is stored in `~/.researchai/config.properties`:
-
-```properties
-# Server URL
-server.url=http://localhost:8080
-
-# Default model (optional)
-default.model=claude-haiku-4-5-20251001
-```
-
 ## API Integration
 
 The CLI communicates with the server using the existing REST API:
 
-| Endpoint                      | Method | Description           |
-|-------------------------------|--------|-----------------------|
-| `/chat`                       | POST   | Send message          |
-| `/sessions/{id}/clear`        | POST   | Clear session         |
-| `/health`                     | GET    | Health check          |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/chat` | POST | Send message |
+| `/sessions/{id}/clear` | POST | Clear session |
+| `/health` | GET | Health check |
 
 ### Request Example
 ```json
 POST /chat
 {
   "message": "Hello",
-  "sessionId": "abc123"
+  "sessionId": "abc123",
+  "model": "gpt-4-turbo"
 }
 ```
 
@@ -182,11 +226,12 @@ POST /chat
 
 Potential features for future versions:
 
-- `/models` - List and select AI models
+- `/models` - List available models from server
 - `/assistant` - Select custom assistants
-- `/config` - Manage CLI configuration
+- `/config` - View/edit CLI configuration
 - Command history (readline support)
 - Colored output (ANSI)
 - Tab completion
 - Streaming responses
 - File input support (`rai chat < input.txt`)
+- Pipe support (`echo "Hello" | rai chat`)
