@@ -1,19 +1,31 @@
 # ResearchAI - Multi-Provider AI Chat API Server
 
-Мощный чат-сервер на Ktor с поддержкой нескольких AI провайдеров (Claude API, OpenAI API и другие).
+Мощный чат-сервер на Ktor с поддержкой нескольких AI провайдеров, MCP интеграцией и расширенными возможностями автоматизации.
 
 ## Возможности
 
-- ✅ **Веб-интерфейс чата** - красивый UI для общения с AI
+### Ядро
+- ✅ **Веб-интерфейс чата** - современный UI для общения с AI
 - ✅ **Мульти-провайдер поддержка** - Claude, OpenAI, HuggingFace, Ollama
+- ✅ **CLI клиент** - терминальный интерфейс для чата
 - ✅ REST API для чата с AI провайдерами
 - ✅ Поддержка JSON запросов/ответов
 - ✅ CORS для фронтенд-приложений
-- ✅ Health check endpoint
 - ✅ Конфигурация через переменные окружения
-- ✅ Логирование запросов и ответов
-- ✅ Управление сессиями чата
-- ✅ Динамическая конфигурация провайдеров
+
+### Расширенные возможности
+- ✅ **MCP (Model Context Protocol)** - подключение внешних инструментов
+- ✅ **Function Calling** - выполнение функций через AI
+- ✅ **Кастомные ассистенты** - персонализированные AI-персоны
+- ✅ **Пайплайны ассистентов** - цепочки обработки сообщений
+- ✅ **Планировщик задач** - автоматические recurring-сообщения
+- ✅ **Компрессия чата** - управление длинными разговорами
+- ✅ **RAG** - работа с документами и контекстом
+
+### Аутентификация и хранение
+- ✅ **OAuth/JWT аутентификация** - Google OAuth support
+- ✅ **PostgreSQL** - продакшн-хранилище данных
+- ✅ **JSON persistence** - локальное хранение сессий
 
 ## AI Providers
 
@@ -115,21 +127,75 @@ OPENAI_PROJECT_ID=proj_ваш_project_id (опционально)
 ### GET /
 Перенаправляет на веб-интерфейс чата (`/index.html`).
 
+### Assistants API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/assistants` | Список всех ассистентов |
+| GET | `/assistants/{id}` | Получить ассистента по ID |
+| POST | `/assistants` | Создать ассистента |
+| PUT | `/assistants/{id}` | Обновить ассистента |
+| DELETE | `/assistants/{id}` | Удалить ассистента |
+
+### Scheduler API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/scheduler/tasks` | Список всех задач |
+| GET | `/scheduler/tasks/{id}` | Получить задачу по ID |
+| POST | `/scheduler/tasks` | Создать задачу |
+| POST | `/scheduler/tasks/{id}/start` | Запустить задачу |
+| POST | `/scheduler/tasks/{id}/stop` | Остановить задачу |
+| DELETE | `/scheduler/tasks/{id}` | Удалить задачу |
+
+### Compression API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| POST | `/compression/compress` | Сжать сессию |
+| GET | `/compression/config/{sessionId}` | Получить конфиг компрессии |
+| POST | `/compression/config` | Обновить конфиг компрессии |
+| GET | `/compression/check/{sessionId}` | Проверить необходимость компрессии |
+| GET | `/compression/archived/{sessionId}` | Получить архивные сообщения |
+
+### MCP API
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/mcp/servers` | Список MCP серверов |
+| POST | `/mcp/servers` | Добавить MCP сервер |
+| DELETE | `/mcp/servers/{id}` | Удалить MCP сервер |
+| GET | `/mcp/tools` | Список доступных инструментов |
+
 ## Веб-интерфейс
 
-Сервер включает встроенный веб-интерфейс для общения с Claude.
+Сервер включает встроенный веб-интерфейс для общения с AI.
 
 **Доступ:** Откройте браузер и перейдите по адресу `http://localhost:8080`
 
 **Возможности веб-интерфейса:**
-- 💬 Удобная переписка с Claude в режиме чата
-- ⚡ Автоматическая отправка по Enter (Shift+Enter для новой строки)
-- 🎨 Современный дизайн с анимациями
-- ⏱️ Индикатор загрузки при ожидании ответа
-- ❌ Обработка ошибок и таймаутов (30 секунд)
+- 💬 Удобная переписка с AI в режиме чата
+- 🔄 Выбор провайдера и модели на лету
+- 🤖 Кастомные ассистенты с уникальными системными промптами
+- ⏰ Создание и управление запланированными задачами
+- 🔧 Настройка MCP серверов
 - 📱 Адаптивный дизайн для мобильных устройств
 
-![Веб-интерфейс чата](https://via.placeholder.com/800x500.png?text=Claude+Chat+Interface)
+## CLI клиент
+
+Терминальный интерфейс для взаимодействия с ResearchAI сервером.
+
+```bash
+# Сборка CLI
+cd researchai-cli
+../gradlew shadowJar
+
+# Запуск
+java -jar build/libs/researchai-cli-0.0.1-all.jar chat "Привет!"
+
+# С выбором модели
+java -jar build/libs/researchai-cli-0.0.1-all.jar chat -m claude-sonnet-4-20250514 "Расскажи о Kotlin"
+```
 
 ## Установка и запуск
 
@@ -279,19 +345,40 @@ docker-compose up -d
 ## Структура проекта
 
 ```
-src/main/kotlin/com/example/
-├── config/
-│   └── ClaudeConfig.kt         # Конфигурация Claude API
-├── models/
-│   ├── ChatRequest.kt          # Модель запроса от пользователя
-│   ├── ChatResponse.kt         # Модель ответа
-│   └── ClaudeModels.kt         # Модели Claude API
-├── routes/
-│   └── ChatRoutes.kt           # HTTP endpoints
-├── services/
-│   └── ClaudeService.kt        # Сервис для работы с Claude API
-├── Application.kt              # Главный файл приложения
-└── Routing.kt                  # Конфигурация роутинга
+ResearchAI/
+├── src/main/kotlin/com/researchai/
+│   ├── auth/                   # OAuth/JWT аутентификация
+│   │   ├── domain/models/      # User, AuthSession, JWTConfig
+│   │   ├── data/               # GoogleAuthProvider, UserRepositoryImpl
+│   │   ├── routes/             # AuthRoutes
+│   │   └── service/            # AuthService, JWTService
+│   ├── config/                 # Конфигурации провайдеров
+│   ├── data/
+│   │   ├── mcp/                # MCPServerManager, MCPClientWrapper
+│   │   ├── provider/           # Реализации провайдеров
+│   │   │   ├── claude/         # ClaudeProvider, ClaudeMapper
+│   │   │   ├── openai/         # OpenAIProvider, OpenAIMapper
+│   │   │   └── huggingface/    # HuggingFaceProvider
+│   │   └── repository/         # SessionRepositoryImpl
+│   ├── domain/
+│   │   ├── compression/        # Алгоритмы компрессии чата
+│   │   ├── mcp/                # MCPOrchestrationService
+│   │   ├── models/             # AIRequest, AIResponse, Message, etc.
+│   │   ├── provider/           # AIProviderFactory
+│   │   ├── repository/         # Interfaces
+│   │   ├── tokenizer/          # TokenCounter
+│   │   └── usecase/            # SendMessageUseCase, GetModelsUseCase
+│   ├── models/                 # ChatSession, Assistant, SchedulerResponses
+│   ├── persistence/
+│   │   ├── sql/                # PostgreSQL implementations
+│   │   └── *.kt                # JSON storage implementations
+│   ├── routes/                 # REST API endpoints
+│   ├── scheduler/              # Task Scheduler
+│   └── services/               # ChatSessionManager, AssistantManager, etc.
+├── researchai-cli/             # CLI клиент
+│   └── src/main/kotlin/com/researchai/cli/
+├── Documents/                  # Документация
+└── data/                       # Runtime данные (sessions, assistants, tasks)
 ```
 
 ## Переменные окружения
@@ -329,17 +416,53 @@ src/main/kotlin/com/example/
 
 ## Технологии
 
+**Backend:**
 - **Kotlin** - язык программирования
 - **Ktor 3.x** - веб-фреймворк
 - **Kotlinx Serialization** - JSON сериализация
-- **Ktor Client** - HTTP клиент для запросов к Claude API
+- **Kotlinx Coroutines** - асинхронное программирование
+- **Exposed** - SQL ORM для PostgreSQL
+- **Flyway** - миграции базы данных
+- **JTokkit** - токенизация для подсчета токенов
+
+**Инфраструктура:**
 - **Netty** - HTTP сервер
+- **PostgreSQL** - база данных (опционально)
+- **Docker** - контейнеризация
+- **MCP SDK** - Model Context Protocol
+
+**CLI:**
+- **Clikt** - парсер командной строки
+- **Mordant** - форматирование терминала
+
+## Документация
+
+Подробная документация находится в папке `Documents/`:
+
+| Документ | Описание |
+|----------|----------|
+| [QUICK-START.md](Documents/QUICK-START.md) | Быстрый старт |
+| [ARCHITECTURE_SUMMARY.md](Documents/ARCHITECTURE_SUMMARY.md) | Обзор архитектуры |
+| [MULTI_PROVIDER_ARCHITECTURE.md](Documents/MULTI_PROVIDER_ARCHITECTURE.md) | Мульти-провайдер архитектура |
+| [ASSISTANT_API.md](Documents/ASSISTANT_API.md) | API ассистентов |
+| [ASSISTANT_PIPELINE.md](Documents/ASSISTANT_PIPELINE.md) | Пайплайны ассистентов |
+| [TASK_SCHEDULER.md](Documents/TASK_SCHEDULER.md) | Планировщик задач |
+| [COMPRESSION_MECHANISM.md](Documents/COMPRESSION_MECHANISM.md) | Компрессия чата |
+| [MCP_INTEGRATION.md](Documents/MCP_INTEGRATION.md) | MCP интеграция |
+| [MCP_ORCHESTRATION.md](Documents/MCP_ORCHESTRATION.md) | MCP оркестрация |
+| [FUNCTION_CALLING.md](Documents/FUNCTION_CALLING.md) | Function calling |
+| [AUTH_README.md](Documents/AUTH_README.md) | Аутентификация |
+| [POSTGRESQL_ARCHITECTURE.md](Documents/POSTGRESQL_ARCHITECTURE.md) | PostgreSQL |
+| [DEPLOYMENT.md](Documents/DEPLOYMENT.md) | Деплой |
+| [DOCKER-QUICKSTART.md](Documents/DOCKER-QUICKSTART.md) | Docker quick start |
+| [CLI](Documents/CLI/) | Документация CLI |
 
 ## Полезные ссылки
 
 - [Ktor Documentation](https://ktor.io/docs/home.html)
 - [Claude API Documentation](https://docs.anthropic.com/claude/reference/getting-started-with-the-api)
-- [Ktor GitHub page](https://github.com/ktorio/ktor)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [MCP Specification](https://modelcontextprotocol.io/)
 
 ## Лицензия
 
