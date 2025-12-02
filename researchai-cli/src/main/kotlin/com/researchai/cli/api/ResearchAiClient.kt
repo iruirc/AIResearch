@@ -86,6 +86,35 @@ class ResearchAiClient(private val baseUrl: String) {
         return response.body()
     }
 
+    /**
+     * Post a review result as a comment on the GitHub PR
+     */
+    suspend fun postReviewComment(
+        reviewResult: PRReviewResult,
+        githubToken: String? = null
+    ) {
+        @Serializable
+        data class PostCommentRequest(
+            val reviewResult: PRReviewResult,
+            val githubToken: String? = null
+        )
+
+        val response = client.post("$baseUrl/pr-review/comment") {
+            contentType(ContentType.Application.Json)
+            setBody(PostCommentRequest(reviewResult, githubToken))
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val errorMessage = try {
+                json.decodeFromString<ErrorResponse>(errorBody).error
+            } catch (e: Exception) {
+                errorBody
+            }
+            throw RuntimeException("Failed to post review comment: $errorMessage")
+        }
+    }
+
     fun close() = client.close()
 
     // ==================== RAG API ====================

@@ -584,4 +584,170 @@ class PRReviewService(
         // Count "### Context N" occurrences
         return Regex("""### Context \d+""").findAll(context).count()
     }
+
+    /**
+     * Post review result as a comment on the GitHub PR
+     *
+     * @param result The review result to post
+     * @param githubToken Optional GitHub token (if not using MCP default)
+     * @return Result indicating success or failure
+     */
+    suspend fun postReviewAsComment(
+        result: PRReviewResult,
+        githubToken: String? = null
+    ): Result<Unit> {
+        return runCatching {
+            logger.info("Posting review comment for PR: ${result.pullRequestUrl}")
+
+            val githubClient = mcpServerManager.getClient(GITHUB_MCP_SERVER_ID)
+                ?: throw IllegalStateException("GitHub MCP server not connected. Please ensure GitHub MCP is configured.")
+
+            // Format review as markdown
+            val markdown = formatAsGitHubMarkdown(result)
+
+            // Parse PR URL to extract owner, repo, and PR number
+            val (owner, repo, prNumber) = parsePRUrl(result.pullRequestUrl)
+
+            logger.info("Posting comment to $owner/$repo#$prNumber")
+
+            // Call MCP tool to create comment
+            val createCommentResult = githubClient.callTool(
+                name = "add_issue_comment",
+                arguments = buildJsonObject {
+                    put("owner", owner)
+                    put("repo", repo)
+                    put("issue_number", prNumber)
+                    put("body", markdown)
+                }
+            )
+
+            logger.info("Review comment posted successfully to PR: ${result.pullRequestUrl}")
+            logger.debug("MCP response: $createCommentResult")
+        }.onFailure { error ->
+            logger.error("Failed to post review comment", error)
+        }
+    }
+
+    /**
+     * Parse GitHub PR URL to extract owner, repo, and PR number
+     *
+     * @param url GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
+     * @return Triple of (owner, repo, prNumber)
+     */
+    private fun parsePRUrl(url: String): Triple<String, String, Int> {
+        val regex = Regex("""github\.com/([^/]+)/([^/]+)/pull/(\d+)""")
+        val match = regex.find(url)
+            ?: throw IllegalArgumentException("Invalid GitHub PR URL: $url. Expected format: https://github.com/owner/repo/pull/123")
+
+        val (owner, repo, prNumber) = match.destructured
+        return Triple(owner, repo, prNumber.toInt())
+    }
+
+    /**
+     * Format review result as GitHub-flavored Markdown
+     */
+    private fun formatAsGitHubMarkdown(result: PRReviewResult): String = buildString {
+        appendLine("## 🤖 AI Code Review")
+        appendLine()
+
+        val scoreEmoji = when {
+            result.overallScore >= 90 -> "🟢"
+            result.overallScore >= 70 -> "🟡"
+            result.overallScore >= 50 -> "🟠"
+            else -> "🔴"
+        }
+        appendLine("**$scoreEmoji Overall Score:** ${result.overallScore}/100")
+        appendLine()
+
+        appendLine("### 📝 Summary")
+        appendLine(result.summary.overview)
+        appendLine()
+
+        if (result.summary.criticalIssues.isNotEmpty()) {
+            appendLine("### 🔴 Critical Issues")
+            result.summary.criticalIssues.forEach { issue ->
+                appendLine("- **[${issue.category}]** ${issue.title}")
+                appendLine("  - ${issue.description}")
+                if (!issue.suggestedAction.isNullOrBlank()) {
+                    appendLine("  - 💡 _${issue.suggestedAction}_")
+                }
+            }
+            appendLine()
+        }
+
+        if (result.summary.importantIssues.isNotEmpty()) {
+            appendLine("### 🟡 Important Issues")
+            result.summary.importantIssues.forEach { issue ->
+                appendLine("- **[${issue.category}]** ${issue.title}")
+                appendLine("  - ${issue.description}")
+                if (!issue.suggestedAction.isNullOrBlank()) {
+                    appendLine("  - 💡 _${issue.suggestedAction}_")
+                }
+            }
+            appendLine()
+        }
+
+        if (result.summary.suggestions.isNotEmpty()) {
+            appendLine("### 💭 Suggestions")
+            result.summary.suggestions.forEach { issue ->
+                appendLine("- **[${issue.category}]** ${issue.title}")
+                if (!issue.description.isBlank()) {
+                    appendLine("  - ${issue.description}")
+                }
+            }
+            appendLine()
+        }
+
+        if (result.summary.positives.isNotEmpty()) {
+            appendLine("### ✅ Positive Observations")
+            result.summary.positives.forEach { positive ->
+                appendLine("- $positive")
+            }
+            appendLine()
+        }
+
+        // File reviews (if any)
+        if (result.fileReviews.isNotEmpty()) {
+            appendLine("<details>")
+            appendLine("<summary>📁 File-by-File Review (${result.fileReviews.size} files)</summary>")
+            appendLine()
+
+            result.fileReviews.forEach { file ->
+                appendLine("#### ${file.filePath} (${file.changeType})")
+                if (file.fileSummary != null) {
+                    appendLine(file.fileSummary)
+                }
+                if (file.lineComments.isNotEmpty()) {
+                    appendLine()
+                    file.lineComments.forEach { comment ->
+                        val icon = when (comment.severity) {
+                            Severity.CRITICAL -> "🔴"
+                            Severity.WARNING -> "🟡"
+                            Severity.INFO -> "ℹ️"
+                        }
+                        appendLine("- $icon **Line ${comment.lineNumber}:** ${comment.message}")
+                        if (!comment.suggestedFix.isNullOrBlank()) {
+                            appendLine("  - 💡 _${comment.suggestedFix}_")
+                        }
+                    }
+                }
+                appendLine()
+            }
+            appendLine("</details>")
+            appendLine()
+        }
+
+        // Metadata
+        appendLine("<details>")
+        appendLine("<summary>⚙️ Review Details</summary>")
+        appendLine()
+        appendLine("- **Duration:** ${result.metadata.reviewDurationMs / 1000.0}s")
+        appendLine("- **Files reviewed:** ${result.metadata.filesReviewed}")
+        appendLine("- **Model:** ${result.metadata.model}")
+        appendLine("- **Provider:** ${result.metadata.provider}")
+        if (result.metadata.ragContextUsed) {
+            appendLine("- **RAG Context:** ${result.metadata.ragChunksRetrieved} chunks")
+        }
+        appendLine("</details>")
+    }
 }

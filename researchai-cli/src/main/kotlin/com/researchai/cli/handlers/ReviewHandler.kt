@@ -67,7 +67,19 @@ class ReviewHandler(
             // Post comment if requested
             if (postComment) {
                 echo("\n\uD83D\uDCE4 Posting review as PR comment...")
-                echo("⚠️  --post-comment will be implemented in Phase 3\n")
+
+                val githubToken = System.getenv("GITHUB_TOKEN")
+                if (githubToken == null) {
+                    echo("⚠️  GITHUB_TOKEN environment variable not set")
+                    echo("   Set it to post comments: export GITHUB_TOKEN=your_token\n")
+                } else {
+                    try {
+                        client.postReviewComment(result, githubToken)
+                        echo("✅ Review comment posted successfully!\n")
+                    } catch (e: Exception) {
+                        echo("❌ Failed to post comment: ${e.message}\n")
+                    }
+                }
             }
 
             // Exit code based on score
