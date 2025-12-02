@@ -138,7 +138,8 @@ class ChatCommand : CliktCommand(
                         val result = initHandler.init(
                             currentDir = currentDir,
                             force = true,
-                            skipConfirm = true
+                            skipConfirm = true,
+                            strategy = "auto"
                         )
 
                         if (result.success) {

@@ -1,5 +1,6 @@
 package com.researchai.cli.strategy
 
+import com.researchai.cli.util.GitUtils
 import java.io.File
 
 /**
@@ -20,12 +21,12 @@ interface FileDiscoveryStrategy {
 }
 
 /**
- * Default discovery strategy:
+ * Documents discovery strategy:
  * - README.md in root
  * - All supported files from Documents/ folder
  */
-class DefaultDiscoveryStrategy : FileDiscoveryStrategy {
-    override val name = "default"
+class DocumentsDiscoveryStrategy : FileDiscoveryStrategy {
+    override val name = "documents"
 
     private val supportedExtensions = listOf("md", "txt", "json", "xml", "log")
 
@@ -54,22 +55,101 @@ class DefaultDiscoveryStrategy : FileDiscoveryStrategy {
 }
 
 /**
+ * Git-based discovery strategy:
+ * - All git-tracked files in the repository
+ * - No filtering by extension (index everything)
+ * - Attempts to read all files as text
+ * - Skips files that can't be read (binary, permission errors, etc.)
+ */
+class GitDiscoveryStrategy : FileDiscoveryStrategy {
+    override val name = "git"
+
+    override fun discover(rootDir: File): List<DiscoveredFile> {
+        // 1. Check if git is installed
+        if (!GitUtils.isGitInstalled()) {
+            throw IllegalStateException(
+                "Git is not installed or not found in PATH. " +
+                "Please install git or use --strategy documents"
+            )
+        }
+
+        // 2. Check if directory is a git repository
+        if (!GitUtils.isGitRepository(rootDir)) {
+            throw IllegalStateException(
+                "Current directory is not a git repository. " +
+                "Use --strategy documents or initialize git with: git init"
+            )
+        }
+
+        // 3. Get git root
+        val gitRoot = GitUtils.getGitRoot(rootDir)
+            ?: throw IllegalStateException("Failed to get git root directory")
+
+        // 4. Get all tracked files
+        val trackedFiles = GitUtils.getTrackedFiles(gitRoot)
+
+        // 5. Convert to DiscoveredFile, filtering out unreadable files
+        return trackedFiles.mapNotNull { file ->
+            try {
+                // Try to read file to check if it's readable
+                file.readText()
+
+                // Calculate relative path from rootDir (not gitRoot)
+                val relativePath = file.relativeTo(rootDir).path
+                DiscoveredFile(file, relativePath)
+            } catch (e: Exception) {
+                // Skip files that can't be read (binary, permission errors, etc.)
+                null
+            }
+        }
+    }
+}
+
+/**
+ * Auto-detection discovery strategy:
+ * - Automatically chooses between git and documents strategy
+ * - If directory is a git repository → uses GitDiscoveryStrategy
+ * - Otherwise → uses DocumentsDiscoveryStrategy
+ */
+class AutoDiscoveryStrategy : FileDiscoveryStrategy {
+    override val name = "auto"
+
+    override fun discover(rootDir: File): List<DiscoveredFile> {
+        // Check if git is installed and directory is a git repository
+        val isGitRepo = GitUtils.isGitInstalled() && GitUtils.isGitRepository(rootDir)
+
+        return if (isGitRepo) {
+            // Use git strategy
+            GitDiscoveryStrategy().discover(rootDir)
+        } else {
+            // Fall back to documents strategy
+            DocumentsDiscoveryStrategy().discover(rootDir)
+        }
+    }
+}
+
+/**
  * Factory for file discovery strategies.
  * Add new strategies here for future extensibility.
  */
 object DiscoveryStrategyFactory {
     private val strategies: Map<String, FileDiscoveryStrategy> by lazy {
         mapOf(
-            "default" to DefaultDiscoveryStrategy()
+            "documents" to DocumentsDiscoveryStrategy(),
+            "git" to GitDiscoveryStrategy(),
+            "auto" to AutoDiscoveryStrategy()
         )
     }
 
     fun get(name: String): FileDiscoveryStrategy {
         return strategies[name]
-            ?: throw IllegalArgumentException("Unknown discovery strategy: $name. Available: ${available()}")
+            ?: throw IllegalArgumentException(
+                "Unknown discovery strategy: $name. Available: ${available().joinToString(", ")}"
+            )
     }
 
     fun available(): List<String> = strategies.keys.toList()
 
-    fun default(): FileDiscoveryStrategy = get("default")
+    // Default strategy is now "auto"
+    fun default(): FileDiscoveryStrategy = get("auto")
 }

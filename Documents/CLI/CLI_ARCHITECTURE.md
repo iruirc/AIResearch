@@ -34,7 +34,8 @@ ResearchAI/
 │       ├── strategy/
 │       │   └── FileDiscoveryStrategy.kt  # File discovery for RAG
 │       └── util/
-│           └── GitRepositoryDetector.kt  # Git repo detection
+│           ├── GitRepositoryDetector.kt  # Git repo detection
+│           └── GitUtils.kt               # Git operations
 └── gradle/
     └── libs.versions.toml       # Shared dependencies
 ```
@@ -49,6 +50,8 @@ ResearchAI/
 4. **ResearchAiClient** - HTTP client for server communication
 5. **CliConfig** - Global CLI configuration
 6. **ProjectConfig** - Per-project RAG configuration
+7. **FileDiscoveryStrategy** - Pluggable strategies for discovering files to index
+8. **GitUtils** - Git operations utility (check repository, list tracked files)
 
 ### Handlers Layer
 
@@ -59,6 +62,61 @@ Handlers extract common logic for reuse in both top-level commands and slash com
 | `GitHandler` | GitHub MCP tool execution | `GitCommand`, `/git` |
 | `AskHandler` | RAG search and question | `AskCommand`, `/ask` |
 | `InitHandler` | Project initialization | `InitCommand`, `/init` |
+
+### File Discovery Strategy Pattern
+
+The CLI uses the **Strategy Pattern** for file discovery, allowing different approaches to finding files for RAG indexing:
+
+#### Strategy Interface
+```kotlin
+interface FileDiscoveryStrategy {
+    val name: String
+    fun discover(rootDir: File): List<DiscoveredFile>
+}
+```
+
+#### Available Strategies
+
+| Strategy | Name | Description | Use Case |
+|----------|------|-------------|----------|
+| **AutoDiscoveryStrategy** | `auto` | Smart detection: git or documents | Default, best UX |
+| **GitDiscoveryStrategy** | `git` | All git-tracked files | Index entire codebase |
+| **DocumentsDiscoveryStrategy** | `documents` | README + Documents/ folder | Documentation only |
+
+#### Strategy Factory
+```kotlin
+object DiscoveryStrategyFactory {
+    fun get(name: String): FileDiscoveryStrategy
+    fun available(): List<String>
+    fun default(): FileDiscoveryStrategy  // Returns "auto"
+}
+```
+
+#### GitUtils - Git Operations
+
+The `GitUtils` object provides safe git operations:
+
+```kotlin
+object GitUtils {
+    // Check if directory is in a git repository
+    fun isGitRepository(dir: File): Boolean
+
+    // Get root directory of git repository
+    fun getGitRoot(dir: File): File?
+
+    // Get all git-tracked files
+    fun getTrackedFiles(gitRoot: File): List<File>
+
+    // Check if git command is available
+    fun isGitInstalled(): Boolean
+}
+```
+
+**Security features:**
+- Uses `ProcessBuilder` to prevent command injection
+- 5-second timeout for git checks
+- 30-second timeout for `git ls-files`
+- All errors handled gracefully
 
 ### Dependencies
 
@@ -149,8 +207,11 @@ rai chat --session abc123-def456
 
 # Initialize project RAG
 rai init
-rai init --force      # Reinitialize
-rai init --yes        # Skip confirmation
+rai init --force            # Reinitialize
+rai init --yes              # Skip confirmation
+rai init --strategy git     # Use git-tracked files
+rai init --strategy documents  # Use Documents/ folder only
+rai init --strategy auto    # Auto-detect (default)
 
 # Ask question using RAG
 rai ask "What is this project about?"
@@ -263,24 +324,110 @@ $ rai init
 Project directory: /path/to/project
 Index this project? [y/N]: y
 Scanning for files...
-Found 5 file(s):
+Using strategy: auto
+Found 245 file(s) using 'auto' strategy:
   - README.md
+  - src/main/kotlin/Application.kt
+  - build.gradle.kts
   - Documents/API.md
   - Documents/ARCHITECTURE.md
 ...
 Creating RAG knowledge base...
 [██████████████████████████████] 100% - Saving to storage
 Project initialized successfully!
+RAG Document Name: myproject
 RAG Document ID: abc123-def456
-Chunks created: 42
+Chunks created: 842
 Config saved to: .researchCLI/config.json
 ```
 
-### File Discovery
+**Example with explicit strategy:**
+```bash
+$ rai init --strategy documents
+Scanning for files...
+Using strategy: documents
+Found 5 file(s) using 'documents' strategy:
+  - README.md
+  - Documents/API.md
+  - Documents/ARCHITECTURE.md
+...
+Creating RAG knowledge base...
+Project initialized successfully!
+```
 
-Default strategy discovers:
+### File Discovery Strategies
+
+The CLI supports three file discovery strategies:
+
+#### 1. Auto Strategy (Default)
+Automatically detects the best strategy based on the environment:
+- **In git repository:** Indexes all git-tracked files
+- **Not in git repository:** Falls back to Documents strategy
+
+```bash
+rai init                    # Uses auto strategy
+rai init --strategy auto    # Explicit auto
+```
+
+#### 2. Git Strategy
+Indexes all git-tracked files in the repository:
+- Discovers files using `git ls-files`
+- No file extension filtering (indexes all tracked files)
+- Automatically respects `.gitignore`
+- Skips binary/unreadable files
+
+```bash
+rai init --strategy git
+```
+
+**Use cases:**
+- Index entire codebase for AI assistance
+- Automatic exclusion of ignored files
+- Works with any git repository structure
+
+**Requirements:**
+- Git must be installed
+- Directory must be a git repository
+
+#### 3. Documents Strategy
+Indexes only documentation files (legacy behavior):
 - `README.md` in project root
 - All `.md`, `.txt`, `.json`, `.xml`, `.log` files in `Documents/` folder
+
+```bash
+rai init --strategy documents
+```
+
+**Use cases:**
+- Non-git projects
+- Only want to index documentation
+- Explicit file control
+
+### Strategy Selection Examples
+
+```bash
+# Auto-detection (recommended)
+cd /path/to/git-repo
+rai init
+# Output: Using strategy: auto
+# Found 245 file(s) using 'auto' strategy (git-tracked files)
+
+# Explicit git strategy
+cd /path/to/git-repo
+rai init --strategy git --force
+# Reindexes all git-tracked files
+
+# Documents strategy
+cd /path/to/non-git-project
+rai init --strategy documents
+# Indexes README.md + Documents/ folder only
+
+# Auto-detection fallback
+cd /path/to/non-git-project
+rai init
+# Output: Using strategy: auto
+# Found 5 file(s) using 'auto' strategy (Documents/ folder)
+```
 
 ## API Integration
 

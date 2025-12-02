@@ -1,6 +1,7 @@
 package com.researchai.cli.commands
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
@@ -17,6 +18,10 @@ class InitCommand : CliktCommand(
     private val serverUrlOption by option("--server", "-s", help = "Server URL")
     private val forceOption by option("--force", "-f", help = "Reinitialize existing project").flag()
     private val yesOption by option("--yes", "-y", help = "Skip confirmation prompt").flag()
+    private val strategyOption by option(
+        "--strategy", "-st",
+        help = "File discovery strategy: documents, git, auto (default: auto)"
+    ).default("auto")
 
     override fun run() = runBlocking {
         val currentDir = File(System.getProperty("user.dir"))
@@ -57,7 +62,8 @@ class InitCommand : CliktCommand(
             handler.init(
                 currentDir = currentDir,
                 force = forceOption,
-                skipConfirm = true // Already confirmed above
+                skipConfirm = true, // Already confirmed above
+                strategy = strategyOption
             )
 
         } finally {

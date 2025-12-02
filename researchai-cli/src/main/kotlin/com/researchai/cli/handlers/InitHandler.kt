@@ -33,12 +33,14 @@ class InitHandler(
      * @param currentDir Project directory
      * @param force If true, reinitialize even if already initialized
      * @param skipConfirm If true, skip user confirmation
+     * @param strategy File discovery strategy (documents, git, auto)
      * @return InitResult with status and document info
      */
     suspend fun init(
         currentDir: File,
         force: Boolean = false,
-        skipConfirm: Boolean = false
+        skipConfirm: Boolean = false,
+        strategy: String = "auto"
     ): InitResult {
         // 1. Check for existing initialization
         if (ProjectConfig.isInitialized(currentDir) && !force) {
@@ -53,16 +55,38 @@ class InitHandler(
 
         // 2. Discover files
         output("Scanning for files...")
-        val strategy = DiscoveryStrategyFactory.default()
-        val discoveredFiles = strategy.discover(currentDir)
+        output("Using strategy: $strategy")
+
+        val discoveryStrategy = try {
+            DiscoveryStrategyFactory.get(strategy)
+        } catch (e: IllegalArgumentException) {
+            output("Error: ${e.message}")
+            return InitResult(success = false, error = e.message)
+        }
+
+        val discoveredFiles = try {
+            discoveryStrategy.discover(currentDir)
+        } catch (e: IllegalStateException) {
+            // Strategy-specific errors (git not installed, not a git repo, etc.)
+            output("Error: ${e.message}")
+            return InitResult(success = false, error = e.message)
+        } catch (e: Exception) {
+            output("Error during file discovery: ${e.message}")
+            return InitResult(success = false, error = e.message)
+        }
 
         if (discoveredFiles.isEmpty()) {
-            output("No files found to index.")
-            output("Expected: README.md in root or Documents/ folder with .md, .txt, .json, .xml, .log files")
+            val message = when (strategy) {
+                "documents" -> "No files found to index. Expected: README.md in root or Documents/ folder with .md, .txt, .json, .xml, .log files"
+                "git" -> "No git-tracked files found in repository"
+                "auto" -> "No files found to index"
+                else -> "No files found to index"
+            }
+            output(message)
             return InitResult(success = false, error = "No files found")
         }
 
-        output("Found ${discoveredFiles.size} file(s):")
+        output("Found ${discoveredFiles.size} file(s) using '$strategy' strategy:")
         discoveredFiles.forEach { output("  - ${it.relativePath}") }
 
         // 3. Create RAG document with progress
