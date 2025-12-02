@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
+import com.researchai.cli.commands.git.GitOutputFormatterRegistry
 import com.researchai.cli.config.CliConfig
 import com.researchai.cli.util.GitRepositoryDetector
 import kotlinx.coroutines.runBlocking
@@ -171,23 +172,14 @@ class GitCommand : CliktCommand(
             return
         }
 
-        // Display result
+        // Display result with tool-specific formatting
+        val formatter = GitOutputFormatterRegistry.getFormatter(toolName)
+
         result.content.forEach { content ->
             when (content.type) {
-                "text" -> echo(formatJsonOutput(content.text ?: ""))
+                "text" -> echo(formatter.format(content.text ?: ""))
                 else -> echo("[${content.type}]: ${content.text ?: content.uri ?: "..."}")
             }
-        }
-    }
-
-    private fun formatJsonOutput(text: String): String {
-        // Try to pretty-print JSON output
-        return try {
-            val json = Json { prettyPrint = true }
-            val element = Json.parseToJsonElement(text)
-            json.encodeToString(JsonElement.serializer(), element)
-        } catch (e: Exception) {
-            text
         }
     }
 }
