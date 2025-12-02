@@ -66,33 +66,36 @@ class PRReviewService(
         val githubClient = mcpServerManager.getClient(GITHUB_MCP_SERVER_ID)
             ?: throw IllegalStateException("GitHub MCP server not connected. Please ensure GitHub MCP is configured.")
 
-        // Fetch PR details
+        // Fetch PR details using pull_request_read with method="get"
         val prDetailsResult = githubClient.callTool(
-            "get_pull_request",
+            "pull_request_read",
             buildJsonObject {
+                put("method", "get")
                 put("owner", request.repositoryOwner)
                 put("repo", request.repositoryName)
-                put("pull_number", request.pullRequestNumber)
+                put("pullNumber", request.pullRequestNumber)
             }
         )
 
-        // Fetch PR diff
+        // Fetch PR diff using pull_request_read with method="get_diff"
         val diffResult = githubClient.callTool(
-            "get_pull_request_diff",
+            "pull_request_read",
             buildJsonObject {
+                put("method", "get_diff")
                 put("owner", request.repositoryOwner)
                 put("repo", request.repositoryName)
-                put("pull_number", request.pullRequestNumber)
+                put("pullNumber", request.pullRequestNumber)
             }
         )
 
-        // Fetch changed files
+        // Fetch changed files using pull_request_read with method="get_files"
         val filesResult = githubClient.callTool(
-            "get_pull_request_files",
+            "pull_request_read",
             buildJsonObject {
+                put("method", "get_files")
                 put("owner", request.repositoryOwner)
                 put("repo", request.repositoryName)
-                put("pull_number", request.pullRequestNumber)
+                put("pullNumber", request.pullRequestNumber)
             }
         )
 

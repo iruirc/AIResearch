@@ -232,9 +232,25 @@ class MCPClientWrapper(
             MCPToolCallResult(
                 success = result?.isError?.not() ?: false,
                 content = result?.content?.map { content ->
+                    // Properly extract text from MCP SDK content objects
+                    val textContent = when (content.type) {
+                        "text" -> {
+                            // Access text property via reflection for TextContent type
+                            try {
+                                val textField = content.javaClass.getDeclaredField("text")
+                                textField.isAccessible = true
+                                textField.get(content) as? String
+                            } catch (e: Exception) {
+                                logger.warn("Failed to extract text from content: ${e.message}")
+                                null
+                            }
+                        }
+                        else -> null
+                    }
+
                     MCPContent(
                         type = content.type,
-                        text = content.toString(), // Временное решение - возвращаем строковое представление
+                        text = textContent,
                         data = null,
                         mimeType = null
                     )
