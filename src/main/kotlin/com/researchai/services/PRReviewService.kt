@@ -7,6 +7,7 @@ import com.researchai.domain.models.mcp.MCPContent
 import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ConfigRepository
 import com.researchai.data.mcp.MCPServerManager
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -347,6 +348,16 @@ class PRReviewService(
     }
 
     /**
+     * Intermediate structure for parsing AI response (without metadata, requestId, pullRequestUrl)
+     */
+    @Serializable
+    private data class AIReviewResponse(
+        val summary: ReviewSummary,
+        val fileReviews: List<FileReview>,
+        val overallScore: Int
+    )
+
+    /**
      * Parse AI response into PRReviewResult
      */
     private fun parseReviewResponse(
@@ -365,11 +376,26 @@ class PRReviewService(
 
         return try {
             val json = Json { ignoreUnknownKeys = true }
-            val parsed = json.decodeFromString<PRReviewResult>(cleanedResponse)
+            // Parse into intermediate structure (AI doesn't return metadata, requestId, pullRequestUrl)
+            val aiResponse = json.decodeFromString<AIReviewResponse>(cleanedResponse)
 
-            parsed.copy(
+            // Convert to PRReviewResult with metadata
+            PRReviewResult(
                 requestId = requestId,
-                pullRequestUrl = prData.details.url
+                pullRequestUrl = prData.details.url,
+                summary = aiResponse.summary,
+                fileReviews = aiResponse.fileReviews,
+                overallScore = aiResponse.overallScore,
+                metadata = ReviewMetadata(
+                    reviewDurationMs = 0, // Will be updated in reviewPullRequest()
+                    filesReviewed = prData.changedFiles.size,
+                    linesAnalyzed = 0,
+                    ragContextUsed = false, // Will be updated in reviewPullRequest()
+                    ragChunksRetrieved = 0, // Will be updated in reviewPullRequest()
+                    tokensUsed = 0,
+                    model = request.model ?: "unknown",
+                    provider = request.providerId.id
+                )
             )
         } catch (e: Exception) {
             // Fallback: create basic result from text response
@@ -386,11 +412,19 @@ class PRReviewService(
         prData: PRData,
         requestId: String
     ): PRReviewResult {
+        // Log the raw response to file for debugging
+        try {
+            java.io.File("/tmp/pr-review-raw-response-$requestId.txt").writeText(response)
+            logger.warn("Raw AI response saved to /tmp/pr-review-raw-response-$requestId.txt (length: ${response.length})")
+        } catch (e: Exception) {
+            logger.warn("Failed to save raw response to file", e)
+        }
+
         return PRReviewResult(
             requestId = requestId,
             pullRequestUrl = prData.details.url,
             summary = ReviewSummary(
-                overview = response.take(500),
+                overview = response.take(50000), // Increased from 500 to 50000
                 criticalIssues = emptyList(),
                 importantIssues = emptyList(),
                 suggestions = emptyList(),
