@@ -416,7 +416,10 @@ data class PRReviewRequest(
     val repositoryName: String,
     val pullRequestNumber: Int,
     val reviewMode: String = "STANDARD",
-    val focusAreas: List<String> = emptyList()
+    val focusAreas: List<String> = emptyList(),
+    val useRAG: Boolean = false,
+    val ragMinScore: Float = 0.7f,
+    val ragMaxChunks: Int = 10
 )
 
 @Serializable

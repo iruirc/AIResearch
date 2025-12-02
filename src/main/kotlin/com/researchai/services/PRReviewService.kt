@@ -18,7 +18,9 @@ class PRReviewService(
     private val mcpServerManager: MCPServerManager,
     private val aiProviderFactory: AIProviderFactory,
     private val configRepository: ConfigRepository,
-    private val assistantManager: AssistantManager
+    private val assistantManager: AssistantManager,
+    private val ragManager: RAGManager,
+    private val preferencesManager: PreferencesManager
 ) {
     companion object {
         const val GITHUB_MCP_SERVER_ID = "github"
@@ -39,19 +41,29 @@ class PRReviewService(
             // 1. Fetch PR data via MCP
             val prData = fetchPRData(request)
 
-            // 2. Build review prompt (without RAG for Phase 1)
-            val reviewPrompt = buildReviewPrompt(prData, null, request)
+            // 2. Retrieve RAG context if enabled
+            val ragContext = if (request.useRAG) {
+                logger.info("Retrieving RAG context for PR review...")
+                retrieveRAGContext(prData, request)
+            } else {
+                null
+            }
 
-            // 3. Execute AI review
+            // 3. Build review prompt with RAG context
+            val reviewPrompt = buildReviewPrompt(prData, ragContext, request)
+
+            // 4. Execute AI review
             val aiResponse = executeAIReview(reviewPrompt, request)
 
-            // 4. Parse response
+            // 5. Parse response
             val result = parseReviewResponse(aiResponse, prData, request, requestId)
 
-            // 5. Add metadata
+            // 6. Add metadata including RAG usage
             result.copy(
                 metadata = result.metadata.copy(
-                    reviewDurationMs = System.currentTimeMillis() - startTime
+                    reviewDurationMs = System.currentTimeMillis() - startTime,
+                    ragContextUsed = request.useRAG && ragContext != null,
+                    ragChunksRetrieved = ragContext?.let { extractChunkCount(it) } ?: 0
                 )
             )
         }.onFailure { error ->
@@ -245,22 +257,30 @@ class PRReviewService(
         prompt: String,
         request: PRReviewRequest
     ): String {
-        val config = configRepository.getProviderConfig(request.providerId).getOrNull()
-            ?: throw IllegalStateException("Provider ${request.providerId} configuration not found")
-        val provider = aiProviderFactory.create(request.providerId, config)
+        // Get global preferences if providerId/model not specified in request
+        val preferences = preferencesManager.getPreferences()
+
+        // Use request values or fallback to global preferences
+        val providerId = if (request.providerId == ProviderType.CLAUDE && request.model == null) {
+            // Default CLAUDE not explicitly set, use preferences
+            ProviderType.valueOf(preferences.providerId.uppercase())
+        } else {
+            request.providerId
+        }
+
+        val config = configRepository.getProviderConfig(providerId).getOrNull()
+            ?: throw IllegalStateException("Provider $providerId configuration not found")
+        val provider = aiProviderFactory.create(providerId, config)
 
         // Get system prompt from assistant
         val assistant = assistantManager.getAssistant(PR_REVIEWER_ASSISTANT_ID)
         val systemPrompt = assistant?.systemPrompt
 
-        // Get model name based on config type
-        val model = request.model ?: when (config) {
-            is ProviderConfig.ClaudeConfig -> config.defaultModel
-            is ProviderConfig.OpenAIConfig -> config.defaultModel
-            is ProviderConfig.HuggingFaceConfig -> config.defaultModel
-            is ProviderConfig.OllamaConfig -> "llama2"  // Default for Ollama
-            else -> throw IllegalStateException("Unknown provider config type")
-        }
+        // Get model: request.model > preferences.model > config.defaultModel
+        val model = request.model ?: preferences.model
+
+        // Get maxTokens from preferences (user set 64000 for gpt-5-nano)
+        val maxTokens = preferences.maxTokens
 
         val aiRequest = AIRequest(
             messages = listOf(
@@ -273,7 +293,7 @@ class PRReviewService(
             systemPrompt = systemPrompt,
             parameters = RequestParameters(
                 temperature = 0.3,  // Low for consistency
-                maxTokens = 8192
+                maxTokens = maxTokens  // Use from global preferences
             )
         )
 
@@ -344,5 +364,145 @@ class PRReviewService(
                 provider = "unknown"
             )
         )
+    }
+
+    /**
+     * Retrieve RAG context based on changed files in the PR
+     */
+    private suspend fun retrieveRAGContext(
+        prData: PRData,
+        request: PRReviewRequest
+    ): String? {
+        return try {
+            // Build search queries from changed files
+            val queries = buildSearchQueries(prData)
+
+            if (queries.isEmpty()) {
+                logger.warn("No search queries generated from PR data")
+                return null
+            }
+
+            logger.info("Generated ${queries.size} search queries from ${prData.changedFiles.size} changed files")
+
+            // Execute searches and collect results
+            val allResults = mutableSetOf<SearchResult>()
+            for (query in queries) {
+                val results = ragManager.searchRelevantContext(
+                    query = query,
+                    topK = 5,
+                    minScore = request.ragMinScore
+                )
+                allResults.addAll(results)
+                logger.debug("Query '${query.take(50)}...' returned ${results.size} results")
+            }
+
+            if (allResults.isEmpty()) {
+                logger.warn("No relevant context found in RAG for any query")
+                return null
+            }
+
+            // Sort by score and take top N
+            val topResults = allResults
+                .sortedByDescending { it.score }
+                .take(request.ragMaxChunks)
+
+            logger.info("Retrieved ${topResults.size} unique chunks from RAG (${allResults.size} total before deduplication)")
+
+            // Format context for LLM
+            formatRAGContext(topResults)
+        } catch (e: Exception) {
+            logger.error("Failed to retrieve RAG context", e)
+            null
+        }
+    }
+
+    /**
+     * Build search queries from changed files
+     */
+    private fun buildSearchQueries(prData: PRData): List<String> {
+        val queries = mutableListOf<String>()
+
+        for (file in prData.changedFiles.take(10)) { // Limit to first 10 files
+            // Query 1: File path context
+            val filePathQuery = "${file.filename} architecture implementation patterns"
+            queries.add(filePathQuery)
+
+            // Query 2: Extract identifiers from patch and search for usage examples
+            file.patch?.let { patch ->
+                val identifiers = extractIdentifiers(patch)
+                identifiers.take(3).forEach { identifier ->
+                    queries.add("$identifier usage examples best practices")
+                }
+            }
+        }
+
+        // Deduplicate and limit total queries
+        return queries.distinct().take(20)
+    }
+
+    /**
+     * Extract identifiers (class/function names) from a patch
+     */
+    private fun extractIdentifiers(patch: String): List<String> {
+        val identifiers = mutableSetOf<String>()
+
+        // Kotlin/Java class definitions
+        val classPattern = Regex("""(?:class|interface|object|enum class)\s+(\w+)""")
+        classPattern.findAll(patch).forEach {
+            identifiers.add(it.groupValues[1])
+        }
+
+        // Kotlin/Java function definitions
+        val functionPattern = Regex("""(?:fun|def|function)\s+(\w+)""")
+        functionPattern.findAll(patch).forEach {
+            identifiers.add(it.groupValues[1])
+        }
+
+        // JavaScript/TypeScript function/class definitions
+        val jsPattern = Regex("""(?:function|class|const|let)\s+(\w+)""")
+        jsPattern.findAll(patch).forEach {
+            identifiers.add(it.groupValues[1])
+        }
+
+        return identifiers.toList()
+    }
+
+    /**
+     * Format RAG results into context string for LLM
+     */
+    private fun formatRAGContext(results: List<SearchResult>): String {
+        if (results.isEmpty()) return ""
+
+        return buildString {
+            appendLine("# Codebase Context (from RAG)")
+            appendLine()
+            appendLine("The following code examples and documentation from the repository may provide helpful context:")
+            appendLine()
+
+            results.groupBy { it.documentName }.forEach { (docName, chunks) ->
+                appendLine("## Document: $docName")
+                appendLine()
+                chunks.forEachIndexed { idx, chunk ->
+                    val relevancePercent = (chunk.score * 100).toInt()
+                    appendLine("### Context ${idx + 1} (relevance: $relevancePercent%)")
+                    chunk.sourceFileName?.let {
+                        appendLine("**Source:** $it")
+                        appendLine()
+                    }
+                    appendLine("```")
+                    appendLine(chunk.text.trim())
+                    appendLine("```")
+                    appendLine()
+                }
+            }
+        }
+    }
+
+    /**
+     * Extract chunk count from formatted RAG context string
+     */
+    private fun extractChunkCount(context: String): Int {
+        // Count "### Context N" occurrences
+        return Regex("""### Context \d+""").findAll(context).count()
     }
 }

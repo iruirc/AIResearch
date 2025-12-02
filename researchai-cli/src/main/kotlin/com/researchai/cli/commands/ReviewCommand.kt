@@ -47,6 +47,21 @@ class ReviewCommand : CliktCommand(
         help = "ResearchAI server URL"
     )
 
+    private val useRag by option(
+        "--use-rag",
+        help = "Use RAG for codebase context (requires repository to be indexed with 'rai init')"
+    ).flag(default = false)
+
+    private val ragMinScore by option(
+        "--rag-min-score",
+        help = "Minimum RAG similarity score (0.0-1.0). Higher = more relevant context"
+    ).default("0.7")
+
+    private val ragMaxChunks by option(
+        "--rag-max-chunks",
+        help = "Maximum number of RAG context chunks to include. Each chunk ~1000 chars"
+    ).default("10")
+
     override fun run() = runBlocking {
         val config = CliConfig.load()
         val serverUrl = serverUrlOption ?: config.serverUrl
@@ -66,7 +81,10 @@ class ReviewCommand : CliktCommand(
                 mode = mode,
                 focusAreas = focus,
                 outputFormat = output,
-                postComment = postComment
+                postComment = postComment,
+                useRag = useRag,
+                ragMinScore = ragMinScore.toFloatOrNull() ?: 0.7f,
+                ragMaxChunks = ragMaxChunks.toIntOrNull() ?: 10
             )
         } catch (e: Exception) {
             echo("Error: ${e.message}")

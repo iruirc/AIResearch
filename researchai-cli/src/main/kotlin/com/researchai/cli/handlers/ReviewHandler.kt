@@ -18,7 +18,10 @@ class ReviewHandler(
         mode: String,
         focusAreas: String?,
         outputFormat: String,
-        postComment: Boolean
+        postComment: Boolean,
+        useRag: Boolean = false,
+        ragMinScore: Float = 0.7f,
+        ragMaxChunks: Int = 10
     ) {
         try {
             // Parse PR URL
@@ -31,13 +34,20 @@ class ReviewHandler(
                 echo("\uD83C\uDFAF Focus: $focusAreas\n")
             }
 
+            if (useRag) {
+                echo("\uD83D\uDCDA RAG: Enabled (minScore=$ragMinScore, maxChunks=$ragMaxChunks)\n")
+            }
+
             // Build request
             val request = PRReviewRequest(
                 repositoryOwner = owner,
                 repositoryName = repo,
                 pullRequestNumber = prNumber,
                 reviewMode = mode.uppercase(),
-                focusAreas = parseFocusAreas(focusAreas)
+                focusAreas = parseFocusAreas(focusAreas),
+                useRAG = useRag,
+                ragMinScore = ragMinScore,
+                ragMaxChunks = ragMaxChunks
             )
 
             // Execute review

@@ -76,7 +76,16 @@ data class PRReviewRequest(
     val providerId: ProviderType = ProviderType.CLAUDE,
     val model: String? = null,
     val maxFilesToReview: Int = 50,
-    val includeLineComments: Boolean = true
+    val includeLineComments: Boolean = true,
+
+    /** Whether to use RAG for codebase context (requires repository to be indexed with `/init`) */
+    val useRAG: Boolean = false,
+
+    /** Minimum similarity score for RAG results (0.0-1.0). Higher = more relevant context */
+    val ragMinScore: Float = 0.7f,
+
+    /** Maximum number of RAG chunks to include in context. Each chunk is ~1000 characters */
+    val ragMaxChunks: Int = 10
 )
 
 /**

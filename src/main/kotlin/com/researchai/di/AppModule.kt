@@ -146,7 +146,9 @@ class AppModule(
             mcpServerManager = mcpServerManager,
             aiProviderFactory = providerFactory,
             configRepository = configRepository,
-            assistantManager = assistantManager
+            assistantManager = assistantManager,
+            ragManager = ragManager,
+            preferencesManager = preferencesManager
         )
     }
 
