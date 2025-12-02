@@ -2,7 +2,7 @@
 
 ## Overview
 
-ResearchAI CLI (`rai`) is a command-line interface for interacting with the ResearchAI backend server. It provides an interactive chat experience directly from the terminal.
+ResearchAI CLI (`rai`) is a command-line interface for interacting with the ResearchAI backend server. It provides an interactive chat experience directly from the terminal, with support for RAG (Retrieval-Augmented Generation) and GitHub MCP tools.
 
 ## Project Structure
 
@@ -18,11 +18,23 @@ ResearchAI/
 │   └── src/main/kotlin/com/researchai/cli/
 │       ├── ResearchAiCli.kt     # Entry point
 │       ├── commands/
-│       │   └── ChatCommand.kt   # Interactive chat
+│       │   ├── ChatCommand.kt   # Interactive chat
+│       │   ├── InitCommand.kt   # Project initialization
+│       │   ├── AskCommand.kt    # RAG questions
+│       │   └── GitCommand.kt    # GitHub MCP tools
+│       ├── handlers/
+│       │   ├── GitHandler.kt    # Git logic (shared)
+│       │   ├── AskHandler.kt    # Ask logic (shared)
+│       │   └── InitHandler.kt   # Init logic (shared)
 │       ├── api/
 │       │   └── ResearchAiClient.kt  # HTTP client
-│       └── config/
-│           └── CliConfig.kt     # Configuration
+│       ├── config/
+│       │   ├── CliConfig.kt     # CLI configuration
+│       │   └── ProjectConfig.kt # Project RAG config
+│       ├── strategy/
+│       │   └── FileDiscoveryStrategy.kt  # File discovery for RAG
+│       └── util/
+│           └── GitRepositoryDetector.kt  # Git repo detection
 └── gradle/
     └── libs.versions.toml       # Shared dependencies
 ```
@@ -32,9 +44,21 @@ ResearchAI/
 ### Components
 
 1. **ResearchAiCli** - Main entry point using Clikt framework
-2. **ChatCommand** - Interactive chat session handler
-3. **ResearchAiClient** - HTTP client for server communication
-4. **CliConfig** - Configuration management
+2. **Commands** - Top-level CLI commands (chat, init, ask, git)
+3. **Handlers** - Reusable logic shared between commands and slash commands
+4. **ResearchAiClient** - HTTP client for server communication
+5. **CliConfig** - Global CLI configuration
+6. **ProjectConfig** - Per-project RAG configuration
+
+### Handlers Layer
+
+Handlers extract common logic for reuse in both top-level commands and slash commands:
+
+| Handler | Purpose | Used By |
+|---------|---------|---------|
+| `GitHandler` | GitHub MCP tool execution | `GitCommand`, `/git` |
+| `AskHandler` | RAG search and question | `AskCommand`, `/ask` |
+| `InitHandler` | Project initialization | `InitCommand`, `/init` |
 
 ### Dependencies
 
@@ -111,30 +135,34 @@ EOF
 
 ## Usage
 
-### Command Line Options
+### Top-Level Commands
 
 ```bash
-# Start chat with default settings
+# Show all commands
+rai --help
+
+# Start interactive chat
 rai chat
-
-# Specify server URL
 rai chat --server http://myserver:8080
-rai chat -s http://myserver:8080
-
-# Specify model
 rai chat --model gpt-4-turbo
-rai chat -m claude-sonnet-4-5-20241022
-rai chat -m llama3:latest
-
-# Continue existing session
 rai chat --session abc123-def456
 
-# Combine options
-rai chat -s http://myserver:8080 -m gpt-4-turbo --session abc123
+# Initialize project RAG
+rai init
+rai init --force      # Reinitialize
+rai init --yes        # Skip confirmation
 
-# Show help
-rai --help
-rai chat --help
+# Ask question using RAG
+rai ask "What is this project about?"
+rai ask --model claude-sonnet-4-5-20241022 "How does authentication work?"
+
+# GitHub MCP tools
+rai git                      # List available tools
+rai git tools                # List available tools
+rai git get_me               # Get current user
+rai git list_issues          # List issues (auto-detects repo)
+rai git list_issues --owner user --repo myrepo
+rai git create_issue --title "Bug" --body "Description"
 ```
 
 ### Model Selection
@@ -148,7 +176,7 @@ The model determines which AI provider is used:
 | `*:*` | Ollama | `llama3:latest`, `mistral:7b`, `codellama:13b` |
 | `*/` or `deepseek` | HuggingFace | `deepseek-ai/DeepSeek-R1` |
 
-## Interactive Commands
+## Interactive Commands (Slash Commands)
 
 During chat session, you can use these commands:
 
@@ -161,6 +189,20 @@ During chat session, you can use these commands:
 | `/new` | Start a new session |
 | `/model` | Show current model |
 | `/model <name>` | Change model (e.g., `/model gpt-4-turbo`) |
+| `/git` | List available GitHub tools |
+| `/git <tool> [args]` | Execute GitHub tool (e.g., `/git get_me`) |
+| `/ask <question>` | Ask question using RAG knowledge |
+| `/init` | Initialize/reinitialize project RAG |
+
+### Slash Command Arguments
+
+For `/git` commands, arguments are passed as `key=value` pairs:
+
+```
+/git list_issues state=open
+/git create_issue title=Bug body=Description
+/git search_repositories query=language:kotlin
+```
 
 ## Example Session
 
@@ -168,42 +210,94 @@ During chat session, you can use these commands:
 $ rai chat
 ResearchAI CLI v0.1.0
 Model: gpt-4-turbo
+RAG context: myproject (5 files)
 Connecting to http://localhost:8080...
 Connected!
 Type /exit to quit, /help for commands
+
+You: /help
+Available commands:
+  /exit              - Exit the chat
+  /help              - Show this help message
+  /clear             - Clear current session history
+  /session           - Show current session ID
+  /new               - Start a new session
+  /model             - Show current model
+  /model <name>      - Change model (e.g., /model gpt-4-turbo)
+  /git               - List available GitHub tools
+  /git <tool> [args] - Execute GitHub tool (e.g., /git get_me)
+  /ask <question>    - Ask question using RAG knowledge
+  /init              - Initialize/reinitialize project RAG
+
+You: /git get_me
+Repository: user/myproject
+Executing: get_me
+
+Login: username
+Name: User Name
+...
+
+You: /ask What does this project do?
+Searching knowledge base...
+Asking AI...
+
+AI: Based on the project documentation, this project is...
 
 You: Hello, how are you?
 
 AI: I'm doing well, thank you for asking! How can I assist you today?
 
-You: /model
-Current model: gpt-4-turbo
-
 You: /model llama3:latest
 Model changed to: llama3:latest
-
-You: Tell me a joke
-
-AI: Why do programmers prefer dark mode? Because light attracts bugs!
-
-You: /session
-Current session: abc123-def456-789
 
 You: /exit
 Goodbye!
 ```
 
+## Project Initialization
+
+The `init` command creates a RAG knowledge base from project files:
+
+```bash
+$ rai init
+Project directory: /path/to/project
+Index this project? [y/N]: y
+Scanning for files...
+Found 5 file(s):
+  - README.md
+  - Documents/API.md
+  - Documents/ARCHITECTURE.md
+...
+Creating RAG knowledge base...
+[██████████████████████████████] 100% - Saving to storage
+Project initialized successfully!
+RAG Document ID: abc123-def456
+Chunks created: 42
+Config saved to: .researchCLI/config.json
+```
+
+### File Discovery
+
+Default strategy discovers:
+- `README.md` in project root
+- All `.md`, `.txt`, `.json`, `.xml`, `.log` files in `Documents/` folder
+
 ## API Integration
 
-The CLI communicates with the server using the existing REST API:
+The CLI communicates with the server using the REST API:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/chat` | POST | Send message |
 | `/sessions/{id}/clear` | POST | Clear session |
 | `/health` | GET | Health check |
+| `/rag/documents` | POST | Create RAG document |
+| `/rag/documents/stream` | POST | Create RAG document with SSE progress |
+| `/rag/search` | POST | Search RAG |
+| `/mcp/tools` | GET | Get MCP tools |
+| `/mcp/tools/call` | POST | Call MCP tool |
 
-### Request Example
+### Chat Request Example
 ```json
 POST /chat
 {
@@ -213,7 +307,7 @@ POST /chat
 }
 ```
 
-### Response Example
+### Chat Response Example
 ```json
 {
   "response": "Hello! How can I help you?",

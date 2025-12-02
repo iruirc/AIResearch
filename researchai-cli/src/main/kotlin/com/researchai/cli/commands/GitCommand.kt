@@ -6,11 +6,9 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
-import com.researchai.cli.commands.git.GitOutputFormatterRegistry
 import com.researchai.cli.config.CliConfig
-import com.researchai.cli.util.GitRepositoryDetector
+import com.researchai.cli.handlers.GitHandler
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.*
 
 class GitCommand : CliktCommand(
     name = "git",
@@ -60,10 +58,6 @@ class GitCommand : CliktCommand(
     private val labels by option("--labels", help = "Labels (comma-separated)")
     private val assignees by option("--assignees", help = "Assignees (comma-separated)")
 
-    companion object {
-        private const val GITHUB_SERVER_ID = "github"
-    }
-
     override fun run() = runBlocking {
         val config = CliConfig.load()
         val serverUrl = serverUrlOption ?: config.serverUrl
@@ -75,9 +69,20 @@ class GitCommand : CliktCommand(
                 return@runBlocking
             }
 
+            val handler = GitHandler(client) { echo(it) }
+
             when (tool) {
-                null, "tools" -> listTools(client)
-                else -> executeTool(client, tool!!)
+                null, "tools" -> handler.listTools()
+                else -> {
+                    // Build arguments from named options
+                    val arguments = buildArgsMap()
+                    handler.executeTool(
+                        toolName = tool!!,
+                        args = arguments,
+                        owner = ownerOption,
+                        repo = repoOption
+                    )
+                }
             }
         } catch (e: Exception) {
             echo("Error: ${e.message}")
@@ -86,100 +91,35 @@ class GitCommand : CliktCommand(
         }
     }
 
-    private suspend fun listTools(client: ResearchAiClient) {
-        echo("Available GitHub MCP tools:\n")
+    private fun buildArgsMap(): Map<String, String> {
+        val argsMap = mutableMapOf<String, String>()
 
-        val tools = client.getMcpTools(GITHUB_SERVER_ID)
+        // Add named options
+        title?.let { argsMap["title"] = it }
+        body?.let { argsMap["body"] = it }
+        query?.let { argsMap["query"] = it }
+        branch?.let { argsMap["branch"] = it }
+        base?.let { argsMap["base"] = it }
+        head?.let { argsMap["head"] = it }
+        path?.let { argsMap["path"] = it }
+        message?.let { argsMap["message"] = it }
+        ref?.let { argsMap["ref"] = it }
+        sha?.let { argsMap["sha"] = it }
+        content?.let { argsMap["content"] = it }
+        issueNumber?.let { argsMap["issue_number"] = it }
+        prNumber?.let { argsMap["pull_number"] = it }
+        state?.let { argsMap["state"] = it }
+        labels?.let { argsMap["labels"] = it }
+        assignees?.let { argsMap["assignees"] = it }
 
-        tools.sortedBy { it.name }.forEach { tool ->
-            echo("  ${tool.name}")
-            echo("    ${tool.description}\n")
-        }
-
-        echo("Total: ${tools.size} tools")
-        echo("\nUsage: rai git <tool_name> [options]")
-    }
-
-    private suspend fun executeTool(client: ResearchAiClient, toolName: String) {
-        // Auto-detect repository if needed
-        val detectedRepo = GitRepositoryDetector.detect()
-        val owner = ownerOption ?: detectedRepo?.owner
-        val repo = repoOption ?: detectedRepo?.repo
-
-        // Build arguments JSON
-        val arguments = buildJsonObject {
-            // Add owner/repo if available
-            if (owner != null) put("owner", owner)
-            if (repo != null) put("repo", repo)
-
-            // Add named options
-            title?.let { put("title", it) }
-            body?.let { put("body", it) }
-            query?.let { put("query", it) }
-            branch?.let { put("branch", it) }
-            base?.let { put("base", it) }
-            head?.let { put("head", it) }
-            path?.let { put("path", it) }
-            message?.let { put("message", it) }
-            ref?.let { put("ref", it) }
-            sha?.let { put("sha", it) }
-            content?.let { put("content", it) }
-
-            issueNumber?.let {
-                put("issue_number", it.toIntOrNull() ?: return@let)
-            }
-            prNumber?.let {
-                put("pull_number", it.toIntOrNull() ?: return@let)
-            }
-            state?.let { put("state", it) }
-
-            // Handle comma-separated lists
-            labels?.let {
-                put("labels", JsonArray(it.split(",").map { label -> JsonPrimitive(label.trim()) }))
-            }
-            assignees?.let {
-                put("assignees", JsonArray(it.split(",").map { assignee -> JsonPrimitive(assignee.trim()) }))
-            }
-
-            // Add generic --arg key=value pairs
-            args.forEach { arg ->
-                val parts = arg.split("=", limit = 2)
-                if (parts.size == 2) {
-                    val (key, value) = parts
-                    // Try to parse as number or boolean
-                    when {
-                        value.toIntOrNull() != null -> put(key, value.toInt())
-                        value.toDoubleOrNull() != null -> put(key, value.toDouble())
-                        value == "true" -> put(key, true)
-                        value == "false" -> put(key, false)
-                        else -> put(key, value)
-                    }
-                }
+        // Add generic --arg key=value pairs
+        args.forEach { arg ->
+            val parts = arg.split("=", limit = 2)
+            if (parts.size == 2) {
+                argsMap[parts[0]] = parts[1]
             }
         }
 
-        // Show what we're doing
-        if (owner != null && repo != null) {
-            echo("Repository: $owner/$repo")
-        }
-        echo("Executing: $toolName\n")
-
-        // Call the tool
-        val result = client.callMcpTool(GITHUB_SERVER_ID, toolName, arguments)
-
-        if (!result.success) {
-            echo("Error: ${result.error ?: "Unknown error"}")
-            return
-        }
-
-        // Display result with tool-specific formatting
-        val formatter = GitOutputFormatterRegistry.getFormatter(toolName)
-
-        result.content.forEach { content ->
-            when (content.type) {
-                "text" -> echo(formatter.format(content.text ?: ""))
-                else -> echo("[${content.type}]: ${content.text ?: content.uri ?: "..."}")
-            }
-        }
+        return argsMap
     }
 }

@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
 import com.researchai.cli.config.CliConfig
 import com.researchai.cli.config.ProjectConfig
+import com.researchai.cli.handlers.AskHandler
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -24,19 +25,9 @@ class AskCommand : CliktCommand(
         val serverUrl = serverUrlOption ?: config.serverUrl
         val model = modelOption ?: config.defaultModel
 
-        // 1. Check initialization
-        if (!ProjectConfig.isInitialized(currentDir)) {
-            echo("Project not initialized. Run 'rai init' first.")
-            return@runBlocking
-        }
-
         val projectConfig = ProjectConfig.load(currentDir)
-        if (projectConfig == null) {
-            echo("Error reading project configuration.")
-            return@runBlocking
-        }
 
-        // 2. Build question from arguments
+        // Build question from arguments
         val question = questionParts.joinToString(" ")
         if (question.isBlank()) {
             echo("Please provide a question.")
@@ -53,45 +44,13 @@ class AskCommand : CliktCommand(
         }
 
         try {
-            // 3. Search in RAG
-            echo("Searching knowledge base...")
-            val searchResults = client.searchRag(
-                query = question,
-                documentIds = listOf(projectConfig.ragDocumentId),
-                topK = 5
-            )
+            val handler = AskHandler(client, projectConfig) { echo(it) }
+            val response = handler.ask(question, model)
 
-            if (searchResults.isEmpty()) {
-                echo("No relevant context found in knowledge base.")
-                echo("Asking without context...\n")
+            response?.let {
+                echo(it.response)
+                echo("")
             }
-
-            // 4. Build context
-            val context = if (searchResults.isNotEmpty()) {
-                searchResults.joinToString("\n\n") { result ->
-                    "---\n${result.text}\n---"
-                }
-            } else null
-
-            // 5. Send question with context
-            val messageWithContext = if (context != null) {
-                """
-                |Based on the following context from project documentation:
-                |
-                |$context
-                |
-                |Please answer: $question
-                """.trimMargin()
-            } else {
-                question
-            }
-
-            echo("Asking AI...\n")
-            val response = client.sendMessage(messageWithContext, sessionId = null, model = model)
-
-            echo(response.response)
-            echo("")
-
         } catch (e: Exception) {
             echo("Error: ${e.message}")
         } finally {

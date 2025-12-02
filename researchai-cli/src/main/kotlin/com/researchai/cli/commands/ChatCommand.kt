@@ -5,6 +5,9 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
 import com.researchai.cli.config.CliConfig
 import com.researchai.cli.config.ProjectConfig
+import com.researchai.cli.handlers.AskHandler
+import com.researchai.cli.handlers.GitHandler
+import com.researchai.cli.handlers.InitHandler
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -25,8 +28,8 @@ class ChatCommand : CliktCommand(
         val serverUrl = serverUrlOption ?: config.serverUrl
         val model = modelOption ?: config.defaultModel
 
-        // Load project config if initialized
-        val projectConfig = ProjectConfig.load(currentDir)
+        // Load project config if initialized (mutable for /init command)
+        var projectConfig = ProjectConfig.load(currentDir)
 
         val client = ResearchAiClient(serverUrl)
 
@@ -85,6 +88,57 @@ class ChatCommand : CliktCommand(
                     currentModel = input.removePrefix("/model ").trim()
                     echo("Model changed to: $currentModel")
                 }
+                // /git command
+                input == "/git" || input.startsWith("/git ") -> {
+                    val gitInput = input.removePrefix("/git").trim()
+                    val gitHandler = GitHandler(client) { echo(it) }
+
+                    try {
+                        if (gitInput.isEmpty() || gitInput == "tools") {
+                            gitHandler.listTools()
+                        } else {
+                            val (toolName, args) = gitHandler.parseSlashCommand(gitInput)
+                            gitHandler.executeTool(toolName, args)
+                        }
+                    } catch (e: Exception) {
+                        echo("Error: ${e.message}")
+                    }
+                }
+                // /ask command
+                input.startsWith("/ask ") -> {
+                    val question = input.removePrefix("/ask ").trim()
+                    val askHandler = AskHandler(client, projectConfig) { echo(it) }
+
+                    try {
+                        val response = askHandler.ask(question, currentModel, currentSessionId)
+                        response?.let {
+                            currentSessionId = it.sessionId
+                            echo("\nAI: ${it.response}\n")
+                        }
+                    } catch (e: Exception) {
+                        echo("Error: ${e.message}")
+                    }
+                }
+                // /init command
+                input == "/init" -> {
+                    val initHandler = InitHandler(client, { echo(it) })
+
+                    try {
+                        val result = initHandler.init(
+                            currentDir = currentDir,
+                            force = true,
+                            skipConfirm = true
+                        )
+
+                        if (result.success) {
+                            // Reload project config after successful init
+                            projectConfig = ProjectConfig.load(currentDir)
+                            echo("RAG context updated: ${projectConfig?.projectName}")
+                        }
+                    } catch (e: Exception) {
+                        echo("Error: ${e.message}")
+                    }
+                }
                 input.startsWith("/") -> {
                     echo("Unknown command: $input")
                     echo("Type /help for available commands")
@@ -134,13 +188,17 @@ class ChatCommand : CliktCommand(
     private fun printHelp() {
         echo("""
             |Available commands:
-            |  /exit          - Exit the chat
-            |  /help          - Show this help message
-            |  /clear         - Clear current session history
-            |  /session       - Show current session ID
-            |  /new           - Start a new session
-            |  /model         - Show current model
-            |  /model <name>  - Change model (e.g., /model gpt-4-turbo)
+            |  /exit              - Exit the chat
+            |  /help              - Show this help message
+            |  /clear             - Clear current session history
+            |  /session           - Show current session ID
+            |  /new               - Start a new session
+            |  /model             - Show current model
+            |  /model <name>      - Change model (e.g., /model gpt-4-turbo)
+            |  /git               - List available GitHub tools
+            |  /git <tool> [args] - Execute GitHub tool (e.g., /git get_me)
+            |  /ask <question>    - Ask question using RAG knowledge
+            |  /init              - Initialize/reinitialize project RAG
         """.trimMargin())
     }
 }
