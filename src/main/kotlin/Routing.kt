@@ -9,6 +9,7 @@ import com.researchai.routes.compressionRoutes
 import com.researchai.routes.mcpRoutes
 import com.researchai.routes.ollamaRoutes
 import com.researchai.routes.pipelineRoutes
+import com.researchai.routes.prReviewRoutes
 import com.researchai.routes.providerRoutes
 import com.researchai.routes.ragRoutes
 import com.researchai.routes.ragTestRoutes
@@ -74,6 +75,9 @@ fun Application.configureRouting(
 
         // API роуты для RAG тестов
         ragTestRoutes(appModule.ragTestStorage, appModule.ragTestExecutionService)
+
+        // API роуты для PR review
+        prReviewRoutes(appModule.prReviewService)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

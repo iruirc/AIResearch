@@ -140,6 +140,16 @@ class AppModule(
         PreferencesManager(preferencesStorage)
     }
 
+    // PR Review Service
+    val prReviewService: com.researchai.services.PRReviewService by lazy {
+        com.researchai.services.PRReviewService(
+            mcpServerManager = mcpServerManager,
+            aiProviderFactory = providerFactory,
+            configRepository = configRepository,
+            assistantManager = assistantManager
+        )
+    }
+
     // Ollama Connection Manager
     val ollamaConnectionManager: OllamaConnectionManager by lazy {
         val tokenCounter = JTokkitTokenCounter.forModel("llama3.2")

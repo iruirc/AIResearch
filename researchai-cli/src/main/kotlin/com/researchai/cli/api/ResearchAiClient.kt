@@ -62,6 +62,30 @@ class ResearchAiClient(private val baseUrl: String) {
         }
     }
 
+    // ==================== PR Review API ====================
+
+    /**
+     * Review a pull request
+     */
+    suspend fun reviewPR(request: PRReviewRequest): PRReviewResult {
+        val response = client.post("$baseUrl/pr-review") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val errorMessage = try {
+                json.decodeFromString<ErrorResponse>(errorBody).error
+            } catch (e: Exception) {
+                errorBody
+            }
+            throw RuntimeException("PR review failed: $errorMessage")
+        }
+
+        return response.body()
+    }
+
     fun close() = client.close()
 
     // ==================== RAG API ====================
@@ -382,4 +406,74 @@ data class CompleteData(
 @Serializable
 data class ErrorData(
     val error: String
+)
+
+// ==================== PR Review API Models ====================
+
+@Serializable
+data class PRReviewRequest(
+    val repositoryOwner: String,
+    val repositoryName: String,
+    val pullRequestNumber: Int,
+    val reviewMode: String = "STANDARD",
+    val focusAreas: List<String> = emptyList()
+)
+
+@Serializable
+data class PRReviewResult(
+    val requestId: String,
+    val pullRequestUrl: String,
+    val summary: ReviewSummary,
+    val fileReviews: List<FileReview>,
+    val overallScore: Int,
+    val metadata: ReviewMetadata
+)
+
+@Serializable
+data class ReviewSummary(
+    val overview: String,
+    val criticalIssues: List<Issue>,
+    val importantIssues: List<Issue>,
+    val suggestions: List<Issue>,
+    val positives: List<String>
+)
+
+@Serializable
+data class FileReview(
+    val filePath: String,
+    val changeType: String,
+    val lineComments: List<LineComment>,
+    val fileSummary: String?
+)
+
+@Serializable
+data class LineComment(
+    val lineNumber: Int,
+    val side: String,
+    val severity: String,
+    val category: String,
+    val message: String,
+    val suggestedFix: String?
+)
+
+@Serializable
+data class Issue(
+    val severity: String,
+    val category: String,
+    val title: String,
+    val description: String,
+    val affectedFiles: List<String>,
+    val suggestedAction: String?
+)
+
+@Serializable
+data class ReviewMetadata(
+    val reviewDurationMs: Long,
+    val filesReviewed: Int,
+    val linesAnalyzed: Int,
+    val ragContextUsed: Boolean = false,
+    val ragChunksRetrieved: Int = 0,
+    val tokensUsed: Int,
+    val model: String,
+    val provider: String
 )
