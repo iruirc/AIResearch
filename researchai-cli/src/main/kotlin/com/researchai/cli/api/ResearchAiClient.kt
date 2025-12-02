@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 class ResearchAiClient(private val baseUrl: String) {
     private val json = Json {
@@ -128,6 +129,49 @@ class ResearchAiClient(private val baseUrl: String) {
         val response = client.delete("$baseUrl/rag/documents/$documentId")
         return response.status.isSuccess()
     }
+
+    // ==================== MCP API ====================
+
+    /**
+     * Get list of MCP tools for a specific server
+     */
+    suspend fun getMcpTools(serverId: String): List<MCPTool> {
+        val response = client.get("$baseUrl/mcp/tools") {
+            parameter("serverId", serverId)
+        }
+
+        if (!response.status.isSuccess()) {
+            throw RuntimeException("Failed to get MCP tools: ${response.bodyAsText()}")
+        }
+
+        return response.body<MCPToolsResponse>().tools
+    }
+
+    /**
+     * Call an MCP tool
+     */
+    suspend fun callMcpTool(
+        serverId: String,
+        toolName: String,
+        arguments: JsonElement
+    ): MCPToolCallResult {
+        val request = MCPToolCallRequest(
+            serverId = serverId,
+            toolName = toolName,
+            arguments = arguments
+        )
+
+        val response = client.post("$baseUrl/mcp/tools/call") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            throw RuntimeException("Failed to call MCP tool: ${response.bodyAsText()}")
+        }
+
+        return response.body()
+    }
 }
 
 @Serializable
@@ -196,4 +240,42 @@ data class SearchResult(
 data class SearchResponse(
     val results: List<SearchResult>,
     val totalFound: Int = 0
+)
+
+// ==================== MCP API Models ====================
+
+@Serializable
+data class MCPTool(
+    val name: String,
+    val description: String,
+    val inputSchema: JsonElement,
+    val serverId: String
+)
+
+@Serializable
+data class MCPToolsResponse(
+    val tools: List<MCPTool>
+)
+
+@Serializable
+data class MCPToolCallRequest(
+    val toolName: String,
+    val arguments: JsonElement,
+    val serverId: String
+)
+
+@Serializable
+data class MCPToolCallResult(
+    val success: Boolean,
+    val content: List<MCPContent>,
+    val error: String? = null
+)
+
+@Serializable
+data class MCPContent(
+    val type: String,
+    val text: String? = null,
+    val data: String? = null,
+    val mimeType: String? = null,
+    val uri: String? = null
 )
