@@ -3,12 +3,12 @@
     {
       "id": "github",
       "name": "GitHub MCP Server",
-      "description": "Access to GitHub API via Model Context Protocol",
+      "description": "Official GitHub MCP Server with 51 tools",
       "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
       "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       },
       "enabled": true
     },
