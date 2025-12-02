@@ -50,19 +50,15 @@ class InitCommand : CliktCommand(
                     // Use \r for inline progress update in terminal
                     print(progress)
                     System.out.flush()
-                }
+                },
+                clearProgressOnComplete = true
             )
 
-            val result = handler.init(
+            handler.init(
                 currentDir = currentDir,
                 force = forceOption,
                 skipConfirm = true // Already confirmed above
             )
-
-            // Clear the progress line after completion
-            if (result.success) {
-                print("\r${" ".repeat(80)}\r")
-            }
 
         } finally {
             client.close()

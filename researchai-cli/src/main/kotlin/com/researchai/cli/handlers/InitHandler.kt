@@ -14,7 +14,8 @@ import java.io.File
 class InitHandler(
     private val client: ResearchAiClient,
     private val output: (String) -> Unit,
-    private val outputProgress: ((String) -> Unit)? = null
+    private val outputProgress: ((String) -> Unit)? = null,
+    private val clearProgressOnComplete: Boolean = false
 ) {
     /**
      * Result of initialization
@@ -98,12 +99,22 @@ class InitHandler(
             )
 
             if (errorMessage != null) {
+                // Clear progress line on error
+                if (clearProgressOnComplete && outputProgress != null) {
+                    outputProgress.invoke("\r${" ".repeat(80)}\r")
+                }
+
                 output("Error: $errorMessage")
                 return InitResult(success = false, error = errorMessage)
             }
 
             val document = completedDocument
             if (document == null) {
+                // Clear progress line on error
+                if (clearProgressOnComplete && outputProgress != null) {
+                    outputProgress.invoke("\r${" ".repeat(80)}\r")
+                }
+
                 output("Error: No response from server")
                 return InitResult(success = false, error = "No response from server")
             }
@@ -116,6 +127,11 @@ class InitHandler(
                 indexedFiles = discoveredFiles.map { it.relativePath }
             )
             ProjectConfig.save(currentDir, projectConfig)
+
+            // Clear progress line if needed
+            if (clearProgressOnComplete && outputProgress != null) {
+                outputProgress.invoke("\r${" ".repeat(80)}\r")
+            }
 
             output("\nProject initialized successfully!")
             output("RAG Document Name: ${document.name}")
@@ -130,6 +146,11 @@ class InitHandler(
             )
 
         } catch (e: Exception) {
+            // Clear progress line on error
+            if (clearProgressOnComplete && outputProgress != null) {
+                outputProgress.invoke("\r${" ".repeat(80)}\r")
+            }
+
             output("\nError creating RAG document: ${e.message}")
             InitResult(success = false, error = e.message)
         }

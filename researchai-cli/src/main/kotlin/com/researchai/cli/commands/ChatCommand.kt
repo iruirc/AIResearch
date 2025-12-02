@@ -121,7 +121,18 @@ class ChatCommand : CliktCommand(
                 }
                 // /init command
                 input == "/init" -> {
-                    val initHandler = InitHandler(client, { echo(it) })
+                    // Add newline to separate progress from prompt
+                    echo("")
+
+                    val initHandler = InitHandler(
+                        client = client,
+                        output = { echo(it) },
+                        outputProgress = { progress ->
+                            print(progress)
+                            System.out.flush()
+                        },
+                        clearProgressOnComplete = true
+                    )
 
                     try {
                         val result = initHandler.init(
