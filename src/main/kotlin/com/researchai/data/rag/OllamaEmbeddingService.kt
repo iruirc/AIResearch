@@ -1,6 +1,7 @@
 package com.researchai.data.rag
 
 import com.researchai.domain.models.RAGConfig
+import com.researchai.domain.rag.EmbeddingProgressCallback
 import com.researchai.domain.rag.EmbeddingService
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -87,13 +88,25 @@ class OllamaEmbeddingService(
     }
 
     override suspend fun generateEmbeddings(texts: List<String>): List<List<Float>> {
+        return generateEmbeddings(texts, null)
+    }
+
+    override suspend fun generateEmbeddings(
+        texts: List<String>,
+        onProgress: EmbeddingProgressCallback?
+    ): List<List<Float>> {
         val results = mutableListOf<List<Float>>()
+        val total = texts.size
+
         for ((index, text) in texts.withIndex()) {
             if (index > 0) {
                 // Add small delay between requests to prevent overloading Ollama
                 delay(DELAY_BETWEEN_REQUESTS_MS)
             }
             results.add(generateEmbedding(text))
+
+            // Invoke progress callback after each embedding
+            onProgress?.invoke(index + 1, total)
         }
         return results
     }

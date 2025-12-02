@@ -3,6 +3,9 @@ package com.researchai.routes
 import com.researchai.domain.models.ChunkingStrategy
 import com.researchai.domain.models.RerankerConfig
 import com.researchai.domain.models.RerankerStrategy
+import com.researchai.models.CompleteEvent
+import com.researchai.models.ErrorEvent
+import com.researchai.models.ProgressEvent
 import com.researchai.models.RAGSearchPreferences
 import com.researchai.persistence.RAGPreferencesStorage
 import com.researchai.services.DuplicateDocumentNameException
@@ -14,6 +17,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.net.URLDecoder
 
@@ -139,6 +144,75 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                 call.respond(HttpStatusCode.Created, document)
             } catch (e: DuplicateDocumentNameException) {
                 call.respond(HttpStatusCode.Conflict, ErrorResponse(e.message ?: "Document with this name already exists"))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
+            }
+        }
+
+        // POST /rag/documents/stream - Add document with SSE progress streaming
+        post("/documents/stream") {
+            val json = Json { encodeDefaults = true }
+
+            try {
+                val request = call.receive<AddDocumentRequest>()
+
+                if (request.name.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Document name cannot be empty"))
+                    return@post
+                }
+
+                if (request.content.isBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Document content cannot be empty"))
+                    return@post
+                }
+
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    try {
+                        val document = ragManager.addDocumentWithProgress(
+                            name = request.name,
+                            content = request.content,
+                            chunkingStrategy = request.chunkingStrategy,
+                            enabled = request.enabled,
+                            originalFileName = request.originalFileName,
+                            sourceFiles = request.sourceFiles?.map { it.fileName to it.content }
+                        ) { phase, current, total, message ->
+                            val percent = if (current != null && total != null && total > 0) {
+                                (current * 100) / total
+                            } else null
+
+                            val event = ProgressEvent(
+                                phase = phase,
+                                current = current,
+                                total = total,
+                                percent = percent,
+                                message = message
+                            )
+                            write("event: progress\n")
+                            write("data: ${json.encodeToString(event)}\n\n")
+                            flush()
+                        }
+
+                        val completeEvent = CompleteEvent(
+                            documentId = document.id,
+                            name = document.name,
+                            chunksCount = document.chunks.size
+                        )
+                        write("event: complete\n")
+                        write("data: ${json.encodeToString(completeEvent)}\n\n")
+                        flush()
+
+                    } catch (e: DuplicateDocumentNameException) {
+                        val errorEvent = ErrorEvent(e.message ?: "Document with this name already exists")
+                        write("event: error\n")
+                        write("data: ${json.encodeToString(errorEvent)}\n\n")
+                        flush()
+                    } catch (e: Exception) {
+                        val errorEvent = ErrorEvent(e.message ?: "Unknown error")
+                        write("event: error\n")
+                        write("data: ${json.encodeToString(errorEvent)}\n\n")
+                        flush()
+                    }
+                }
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }

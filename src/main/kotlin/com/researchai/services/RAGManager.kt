@@ -18,6 +18,15 @@ import java.util.*
  */
 class DuplicateDocumentNameException(name: String) : Exception("Document with name '$name' already exists")
 
+/**
+ * Callback for document creation progress
+ * @param phase Current phase: "chunking", "embedding", "indexing", "saving"
+ * @param current Current item number (for embedding phase)
+ * @param total Total items (for embedding phase)
+ * @param message Optional message
+ */
+typealias DocumentProgressCallback = suspend (phase: String, current: Int?, total: Int?, message: String?) -> Unit
+
 class RAGManager(
     private val embeddingService: EmbeddingService,
     private val vectorSearch: VectorSearchService,
@@ -123,6 +132,113 @@ class RAGManager(
         )
 
         storage.save(document)
+        vectorSearch.indexDocument(document)
+
+        return document
+    }
+
+    /**
+     * Add a new document with progress callback for SSE streaming
+     */
+    suspend fun addDocumentWithProgress(
+        name: String,
+        content: String,
+        chunkingStrategy: ChunkingStrategy = ChunkingStrategy.FIXED_SIZE,
+        enabled: Boolean = config.enabledByDefault,
+        originalFileName: String? = null,
+        sourceFiles: List<Pair<String, String>>? = null,
+        onProgress: DocumentProgressCallback
+    ): RAGDocument {
+        // Check if document with this name already exists
+        if (storage.existsByName(name)) {
+            throw DuplicateDocumentNameException(name)
+        }
+
+        val documentId = UUID.randomUUID().toString()
+
+        // Save source files
+        onProgress("saving_files", null, null, "Saving source files...")
+        val sourceFilePaths: List<String>
+        val sourceFilePath: String?
+
+        if (!sourceFiles.isNullOrEmpty()) {
+            sourceFilePaths = saveSourceFiles(documentId, sourceFiles)
+            sourceFilePath = null
+        } else {
+            sourceFilePath = saveSourceFile(documentId, content, originalFileName)
+            sourceFilePaths = emptyList()
+        }
+
+        // Chunking phase
+        onProgress("chunking", null, null, "Splitting text into chunks...")
+        val chunker = getChunker(chunkingStrategy)
+        val textChunks = chunker.chunk(content)
+        val totalChunks = textChunks.size
+
+        // Build source file map for multi-file documents
+        val sourceFileMap = buildSourceFileMap(content)
+
+        // Embedding phase with progress
+        onProgress("embedding", 0, totalChunks, "Generating embeddings...")
+        val embeddings = embeddingService.generateEmbeddings(textChunks) { current, total ->
+            onProgress("embedding", current, total, null)
+        }
+
+        // Building chunks phase
+        onProgress("indexing", null, null, "Building document chunks...")
+        var searchStartPosition = 0
+
+        val chunks = textChunks.mapIndexed { index, text ->
+            val chunkPosition = content.indexOf(text, searchStartPosition)
+            if (chunkPosition >= 0) {
+                searchStartPosition = chunkPosition + 1
+            }
+
+            val chunkSourceFile = if (chunkPosition >= 0 && sourceFileMap.isNotEmpty()) {
+                findSourceFileByPosition(chunkPosition, sourceFileMap)
+            } else {
+                null
+            }
+
+            val metadata = mutableMapOf(
+                "chunkSize" to text.length.toString(),
+                "strategy" to chunkingStrategy.name
+            )
+            if (chunkSourceFile != null) {
+                metadata["sourceFile"] = chunkSourceFile
+            }
+            if (chunkPosition >= 0) {
+                metadata["chunkStartPosition"] = chunkPosition.toString()
+            }
+
+            DocumentChunk(
+                text = text,
+                embedding = embeddings[index],
+                chunkIndex = index,
+                metadata = metadata
+            )
+        }
+
+        val now = Clock.System.now()
+        val document = RAGDocument(
+            id = documentId,
+            name = name,
+            content = content,
+            chunks = chunks,
+            chunkingStrategy = chunkingStrategy,
+            enabled = enabled,
+            createdAt = now,
+            updatedAt = now,
+            sourceFilePath = sourceFilePath,
+            sourceFilePaths = sourceFilePaths
+        )
+
+        // Saving phase
+        onProgress("saving", null, null, "Saving document to storage...")
+        storage.save(document)
+
+        // Indexing phase
+        onProgress("indexing", null, null, "Indexing document for search...")
         vectorSearch.indexDocument(document)
 
         return document

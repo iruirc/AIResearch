@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.utils.io.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -90,6 +91,86 @@ class ResearchAiClient(private val baseUrl: String) {
         }
 
         return response.body()
+    }
+
+    /**
+     * Create a RAG document with SSE progress streaming
+     */
+    suspend fun createRagDocumentWithProgress(
+        name: String,
+        content: String,
+        sourceFiles: List<Pair<String, String>>? = null,
+        onProgress: suspend (ProgressData) -> Unit,
+        onComplete: suspend (CompleteData) -> Unit,
+        onError: suspend (String) -> Unit
+    ) {
+        val request = AddDocumentRequest(
+            name = name,
+            content = content,
+            sourceFiles = sourceFiles?.map { SourceFileInput(it.first, it.second) }
+        )
+
+        client.preparePost("$baseUrl/rag/documents/stream") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+            timeout {
+                requestTimeoutMillis = 600_000 // 10 minutes for large documents
+            }
+        }.execute { response ->
+            if (!response.status.isSuccess()) {
+                onError("Server error: ${response.status}")
+                return@execute
+            }
+
+            val channel: ByteReadChannel = response.bodyAsChannel()
+            val buffer = StringBuilder()
+
+            while (!channel.isClosedForRead) {
+                val line = try {
+                    channel.readUTF8Line()
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (line == null) break
+
+                if (line.startsWith("event:")) {
+                    buffer.clear()
+                    buffer.append(line)
+                } else if (line.startsWith("data:")) {
+                    val eventLine = buffer.toString()
+                    val eventType = eventLine.removePrefix("event:").trim()
+                    val data = line.removePrefix("data:").trim()
+
+                    when (eventType) {
+                        "progress" -> {
+                            try {
+                                val progress = json.decodeFromString<ProgressData>(data)
+                                onProgress(progress)
+                            } catch (e: Exception) {
+                                // Skip malformed progress events
+                            }
+                        }
+                        "complete" -> {
+                            try {
+                                val complete = json.decodeFromString<CompleteData>(data)
+                                onComplete(complete)
+                            } catch (e: Exception) {
+                                onError("Failed to parse complete event: ${e.message}")
+                            }
+                        }
+                        "error" -> {
+                            try {
+                                val error = json.decodeFromString<ErrorData>(data)
+                                onError(error.error)
+                            } catch (e: Exception) {
+                                onError(data)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -278,4 +359,27 @@ data class MCPContent(
     val data: String? = null,
     val mimeType: String? = null,
     val uri: String? = null
+)
+
+// ==================== SSE Progress Models ====================
+
+@Serializable
+data class ProgressData(
+    val phase: String,
+    val current: Int? = null,
+    val total: Int? = null,
+    val percent: Int? = null,
+    val message: String? = null
+)
+
+@Serializable
+data class CompleteData(
+    val documentId: String,
+    val name: String,
+    val chunksCount: Int
+)
+
+@Serializable
+data class ErrorData(
+    val error: String
 )

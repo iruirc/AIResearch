@@ -3,6 +3,8 @@ package com.researchai.cli.commands
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.researchai.cli.api.CompleteData
+import com.researchai.cli.api.ProgressData
 import com.researchai.cli.api.ResearchAiClient
 import com.researchai.cli.config.CliConfig
 import com.researchai.cli.config.ProjectConfig
@@ -67,7 +69,7 @@ class InitCommand : CliktCommand(
             return@runBlocking
         }
 
-        // 5. Create RAG document
+        // 5. Create RAG document with progress
         echo("\nCreating RAG knowledge base...")
 
         try {
@@ -81,28 +83,83 @@ class InitCommand : CliktCommand(
                 it.relativePath.replace("/", "_").replace("\\", "_") to it.file.readText()
             }
 
-            val document = client.createRagDocument(
+            var completedDocument: CompleteData? = null
+            var errorMessage: String? = null
+
+            client.createRagDocumentWithProgress(
                 name = currentDir.name,
                 content = combinedContent,
-                sourceFiles = sourceFiles
+                sourceFiles = sourceFiles,
+                onProgress = { progress ->
+                    printProgress(progress)
+                },
+                onComplete = { complete ->
+                    completedDocument = complete
+                },
+                onError = { error ->
+                    errorMessage = error
+                }
             )
+
+            // Clear the progress line
+            print("\r${" ".repeat(80)}\r")
+
+            if (errorMessage != null) {
+                echo("Error: $errorMessage")
+                return@runBlocking
+            }
+
+            val document = completedDocument
+            if (document == null) {
+                echo("Error: No response from server")
+                return@runBlocking
+            }
 
             // 6. Save project configuration
             val projectConfig = ProjectConfig.create(
-                ragDocumentId = document.id,
+                ragDocumentId = document.documentId,
                 projectName = currentDir.name,
                 indexedFiles = discoveredFiles.map { it.relativePath }
             )
             ProjectConfig.save(currentDir, projectConfig)
 
-            echo("\nProject initialized successfully!")
-            echo("RAG Document ID: ${document.id}")
+            echo("Project initialized successfully!")
+            echo("RAG Document ID: ${document.documentId}")
+            echo("Chunks created: ${document.chunksCount}")
             echo("Config saved to: ${ProjectConfig.getConfigDir(currentDir).path}/config.json")
 
         } catch (e: Exception) {
-            echo("Error creating RAG document: ${e.message}")
+            echo("\nError creating RAG document: ${e.message}")
         } finally {
             client.close()
         }
+    }
+
+    private fun printProgress(progress: ProgressData) {
+        val percent = progress.percent ?: 0
+        val bar = buildProgressBar(percent)
+
+        val phaseText = when (progress.phase) {
+            "saving_files" -> "Saving source files"
+            "chunking" -> "Splitting into chunks"
+            "embedding" -> {
+                val current = progress.current ?: 0
+                val total = progress.total ?: 0
+                "Generating embeddings ($current/$total)"
+            }
+            "indexing" -> "Indexing document"
+            "saving" -> "Saving to storage"
+            else -> progress.message ?: progress.phase
+        }
+
+        // \r returns cursor to start of line, allowing us to overwrite
+        print("\r$bar $percent% - $phaseText${" ".repeat(20)}")
+        System.out.flush()
+    }
+
+    private fun buildProgressBar(percent: Int, width: Int = 30): String {
+        val filled = (width * percent) / 100
+        val empty = width - filled
+        return "[" + "█".repeat(filled) + "░".repeat(empty) + "]"
     }
 }
