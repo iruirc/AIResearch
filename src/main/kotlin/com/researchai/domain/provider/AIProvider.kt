@@ -46,7 +46,12 @@ data class ModelCapabilities(
     val supportsVision: Boolean = false,
     val supportsStreaming: Boolean = true,
     val maxTokens: Int = 4096,
-    val contextWindow: Int = 8192
+    val contextWindow: Int = 8192,
+
+    // Temperature constraints
+    val temperatureMin: Double = 0.0,
+    val temperatureMax: Double = 1.0,
+    val defaultTemperature: Double = 1.0
 )
 
 /**

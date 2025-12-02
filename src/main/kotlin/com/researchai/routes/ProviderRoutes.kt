@@ -161,7 +161,10 @@ fun Route.providerRoutes(appModule: AppModule) {
                                         supportsVision = model.capabilities.supportsVision,
                                         supportsStreaming = model.capabilities.supportsStreaming,
                                         maxTokens = model.capabilities.maxTokens,
-                                        contextWindow = model.capabilities.contextWindow
+                                        contextWindow = model.capabilities.contextWindow,
+                                        temperatureMin = model.capabilities.temperatureMin,
+                                        temperatureMax = model.capabilities.temperatureMax,
+                                        defaultTemperature = model.capabilities.defaultTemperature
                                     )
                                 )
                             }
@@ -253,7 +256,10 @@ data class CapabilitiesInfo(
     val supportsVision: Boolean,
     val supportsStreaming: Boolean,
     val maxTokens: Int,
-    val contextWindow: Int
+    val contextWindow: Int,
+    val temperatureMin: Double,
+    val temperatureMax: Double,
+    val defaultTemperature: Double
 )
 
 @Serializable

@@ -126,7 +126,10 @@ class HuggingFaceProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 32*1000,
-                    contextWindow = 128*1000
+                    contextWindow = 128*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -137,7 +140,10 @@ class HuggingFaceProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 32*1000,
-                    contextWindow = 128*1000
+                    contextWindow = 128*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -148,7 +154,10 @@ class HuggingFaceProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 8*1000,
-                    contextWindow = 128*1000
+                    contextWindow = 128*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -159,7 +168,10 @@ class HuggingFaceProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 8*1000,
-                    contextWindow = 32*1000
+                    contextWindow = 32*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -170,7 +182,10 @@ class HuggingFaceProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 2*1000,
-                    contextWindow = 128*1000
+                    contextWindow = 128*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             )
         )

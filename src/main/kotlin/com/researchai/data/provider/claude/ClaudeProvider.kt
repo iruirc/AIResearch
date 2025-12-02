@@ -130,7 +130,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 16*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -141,7 +144,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 64*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -152,7 +158,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 16*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -163,7 +172,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 16*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -174,7 +186,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 16*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -185,7 +200,10 @@ class ClaudeProvider(
                     supportsVision = true,
                     supportsStreaming = true,
                     maxTokens = 8*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -196,7 +214,10 @@ class ClaudeProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 8*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -207,7 +228,10 @@ class ClaudeProvider(
                     supportsVision = true,
                     supportsStreaming = true,
                     maxTokens = 4*1000,
-                    contextWindow = 200*1000
+                    contextWindow = 200*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             )
         )

@@ -127,7 +127,10 @@ class OpenAIProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 128*1000,
-                    contextWindow = 400*1000
+                    contextWindow = 400*1000,
+                    temperatureMin = 1.0,
+                    temperatureMax = 1.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -138,7 +141,10 @@ class OpenAIProvider(
                     supportsVision = false,
                     supportsStreaming = true,
                     maxTokens = 128*1000,
-                    contextWindow = 400*1000
+                    contextWindow = 400*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -149,7 +155,10 @@ class OpenAIProvider(
                     supportsVision = true,
                     supportsStreaming = true,
                     maxTokens = 128*1000,
-                    contextWindow = 400*1000
+                    contextWindow = 400*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             ),
             AIModel(
@@ -160,7 +169,10 @@ class OpenAIProvider(
                     supportsVision = true,
                     supportsStreaming = true,
                     maxTokens = 272*1000,
-                    contextWindow = 400*1000
+                    contextWindow = 400*1000,
+                    temperatureMin = 0.0,
+                    temperatureMax = 2.0,
+                    defaultTemperature = 1.0
                 )
             )
         )

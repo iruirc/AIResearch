@@ -173,7 +173,10 @@ class OllamaProvider(
             supportsVision = supportsVision,
             supportsStreaming = true,
             maxTokens = 4096,
-            contextWindow = contextWindow
+            contextWindow = contextWindow,
+            temperatureMin = 0.0,
+            temperatureMax = 2.0,
+            defaultTemperature = 0.8
         )
     }
 

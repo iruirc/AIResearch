@@ -279,8 +279,17 @@ class PRReviewService(
         // Get model: request.model > preferences.model > config.defaultModel
         val model = request.model ?: preferences.model
 
+        // Validate and correct temperature based on model capabilities
+        val validatedTemperature = validateTemperature(
+            provider = provider,
+            model = model,
+            temperature = preferences.temperature
+        )
+
         // Get maxTokens from preferences (user set 64000 for gpt-5-nano)
         val maxTokens = preferences.maxTokens
+
+        logger.info("Model: $model, Temperature: ${preferences.temperature} → $validatedTemperature, MaxTokens: $maxTokens")
 
         val aiRequest = AIRequest(
             messages = listOf(
@@ -292,13 +301,49 @@ class PRReviewService(
             model = model,
             systemPrompt = systemPrompt,
             parameters = RequestParameters(
-                temperature = 0.3,  // Low for consistency
+                temperature = validatedTemperature,  // Use validated temperature
                 maxTokens = maxTokens  // Use from global preferences
             )
         )
 
         val response = provider.sendMessage(aiRequest).getOrThrow()
         return response.content
+    }
+
+    /**
+     * Validate temperature against model capabilities
+     */
+    private suspend fun validateTemperature(
+        provider: com.researchai.domain.provider.AIProvider,
+        model: String,
+        temperature: Double
+    ): Double {
+        // Get model capabilities
+        val modelsResult = provider.getModels()
+        if (modelsResult.isFailure) {
+            logger.warn("Failed to get models, using temperature as-is: $temperature")
+            return temperature
+        }
+
+        val models = modelsResult.getOrNull() ?: emptyList()
+        val modelCapabilities = models.find { it.id == model }?.capabilities
+
+        if (modelCapabilities == null) {
+            logger.warn("Model $model not found in provider models, using temperature as-is: $temperature")
+            return temperature
+        }
+
+        // Validate temperature range
+        val validatedTemp = temperature.coerceIn(
+            modelCapabilities.temperatureMin,
+            modelCapabilities.temperatureMax
+        )
+
+        if (validatedTemp != temperature) {
+            logger.info("Temperature adjusted for model $model: $temperature → $validatedTemp (allowed range: ${modelCapabilities.temperatureMin}..${modelCapabilities.temperatureMax})")
+        }
+
+        return validatedTemp
     }
 
     /**
