@@ -4,7 +4,9 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.researchai.cli.api.ResearchAiClient
 import com.researchai.cli.config.CliConfig
+import com.researchai.cli.config.ProjectConfig
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
 class ChatCommand : CliktCommand(
     name = "chat",
@@ -18,14 +20,21 @@ class ChatCommand : CliktCommand(
 
     override fun run() = runBlocking {
         val config = CliConfig.load()
+        val currentDir = File(System.getProperty("user.dir"))
 
         val serverUrl = serverUrlOption ?: config.serverUrl
         val model = modelOption ?: config.defaultModel
+
+        // Load project config if initialized
+        val projectConfig = ProjectConfig.load(currentDir)
 
         val client = ResearchAiClient(serverUrl)
 
         echo("ResearchAI CLI v0.1.0")
         model?.let { echo("Model: $it") } ?: echo("Model: server default")
+        if (projectConfig != null) {
+            echo("RAG context: ${projectConfig.projectName} (${projectConfig.indexedFiles.size} files)")
+        }
         echo("Connecting to $serverUrl...")
 
         if (!client.checkHealth()) {
@@ -82,7 +91,34 @@ class ChatCommand : CliktCommand(
                 }
                 input.isNotBlank() -> {
                     try {
-                        val response = client.sendMessage(input, currentSessionId, currentModel)
+                        // If project is initialized, search RAG for context
+                        val messageToSend = if (projectConfig != null) {
+                            val searchResults = try {
+                                client.searchRag(
+                                    query = input,
+                                    documentIds = listOf(projectConfig.ragDocumentId),
+                                    topK = 3
+                                )
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+
+                            if (searchResults.isNotEmpty()) {
+                                val context = searchResults.joinToString("\n\n") { it.text }
+                                """
+                                |Context from project documentation:
+                                |$context
+                                |
+                                |User question: $input
+                                """.trimMargin()
+                            } else {
+                                input
+                            }
+                        } else {
+                            input
+                        }
+
+                        val response = client.sendMessage(messageToSend, currentSessionId, currentModel)
                         currentSessionId = response.sessionId
                         echo("\nAI: ${response.response}\n")
                     } catch (e: Exception) {

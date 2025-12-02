@@ -61,6 +61,73 @@ class ResearchAiClient(private val baseUrl: String) {
     }
 
     fun close() = client.close()
+
+    // ==================== RAG API ====================
+
+    /**
+     * Create a RAG document with multiple source files
+     */
+    suspend fun createRagDocument(
+        name: String,
+        content: String,
+        sourceFiles: List<Pair<String, String>>? = null
+    ): RAGDocument {
+        val request = AddDocumentRequest(
+            name = name,
+            content = content,
+            sourceFiles = sourceFiles?.map { SourceFileInput(it.first, it.second) }
+        )
+
+        val response = client.post("$baseUrl/rag/documents") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw RuntimeException("Failed to create RAG document: $errorBody")
+        }
+
+        return response.body()
+    }
+
+    /**
+     * Search RAG for relevant context
+     */
+    suspend fun searchRag(
+        query: String,
+        documentIds: List<String>? = null,
+        topK: Int = 5,
+        minScore: Float = 0.5f
+    ): List<SearchResult> {
+        val request = SearchRequest(
+            query = query,
+            topK = topK,
+            minScore = minScore,
+            documentIds = documentIds
+        )
+
+        val response = client.post("$baseUrl/rag/search") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw RuntimeException("Failed to search RAG: $errorBody")
+        }
+
+        // Server returns array directly, not wrapped in object
+        return response.body<List<SearchResult>>()
+    }
+
+    /**
+     * Delete a RAG document
+     */
+    suspend fun deleteRagDocument(documentId: String): Boolean {
+        val response = client.delete("$baseUrl/rag/documents/$documentId")
+        return response.status.isSuccess()
+    }
 }
 
 @Serializable
@@ -82,4 +149,51 @@ data class ChatResponse(
 @Serializable
 data class ErrorResponse(
     val error: String
+)
+
+// ==================== RAG API Models ====================
+
+@Serializable
+data class SourceFileInput(
+    val fileName: String,
+    val content: String
+)
+
+@Serializable
+data class AddDocumentRequest(
+    val name: String,
+    val content: String,
+    val chunkingStrategy: String = "FIXED_SIZE",
+    val enabled: Boolean = true,
+    val sourceFiles: List<SourceFileInput>? = null
+)
+
+@Serializable
+data class RAGDocument(
+    val id: String,
+    val name: String,
+    val enabled: Boolean = true
+)
+
+@Serializable
+data class SearchRequest(
+    val query: String,
+    val topK: Int = 5,
+    val minScore: Float = 0.5f,
+    val documentIds: List<String>? = null
+)
+
+@Serializable
+data class SearchResult(
+    val documentId: String,
+    val documentName: String,
+    val chunkIndex: Int = 0,
+    val text: String,
+    val score: Float
+)
+
+@Serializable
+data class SearchResponse(
+    val results: List<SearchResult>,
+    val totalFound: Int = 0
 )

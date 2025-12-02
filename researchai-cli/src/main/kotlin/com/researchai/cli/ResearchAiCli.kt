@@ -2,7 +2,9 @@ package com.researchai.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
+import com.researchai.cli.commands.AskCommand
 import com.researchai.cli.commands.ChatCommand
+import com.researchai.cli.commands.InitCommand
 
 class ResearchAiCli : CliktCommand(
     name = "rai",
@@ -12,5 +14,9 @@ class ResearchAiCli : CliktCommand(
 }
 
 fun main(args: Array<String>) = ResearchAiCli()
-    .subcommands(ChatCommand())
+    .subcommands(
+        ChatCommand(),
+        InitCommand(),
+        AskCommand()
+    )
     .main(args)
