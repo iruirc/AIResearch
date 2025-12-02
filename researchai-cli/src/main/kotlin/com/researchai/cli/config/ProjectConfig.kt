@@ -14,6 +14,7 @@ import java.time.Instant
 data class ProjectConfig(
     val version: String = "1.0",
     val ragDocumentId: String,
+    val ragDocumentName: String? = null,
     val projectName: String,
     val indexedAt: String,
     val indexedFiles: List<String>
@@ -85,12 +86,14 @@ data class ProjectConfig(
          */
         fun create(
             ragDocumentId: String,
+            ragDocumentName: String? = null,
             projectName: String,
             indexedFiles: List<String>
         ): ProjectConfig {
             return ProjectConfig(
                 version = "1.0",
                 ragDocumentId = ragDocumentId,
+                ragDocumentName = ragDocumentName,
                 projectName = projectName,
                 indexedAt = Instant.now().toString(),
                 indexedFiles = indexedFiles

@@ -141,9 +141,9 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                     sourceFiles = request.sourceFiles?.map { it.fileName to it.content }
                 )
 
+                // Note: document.name may differ from request.name if name was already taken
+                // The unique name is automatically generated with _N suffix
                 call.respond(HttpStatusCode.Created, document)
-            } catch (e: DuplicateDocumentNameException) {
-                call.respond(HttpStatusCode.Conflict, ErrorResponse(e.message ?: "Document with this name already exists"))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error"))
             }
@@ -192,6 +192,8 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                             flush()
                         }
 
+                        // Note: document.name may differ from request.name if name was already taken
+                        // The unique name is automatically generated with _N suffix
                         val completeEvent = CompleteEvent(
                             documentId = document.id,
                             name = document.name,
@@ -201,11 +203,6 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                         write("data: ${json.encodeToString(completeEvent)}\n\n")
                         flush()
 
-                    } catch (e: DuplicateDocumentNameException) {
-                        val errorEvent = ErrorEvent(e.message ?: "Document with this name already exists")
-                        write("event: error\n")
-                        write("data: ${json.encodeToString(errorEvent)}\n\n")
-                        flush()
                     } catch (e: Exception) {
                         val errorEvent = ErrorEvent(e.message ?: "Unknown error")
                         write("event: error\n")
@@ -249,9 +246,8 @@ fun Route.ragRoutes(ragManager: RAGManager, preferencesStorage: RAGPreferencesSt
                             enabled = request.enabled,
                             originalFileName = input.originalFileName
                         )
+                        // Note: document.name may differ from input.name if name was already taken
                         created.add(document)
-                    } catch (e: DuplicateDocumentNameException) {
-                        errors.add(BatchError(input.name, "Document with this name already exists"))
                     } catch (e: Exception) {
                         errors.add(BatchError(input.name, e.message ?: "Unknown error"))
                     }

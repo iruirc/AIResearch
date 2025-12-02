@@ -35,6 +35,26 @@ class RAGManager(
     private val rerankerService: RerankerService? = null
 ) {
     private val logger = LoggerFactory.getLogger(RAGManager::class.java)
+
+    /**
+     * Generate a unique document name by appending _N suffix if name already exists.
+     * Returns original name if it's available, or name_1, name_2, etc.
+     */
+    suspend fun generateUniqueName(baseName: String): String {
+        if (!storage.existsByName(baseName)) {
+            return baseName
+        }
+
+        var counter = 1
+        while (true) {
+            val candidateName = "${baseName}_$counter"
+            if (!storage.existsByName(candidateName)) {
+                return candidateName
+            }
+            counter++
+        }
+    }
+
     suspend fun initialize() {
         val documents = storage.loadAll()
         documents.forEach { document ->
@@ -50,9 +70,10 @@ class RAGManager(
         originalFileName: String? = null,
         sourceFiles: List<Pair<String, String>>? = null
     ): RAGDocument {
-        // Check if document with this name already exists
-        if (storage.existsByName(name)) {
-            throw DuplicateDocumentNameException(name)
+        // Generate unique name if document with this name already exists
+        val uniqueName = generateUniqueName(name)
+        if (uniqueName != name) {
+            logger.info("Document name '$name' already exists, using '$uniqueName' instead")
         }
 
         val documentId = UUID.randomUUID().toString()
@@ -120,7 +141,7 @@ class RAGManager(
         val now = Clock.System.now()
         val document = RAGDocument(
             id = documentId,
-            name = name,
+            name = uniqueName,
             content = content,
             chunks = chunks,
             chunkingStrategy = chunkingStrategy,
@@ -149,9 +170,10 @@ class RAGManager(
         sourceFiles: List<Pair<String, String>>? = null,
         onProgress: DocumentProgressCallback
     ): RAGDocument {
-        // Check if document with this name already exists
-        if (storage.existsByName(name)) {
-            throw DuplicateDocumentNameException(name)
+        // Generate unique name if document with this name already exists
+        val uniqueName = generateUniqueName(name)
+        if (uniqueName != name) {
+            logger.info("Document name '$name' already exists, using '$uniqueName' instead")
         }
 
         val documentId = UUID.randomUUID().toString()
@@ -222,7 +244,7 @@ class RAGManager(
         val now = Clock.System.now()
         val document = RAGDocument(
             id = documentId,
-            name = name,
+            name = uniqueName,
             content = content,
             chunks = chunks,
             chunkingStrategy = chunkingStrategy,

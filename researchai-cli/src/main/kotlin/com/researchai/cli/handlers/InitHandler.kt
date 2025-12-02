@@ -43,6 +43,7 @@ class InitHandler(
         if (ProjectConfig.isInitialized(currentDir) && !force) {
             val existingConfig = ProjectConfig.load(currentDir)
             output("Project already initialized.")
+            existingConfig?.ragDocumentName?.let { output("RAG Document Name: $it") }
             output("RAG Document ID: ${existingConfig?.ragDocumentId}")
             output("Indexed files: ${existingConfig?.indexedFiles?.size ?: 0}")
             output("Use --force or /init to reinitialize.")
@@ -110,12 +111,14 @@ class InitHandler(
             // 4. Save project configuration
             val projectConfig = ProjectConfig.create(
                 ragDocumentId = document.documentId,
+                ragDocumentName = document.name,
                 projectName = currentDir.name,
                 indexedFiles = discoveredFiles.map { it.relativePath }
             )
             ProjectConfig.save(currentDir, projectConfig)
 
             output("\nProject initialized successfully!")
+            output("RAG Document Name: ${document.name}")
             output("RAG Document ID: ${document.documentId}")
             output("Chunks created: ${document.chunksCount}")
             output("Config saved to: ${ProjectConfig.getConfigDir(currentDir).path}/config.json")
