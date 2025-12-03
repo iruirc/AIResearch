@@ -12,14 +12,21 @@ data class CliConfig(
         private val configFile = File(configDir, "config.properties")
 
         fun load(): CliConfig {
-            if (!configFile.exists()) return CliConfig()
+            // Priority: 1. Environment variable, 2. Config file, 3. Default
+            val envServerUrl = System.getenv("RESEARCHAI_SERVER_URL")
+
+            if (!configFile.exists()) {
+                return CliConfig(
+                    serverUrl = envServerUrl ?: "http://localhost:8080"
+                )
+            }
 
             val props = Properties().apply {
                 configFile.inputStream().use { load(it) }
             }
 
             return CliConfig(
-                serverUrl = props.getProperty("server.url", "http://localhost:8080"),
+                serverUrl = envServerUrl ?: props.getProperty("server.url", "http://localhost:8080"),
                 defaultModel = props.getProperty("default.model")
             )
         }

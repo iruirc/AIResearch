@@ -31,9 +31,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Run review and save to file
+          # Note: CLI reads RESEARCHAI_SERVER_URL from environment
           java -jar researchai-cli/build/libs/researchai-cli-*-all.jar \
             review ${{ github.event.pull_request.html_url }} \
-            --server "$RESEARCHAI_SERVER_URL" \
             --mode standard \
             --use-rag \
             --output json > review.json || {
@@ -54,9 +54,9 @@ jobs:
           RESEARCHAI_SERVER_URL: ${{ secrets.RESEARCHAI_SERVER_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Note: CLI reads RESEARCHAI_SERVER_URL from environment
           java -jar researchai-cli/build/libs/researchai-cli-*-all.jar \
             review ${{ github.event.pull_request.html_url }} \
-            --server "$RESEARCHAI_SERVER_URL" \
             --mode standard \
             --use-rag \
             --post-comment || echo "Failed to post comment"
