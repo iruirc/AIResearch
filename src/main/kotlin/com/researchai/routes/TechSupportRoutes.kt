@@ -177,12 +177,31 @@ fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionM
          * Response: Health status with RAG and Trello connection info
          */
         get("/health") {
-            call.respond(mapOf(
-                "status" to "ok",
-                "service" to "tech-support",
-                "ragEnabled" to true,
-                "trelloConnected" to techSupportService.isTrelloConnected()
-            ))
+            try {
+                val trelloConnected = try {
+                    techSupportService.isTrelloConnected()
+                } catch (e: Exception) {
+                    call.application.environment.log.warn("Failed to check Trello connection", e)
+                    false
+                }
+
+                call.respond(TechSupportHealthResponse(
+                    status = "ok",
+                    ragEnabled = true,
+                    trelloConnected = trelloConnected
+                ))
+            } catch (e: Exception) {
+                call.application.environment.log.error("Health check failed", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    TechSupportHealthResponse(
+                        status = "error",
+                        ragEnabled = false,
+                        trelloConnected = false,
+                        error = e.message ?: "Unknown error"
+                    )
+                )
+            }
         }
     }
 }

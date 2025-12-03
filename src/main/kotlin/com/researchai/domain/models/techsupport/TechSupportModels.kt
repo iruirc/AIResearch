@@ -165,3 +165,15 @@ data class TechSupportConfig(
     val defaultBoardId: String? = null,
     val trelloMcpServerId: String = "trello"
 )
+
+/**
+ * Ответ на health check запрос
+ */
+@Serializable
+data class TechSupportHealthResponse(
+    val status: String,
+    val service: String = "tech-support",
+    val ragEnabled: Boolean,
+    val trelloConnected: Boolean,
+    val error: String? = null
+)
