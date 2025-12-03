@@ -13,6 +13,19 @@
       "enabled": true
     },
     {
+      "id": "trello",
+      "name": "Trello MCP Server",
+      "description": "Official Trello MCP Server (@delorenj/mcp-server-trello) - manage boards, lists, cards",
+      "transport": "stdio",
+      "command": "/opt/homebrew/bin/bunx",
+      "args": ["@delorenj/mcp-server-trello"],
+      "env": {
+        "TRELLO_API_KEY": "${TRELLO_API_KEY}",
+        "TRELLO_TOKEN": "${TRELLO_TOKEN}"
+      },
+      "enabled": true
+    },
+    {
       "id": "filesystem",
       "name": "Filesystem Server",
       "description": "Access to local filesystem",
