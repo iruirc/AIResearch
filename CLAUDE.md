@@ -525,6 +525,279 @@ override suspend fun onTaskError(error: Exception) {
 - **Graceful Shutdown**: Always use proper shutdown to save all tasks
 - **Documentation**: See `Documents/TASK_SCHEDULER.md` for comprehensive details
 
+## PR Review
+
+The application supports **AI-powered Pull Request review** via CLI and GitHub Actions integration.
+
+### Overview
+
+The PR Review feature allows automated code review of GitHub pull requests using AI analysis combined with RAG context from the codebase. Reviews can be triggered manually via CLI or automatically via GitHub Actions.
+
+**Key Features:**
+- **MCP Integration**: Fetches PR data (diff, files, comments) via GitHub MCP server
+- **RAG Context**: Uses codebase documentation and patterns for contextual review
+- **Multiple Review Modes**: Quick, Standard, Thorough analysis levels
+- **Focus Areas**: Configurable focus on specific aspects (Security, Performance, Architecture, etc.)
+- **Quality Gate**: Configurable score threshold for CI/CD pipelines
+- **GitHub Integration**: Post reviews as PR comments automatically
+
+### Architecture Components
+
+1. **Domain Layer** (`com.researchai.domain.models.pr`):
+   - `PRReviewRequest` - Request model with repository, PR number, mode, focus areas
+   - `PRReviewResult` - Result model with summary, file reviews, score, metadata
+   - `ReviewMode` enum - QUICK, STANDARD, THOROUGH
+   - `FocusArea` enum - SECURITY, PERFORMANCE, CODE_STYLE, ARCHITECTURE, TESTING, etc.
+   - `Severity` enum - CRITICAL, WARNING, INFO
+   - Supporting models: `FileReview`, `LineComment`, `Issue`, `ReviewMetadata`
+
+2. **Service Layer** (`com.researchai.services`):
+   - `PRReviewService` - Main orchestration service
+     - `reviewPullRequest()` - Execute PR review
+     - `postReviewAsComment()` - Post review to GitHub as comment
+     - `fetchPRData()` - Get PR data via GitHub MCP
+     - `gatherRAGContext()` - Retrieve relevant code context
+     - `buildReviewPrompt()` - Construct AI prompt with context
+     - `executeAIReview()` - Call AI provider for analysis
+
+3. **Routes** (`com.researchai.routes.PRReviewRoutes`):
+   - `POST /pr-review` - Execute PR review
+   - `POST /pr-review/comment` - Post review as GitHub comment
+   - `GET /pr-review/health` - Health check
+
+4. **CLI** (`researchai-cli`):
+   - `ReviewCommand` - CLI command for PR review
+   - `ReviewHandler` - Command execution logic
+   - `ReviewApiClient` - HTTP client for API calls
+   - `ReviewOutputFormatter` - Format output (TEXT, JSON, GITHUB markdown)
+
+5. **Assistant**:
+   - System assistant `pr-reviewer` with specialized prompt for code review
+   - Provides structured JSON output with issues, suggestions, scores
+
+### Review Modes
+
+**QUICK** - Fast summary-only review:
+- High-level overview
+- Critical issues only
+- No line-by-line comments
+- ~30-60 seconds
+
+**STANDARD** (default) - Balanced review:
+- Detailed summary
+- Critical and important issues
+- Key line comments
+- ~1-2 minutes
+
+**THOROUGH** - Comprehensive review:
+- Full analysis
+- All issues and suggestions
+- Detailed line-by-line comments
+- ~2-5 minutes
+
+### Focus Areas
+
+All focus areas have equal priority (configurable):
+
+- **SECURITY** - Authentication, injection, data exposure vulnerabilities
+- **PERFORMANCE** - Inefficient algorithms, N+1 queries, memory leaks
+- **CODE_STYLE** - Naming conventions, formatting, readability
+- **ARCHITECTURE** - Design patterns, separation of concerns, modularity
+- **TESTING** - Test coverage, test quality, edge cases
+- **DOCUMENTATION** - Code comments, API docs, README updates
+- **ERROR_HANDLING** - Exception handling, null safety, error messages
+- **KOTLIN_IDIOMS** - Idiomatic Kotlin usage (coroutines, null safety, data classes)
+
+### CLI Usage
+
+**Basic usage:**
+```bash
+# Review a PR
+rai review https://github.com/owner/repo/pull/123
+
+# With specific mode
+rai review https://github.com/owner/repo/pull/123 --mode thorough
+
+# With RAG context
+rai review https://github.com/owner/repo/pull/123 --use-rag
+
+# With focus areas
+rai review https://github.com/owner/repo/pull/123 --focus security,performance
+
+# Output formats
+rai review https://github.com/owner/repo/pull/123 --output json
+rai review https://github.com/owner/repo/pull/123 --output github
+
+# Post as GitHub comment
+rai review https://github.com/owner/repo/pull/123 --post-comment
+```
+
+**Environment variables:**
+- `RESEARCHAI_SERVER_URL` - ResearchAI server URL (default: http://localhost:8080)
+- `GITHUB_TOKEN` - GitHub personal access token (required for --post-comment)
+
+### API Usage
+
+**Execute PR review:**
+```http
+POST /pr-review
+Content-Type: application/json
+
+{
+  "repositoryOwner": "owner",
+  "repositoryName": "repo",
+  "pullRequestNumber": 123,
+  "reviewMode": "STANDARD",
+  "focusAreas": ["SECURITY", "PERFORMANCE"],
+  "useRAG": true,
+  "ragMinScore": 0.7,
+  "ragMaxChunks": 10
+}
+```
+
+**Response:**
+```json
+{
+  "requestId": "uuid",
+  "pullRequestUrl": "https://github.com/owner/repo/pull/123",
+  "summary": {
+    "overview": "...",
+    "criticalIssues": [...],
+    "importantIssues": [...],
+    "suggestions": [...],
+    "positives": [...]
+  },
+  "fileReviews": [...],
+  "overallScore": 75,
+  "metadata": {
+    "reviewDurationMs": 45000,
+    "filesReviewed": 12,
+    "ragContextUsed": true,
+    "ragChunksRetrieved": 8,
+    "model": "claude-sonnet-4-5",
+    "provider": "CLAUDE"
+  }
+}
+```
+
+**Post review comment:**
+```http
+POST /pr-review/comment
+Content-Type: application/json
+
+{
+  "reviewResult": { /* PRReviewResult object */ },
+  "githubToken": "ghp_..."
+}
+```
+
+### GitHub Actions Integration
+
+Automatic PR review on every pull request via GitHub Actions workflow.
+
+**Setup:**
+1. Add `.github/workflows/pr-review.yml` to your repository
+2. Configure GitHub secrets:
+   - `RESEARCHAI_SERVER_URL` - Your ResearchAI server URL
+   - `GITHUB_TOKEN` - Automatically provided by GitHub
+
+**Workflow triggers:**
+- `pull_request:opened` - New PR created
+- `pull_request:synchronize` - New commits pushed
+- `pull_request:reopened` - PR reopened
+
+**Quality Gate:**
+- PR fails CI if review score < 50 (configurable)
+- Review posted as PR comment automatically
+- Blocks merge if branch protection enabled
+
+**Documentation:** See `Documents/PR_REVIEW_GITHUB_ACTION.md` for detailed setup guide
+
+### RAG Integration
+
+When `useRAG: true`, the review includes context from the codebase:
+
+1. **Query Generation**: Extracts queries from PR title, description, changed files
+2. **Context Retrieval**: Searches RAG database for relevant code patterns
+3. **Context Injection**: Adds top-ranked chunks to review prompt
+4. **Quality Improvement**: AI uses codebase conventions for better reviews
+
+**Configuration:**
+- `ragMinScore` - Minimum similarity score (default: 0.7)
+- `ragMaxChunks` - Maximum context chunks (default: 10)
+
+### Review Output Format
+
+**TEXT Format** (CLI default):
+```
+================================================================================
+📊 PR REVIEW RESULTS
+================================================================================
+
+🟢 Overall Score: 85/100
+
+📝 Summary
+--------------------------------------------------------------------------------
+This PR implements...
+
+🔴 Critical Issues (2)
+--------------------------------------------------------------------------------
+• [SECURITY] SQL Injection vulnerability
+  Direct string concatenation in query...
+  💡 Use parameterized queries instead
+
+🟡 Important Issues (5)
+...
+```
+
+**JSON Format** (--output json):
+- Structured JSON for programmatic processing
+- All fields preserved
+- Machine-readable
+
+**GITHUB Format** (--output github):
+- GitHub-flavored Markdown
+- Collapsible sections
+- Emoji indicators
+- Ready for PR comments
+
+### Scoring System
+
+**Score Range:** 0-100
+
+**Thresholds:**
+- 90-100: Excellent, ready to merge
+- 70-89: Good, minor issues only
+- 50-69: Needs work, important issues to address
+- Below 50: Significant concerns, requires major changes
+
+**Factors:**
+- Critical issues: -10 to -20 points each
+- Important issues: -3 to -7 points each
+- Suggestions: -1 to -2 points each
+- Positive observations: +1 to +5 points
+
+### GitHub MCP Requirements
+
+The PR Review feature requires GitHub MCP server to be configured:
+
+**Required MCP tools:**
+- `pull_request_read` - Get PR details
+- `pull_request_diff` - Get PR diff
+- `pull_request_files` - Get changed files list
+- `add_issue_comment` - Post review comments
+
+**Configuration:**
+Ensure GitHub MCP server is registered in `mcp-config.json` with valid GitHub token.
+
+### Important Notes
+
+- **MCP Dependency**: Requires GitHub MCP server to be connected
+- **AI Provider**: Works with any configured provider (Claude, OpenAI, HuggingFace)
+- **Rate Limits**: Be mindful of GitHub API rate limits
+- **Cost**: ~$0.05-$0.20 per PR review depending on provider and size
+- **Documentation**: See `Documents/PR_REVIEW_GITHUB_ACTION.md` for CI/CD setup
+
 ## Important Notes
 
 - **No tests**: The project currently has no test suite

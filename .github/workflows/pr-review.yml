@@ -1,0 +1,70 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build ResearchAI CLI
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :researchai-cli:build
+          ./gradlew :researchai-cli:buildFatJar
+
+      - name: Run AI Review
+        id: review
+        env:
+          RESEARCHAI_SERVER_URL: ${{ secrets.RESEARCHAI_SERVER_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run review and save to file
+          java -jar researchai-cli/build/libs/researchai-cli-*-all.jar \
+            review ${{ github.event.pull_request.html_url }} \
+            --mode standard \
+            --use-rag \
+            --output json > review.json
+
+          # Extract score
+          SCORE=$(jq '.overallScore' review.json)
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+
+          # Save review for next step
+          echo "Review completed with score: $SCORE"
+
+      - name: Post Review Comment
+        if: always()
+        env:
+          RESEARCHAI_SERVER_URL: ${{ secrets.RESEARCHAI_SERVER_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          java -jar researchai-cli/build/libs/researchai-cli-*-all.jar \
+            review ${{ github.event.pull_request.html_url }} \
+            --mode standard \
+            --use-rag \
+            --post-comment
+
+      - name: Check Quality Gate
+        run: |
+          SCORE=${{ steps.review.outputs.score }}
+          THRESHOLD=50
+
+          if [ "$SCORE" -lt "$THRESHOLD" ]; then
+            echo "❌ PR review score ($SCORE) is below threshold ($THRESHOLD)"
+            echo "Please address the critical and important issues before merging."
+            exit 1
+          else
+            echo "✅ PR review score ($SCORE) meets threshold ($THRESHOLD)"
+          fi
