@@ -31,9 +31,9 @@
       "enabled": true
     },
     {
-      "id": "Trello",
-      "name": "Trello Server",
-      "description": "Access to Trello API",
+      "id": "trello-custom",
+      "name": "Trello Custom Server",
+      "description": "Access to Trello API (custom implementation)",
       "transport": "stdio",
       "command": "/Volumes/Data/Projects/MobileDeveloper/Projects/mcpServers/localMcp/trelloMCP/run-mcp-server.sh",
       "args": [],

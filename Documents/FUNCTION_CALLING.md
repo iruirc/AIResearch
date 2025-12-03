@@ -156,7 +156,7 @@ Function Calling - это возможность AI моделей (Claude, Open
 │ MCP SERVERS (External Processes)                           │
 │ - Weather MCP Server                                        │
 │ - GitHub MCP Server                                         │
-│ - Trello MCP Server                                         │
+│ - Trello Custom MCP Server                                  │
 │ - Filesystem MCP Server                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -948,15 +948,15 @@ fun convertToClaudeTools(mcpTools: List<MCPTool>): List<ClaudeTool> {
         ▼                           ▼              ▼
 ┌──────────────┐          ┌──────────────┐  ┌──────────────┐
 │MCPClientWrap │          │MCPClientWrap │  │MCPClientWrap │
-│ Weather      │          │ GitHub       │  │ Trello       │
+│ Weather      │          │ GitHub       │  │Trello Custom │
 │ STDIO        │          │ STDIO        │  │ STDIO        │
 └──────┬───────┘          └──────┬───────┘  └──────┬───────┘
        │                         │                  │
        ▼                         ▼                  ▼
-┌──────────────┐          ┌──────────────┐  ┌──────────────┐
-│Weather Server│          │GitHub Server │  │Trello Server │
-│(Node.js)     │          │(Node.js)     │  │(Node.js)     │
-└──────────────┘          └──────────────┘  └──────────────┘
+┌──────────────┐          ┌──────────────┐  ┌──────────────────┐
+│Weather Server│          │GitHub Server │  │Trello Custom Srv │
+│(Node.js)     │          │(Node.js)     │  │(Node.js)         │
+└──────────────┘          └──────────────┘  └──────────────────┘
 ```
 
 ### MCPOrchestrationService
@@ -1178,9 +1178,9 @@ class MCPClientWrapper(
       }
     },
     {
-      "id": "trello",
-      "name": "Trello Server",
-      "description": "Trello board management",
+      "id": "trello-custom",
+      "name": "Trello Custom Server",
+      "description": "Trello board management (custom implementation)",
       "enabled": true,
       "transport": "stdio",
       "command": "/Volumes/.../trelloMCP/run-mcp-server.sh",
