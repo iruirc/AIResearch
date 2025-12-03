@@ -26,6 +26,16 @@ TRELLO_API_KEY=your-api-key
 TRELLO_TOKEN=your-token
 ```
 
+### Trello Defaults
+
+| Operation | Default Value | Override |
+|-----------|---------------|----------|
+| **Ticket Search** | All boards accessible to token | `trelloBoardId` in request |
+| **Ticket Creation - Board** | `TRELLO_SUPPORT_BOARD_ID` env variable | `boardId` in request |
+| **Ticket Creation - List** | `Inbox` | `listName` in request |
+
+> **Note:** Ensure the board specified in `TRELLO_SUPPORT_BOARD_ID` has a list named "Inbox", or provide a custom `listName` when creating tickets.
+
 ## User Scenarios
 
 ### Scenario 1: Asking a Technical Question
