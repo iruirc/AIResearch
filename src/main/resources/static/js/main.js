@@ -337,6 +337,21 @@ async function sendMessageWithText(message, useReranking = null) {
         // Add assistant message to UI with metadata and timestamp
         messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());
 
+        // If tech support mode is enabled, update the panel with suggestions
+        if (techSupportMode && techSupportMode.isEnabled) {
+            try {
+                const state = appState.getState();
+                await techSupportMode.sendQuery(message, {
+                    sessionId: state.currentSessionId,
+                    providerId: state.currentProvider?.toUpperCase() || 'CLAUDE',
+                    model: state.settings?.model
+                });
+                console.log('Tech support panel updated');
+            } catch (e) {
+                console.error('Tech support query failed:', e);
+            }
+        }
+
         // Reload sessions list to update message count
         await sessionService.loadSessions();
         console.log('Sessions list reloaded to update message count');
