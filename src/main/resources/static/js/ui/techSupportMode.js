@@ -215,23 +215,103 @@ export class TechSupportMode {
         }
 
         container.innerHTML = actions.map(action => {
-            if (action.actionType === 'CREATE_TICKET' && action.createTicket) {
-                return `
-                    <button class="action-btn create-ticket"
-                            onclick="techSupportMode.createTicket('${this.escapeHtml(action.createTicket.title)}', '${this.escapeHtml(action.createTicket.description)}')">
-                        <span class="icon">&#x1F4DD;</span> Create Ticket: ${this.escapeHtml(action.createTicket.title)}
-                    </button>
-                `;
-            } else if (action.actionType === 'VIEW_TICKET' && action.viewTicket) {
-                return `
-                    <div class="action-item view-ticket">
-                        <span class="icon">&#x1F440;</span> View: ${this.escapeHtml(action.viewTicket.cardName)}
-                        <small>${this.escapeHtml(action.viewTicket.reason)}</small>
-                    </div>
-                `;
+            switch (action.actionType) {
+                case 'CREATE_TICKET':
+                    if (action.createTicket) {
+                        const title = this.escapeHtml(action.createTicket.title);
+                        const desc = this.escapeHtml(action.createTicket.description).replace(/'/g, "\\'");
+                        return `
+                            <button class="action-btn create-ticket"
+                                    onclick="techSupportMode.createTicket('${title}', '${desc}')">
+                                <span class="icon">&#x1F4DD;</span> ${title}
+                            </button>
+                        `;
+                    }
+                    break;
+
+                case 'VIEW_TICKET':
+                    if (action.viewTicket) {
+                        return `
+                            <div class="action-item view-ticket">
+                                <span class="icon">&#x1F440;</span>
+                                <span class="action-title">${this.escapeHtml(action.viewTicket.cardName)}</span>
+                                <small>${this.escapeHtml(action.viewTicket.reason)}</small>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'ESCALATE':
+                    if (action.escalate) {
+                        const priorityIcon = this.getPriorityIcon(action.escalate.priority);
+                        return `
+                            <div class="action-item escalate priority-${action.escalate.priority}">
+                                <span class="icon">${priorityIcon}</span>
+                                <span class="action-title">Escalate to Support</span>
+                                <small>${this.escapeHtml(action.escalate.reason)}</small>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'ADD_TO_FAQ':
+                    if (action.addToFaq) {
+                        return `
+                            <button class="action-btn add-to-faq"
+                                    onclick="techSupportMode.addToFaq('${this.escapeHtml(action.addToFaq.question)}')">
+                                <span class="icon">&#x1F4D6;</span> Add to FAQ
+                            </button>
+                        `;
+                    }
+                    break;
+
+                case 'CONTACT_SUPPORT':
+                    if (action.contactSupport) {
+                        const channelIcon = this.getChannelIcon(action.contactSupport.suggestedChannel);
+                        return `
+                            <div class="action-item contact-support">
+                                <span class="icon">${channelIcon}</span>
+                                <span class="action-title">Contact Support</span>
+                                <small>${this.escapeHtml(action.contactSupport.reason)}</small>
+                            </div>
+                        `;
+                    }
+                    break;
             }
             return '';
         }).join('');
+    }
+
+    /**
+     * Get icon for priority level
+     */
+    getPriorityIcon(priority) {
+        switch (priority) {
+            case 'urgent': return '&#x1F6A8;'; // 🚨
+            case 'high': return '&#x26A0;';    // ⚠
+            case 'normal': return '&#x1F4E2;'; // 📢
+            case 'low': return '&#x1F4AC;';    // 💬
+            default: return '&#x1F4E2;';
+        }
+    }
+
+    /**
+     * Get icon for support channel
+     */
+    getChannelIcon(channel) {
+        switch (channel) {
+            case 'email': return '&#x1F4E7;';  // 📧
+            case 'chat': return '&#x1F4AC;';   // 💬
+            case 'phone': return '&#x1F4DE;';  // 📞
+            default: return '&#x1F4E7;';
+        }
+    }
+
+    /**
+     * Add question to FAQ (placeholder)
+     */
+    async addToFaq(question) {
+        alert(`FAQ functionality coming soon!\n\nQuestion: ${question}`);
     }
 
     /**

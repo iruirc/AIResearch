@@ -32,9 +32,17 @@ TRELLO_TOKEN=your-token
 |-----------|---------------|----------|
 | **Ticket Search** | All boards accessible to token | `trelloBoardId` in request |
 | **Ticket Creation - Board** | `TRELLO_SUPPORT_BOARD_ID` env variable | `boardId` in request |
-| **Ticket Creation - List** | `Inbox` | `listName` in request |
+| **Ticket Creation - List** | Depends on query type (see below) | `listName` in request |
 
-> **Note:** Ensure the board specified in `TRELLO_SUPPORT_BOARD_ID` has a list named "Inbox", or provide a custom `listName` when creating tickets.
+**Automatic List Selection by Query Type:**
+
+| Query Type | Default List | Labels |
+|------------|--------------|--------|
+| `BUG_REPORT` | `Bugs` | bug, needs-triage |
+| `FEATURE_REQUEST` | `Ideas` | feature-request, needs-review |
+| `GENERAL` / Other | `Inbox` | support, needs-triage |
+
+> **Note:** Ensure the board specified in `TRELLO_SUPPORT_BOARD_ID` has the required lists ("Inbox", "Bugs", "Ideas"), or provide a custom `listName` when creating tickets.
 
 ## User Scenarios
 
@@ -110,13 +118,15 @@ Related Tickets:
   - AUTH-123: "401 errors after v1.5 update" (In Progress)
 
 Suggested Actions:
-  1. View Related Ticket:
+  1. 📝 Create Ticket:
+     Title: Bug: Login failure - 401 error after v1.5 update
+     List: Bugs
+     Labels: [bug, needs-triage]
+     Description: User reports login failures...
+
+  2. 👀 View Related Ticket:
      Ticket: AUTH-123 - 401 errors after v1.5 update
      Reason: Similar issue reported by other users
-
-  2. Create Ticket (if new issue):
-     Title: Login failure - 401 error after v1.5 update
-     Description: User reports login failures...
 ```
 
 ---
@@ -136,7 +146,7 @@ Suggested Actions:
 rai support "What's the status of the OAuth redirect issue?"
 ```
 
-**Expected Response:**
+**Expected Response (ticket found):**
 ```
 Query Type: [STATUS]
 
@@ -151,6 +161,23 @@ Related Tickets:
 
 The team is currently working on this issue. It's marked as
 high-priority and is expected to be resolved in the next release.
+
+Suggested Actions:
+  1. 👀 View Ticket: OAUTH-456 - OAuth redirect mismatch error
+```
+
+**Expected Response (ticket not found):**
+```
+Query Type: [STATUS]
+
+Answer:
+I couldn't find a ticket matching your query about OAuth redirect issues.
+It's possible the ticket was renamed or closed.
+
+Suggested Actions:
+  1. 📧 Contact Support
+     Reason: Unable to find ticket matching your query
+     Channel: email
 ```
 
 ---
@@ -175,11 +202,12 @@ Currently, ResearchAI supports JWT and OAuth authentication methods.
 I can create a feature request ticket for the development team.
 
 Suggested Actions:
-  1. Create Ticket:
-     Title: Feature Request: SAML Authentication Support
+  1. 📝 Create Ticket:
+     Title: Feature: SAML Authentication Support
+     List: Ideas
+     Labels: [feature-request, needs-review]
      Description: User requests SAML authentication support for
                   enterprise SSO integration
-     Labels: [feature-request, auth]
 ```
 
 ---
@@ -213,10 +241,46 @@ Related Known Issues:
     Workaround: Retry after 5-10 seconds.
 
 Sources Used:
-  Documentation (1):
+  Documentation (3):
     - faq/general.md
-  Known Issues (1):
+    - configuration.md
     - known-issues/current.md
+
+Suggested Actions:
+  1. 📖 Add to FAQ
+     Question: My API requests keep timing out after 30 seconds
+     Category: how-to
+```
+
+---
+
+### Scenario 5.1: Escalating Complex Issues
+
+**User Story**: As a user, I have a unique problem that isn't covered in documentation.
+
+**CLI:**
+```bash
+rai support "My custom OAuth provider returns a weird error code 0x4F2A"
+```
+
+**Expected Response (no RAG or Trello context):**
+```
+Query Type: [GENERAL]
+
+Answer:
+I don't have specific information about error code 0x4F2A for custom
+OAuth providers. This appears to be a vendor-specific error.
+
+Suggested Actions:
+  1. 📢 Escalate to Support
+     Reason: No relevant documentation or tickets found
+     Priority: normal
+     Team: support
+
+  2. 📝 Create Ticket:
+     Title: Support: Custom OAuth error 0x4F2A
+     List: Inbox
+     Labels: [support, needs-triage]
 ```
 
 ---
@@ -319,8 +383,32 @@ rai support --output json "What providers are supported?"
 - Shows status (list name) and labels
 
 **Suggested Actions:**
-- "Create Ticket" - Opens form to create new Trello card
-- "View Ticket" - Links to relevant existing tickets
+
+The panel intelligently suggests actions based on query type and context:
+
+| Action | Icon | When Appears | Description |
+|--------|------|--------------|-------------|
+| **Create Ticket** | 📝 | Bug reports, feature requests, or when no other actions apply | Creates a new Trello card with pre-filled title and description |
+| **View Ticket** | 👀 | When similar tickets found in Trello | Links to existing related tickets |
+| **Escalate** | 🚨/⚠/📢 | Bug reports or questions without RAG/Trello context | Suggests escalating to human support (with priority indicator) |
+| **Add to FAQ** | 📖 | HOW_TO questions with good RAG matches (3+ sources) | Suggests adding Q&A to documentation |
+| **Contact Support** | 📧 | Status check queries when no matching tickets found | Suggests contacting support via email/chat/phone |
+
+**Priority Indicators (Escalate action):**
+- 🚨 **Urgent** - Critical issues requiring immediate attention
+- ⚠ **High** - Bug reports without available context
+- 📢 **Normal** - General questions needing human help
+- 💬 **Low** - Minor issues
+
+**Action Logic by Query Type:**
+
+| Query Type | Primary Actions |
+|------------|-----------------|
+| `BUG_REPORT` | Create Ticket (Bugs list) + Escalate (if no context) |
+| `FEATURE_REQUEST` | Create Ticket (Ideas list) |
+| `HOW_TO` | Add to FAQ (if good RAG match) |
+| `STATUS_CHECK` | Contact Support (if no tickets found) |
+| `GENERAL` | Escalate (if no context) or Create Ticket (fallback) |
 
 **Sources Used:**
 - Lists documentation files used for the answer

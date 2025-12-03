@@ -51,7 +51,7 @@ class TechSupportService(
             val aiResponse = executeAIRequest(enrichedPrompt, request)
 
             // 5. Extract suggested actions
-            val suggestedActions = extractSuggestedActions(aiResponse, context, queryType)
+            val suggestedActions = extractSuggestedActions(aiResponse, context, queryType, request.query)
 
             TechSupportResponse(
                 answer = aiResponse,
@@ -349,37 +349,115 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
     private fun extractSuggestedActions(
         response: String,
         context: TechSupportContext,
-        queryType: QueryType
+        queryType: QueryType,
+        originalQuery: String
     ): List<SuggestedActionWrapper> {
         val actions = mutableListOf<SuggestedActionWrapper>()
+        val hasRelatedTickets = context.ticketContext?.relatedTickets?.isNotEmpty() == true
+        val hasRagContext = context.ragContext != null && context.ragContext.sourceCount > 0
+        val ragScore = context.ragContext?.sources?.size ?: 0
 
-        // Suggest creating ticket for bug reports without similar tickets
-        if (queryType == QueryType.BUG_REPORT &&
-            (context.ticketContext?.relatedTickets?.isEmpty() != false)) {
-            actions.add(SuggestedActionWrapper(
-                actionType = "CREATE_TICKET",
-                createTicket = CreateTicketAction(
-                    title = "Bug Report: ${extractBugTitle(response)}",
-                    description = "User reported an issue that may need investigation.",
-                    suggestedList = "Inbox",
-                    suggestedLabels = listOf("bug", "needs-triage")
-                )
-            ))
+        // 1. CREATE_TICKET - для багов и feature requests
+        when (queryType) {
+            QueryType.BUG_REPORT -> {
+                actions.add(SuggestedActionWrapper(
+                    actionType = "CREATE_TICKET",
+                    createTicket = CreateTicketAction(
+                        title = "Bug: ${extractBugTitle(originalQuery)}",
+                        description = "Пользователь сообщил о проблеме:\n\n$originalQuery",
+                        suggestedList = "Bugs",
+                        suggestedLabels = listOf("bug", "needs-triage")
+                    )
+                ))
+            }
+            QueryType.FEATURE_REQUEST -> {
+                actions.add(SuggestedActionWrapper(
+                    actionType = "CREATE_TICKET",
+                    createTicket = CreateTicketAction(
+                        title = "Feature: ${extractBugTitle(originalQuery)}",
+                        description = "Запрос на новую функцию:\n\n$originalQuery",
+                        suggestedList = "Ideas",
+                        suggestedLabels = listOf("feature-request", "needs-review")
+                    )
+                ))
+            }
+            else -> {}
         }
 
-        // Add links to related tickets
-        context.ticketContext?.relatedTickets?.take(2)?.forEach { ticket ->
+        // 2. VIEW_TICKET - показываем связанные тикеты
+        context.ticketContext?.relatedTickets?.take(3)?.forEach { ticket ->
             actions.add(SuggestedActionWrapper(
                 actionType = "VIEW_TICKET",
                 viewTicket = ViewTicketAction(
                     cardId = ticket.cardId,
                     cardName = ticket.cardName,
-                    reason = "Similar issue found in tickets"
+                    reason = "Похожая проблема"
+                )
+            ))
+        }
+
+        // 3. ADD_TO_FAQ - для HOW_TO вопросов если RAG дал хороший ответ
+        if (queryType == QueryType.HOW_TO && hasRagContext && ragScore >= 3) {
+            actions.add(SuggestedActionWrapper(
+                actionType = "ADD_TO_FAQ",
+                addToFaq = AddToFaqAction(
+                    question = originalQuery,
+                    suggestedAnswer = extractShortAnswer(response),
+                    category = "how-to"
+                )
+            ))
+        }
+
+        // 4. ESCALATE - если нет полезного контекста и это серьёзный вопрос
+        if (!hasRagContext && !hasRelatedTickets && queryType in listOf(QueryType.BUG_REPORT, QueryType.GENERAL)) {
+            actions.add(SuggestedActionWrapper(
+                actionType = "ESCALATE",
+                escalate = EscalateAction(
+                    reason = "Не найдено релевантной информации для ответа",
+                    priority = if (queryType == QueryType.BUG_REPORT) "high" else "normal",
+                    suggestedTeam = "support"
+                )
+            ))
+        }
+
+        // 5. CONTACT_SUPPORT - для STATUS_CHECK без найденных тикетов
+        if (queryType == QueryType.STATUS_CHECK && !hasRelatedTickets) {
+            actions.add(SuggestedActionWrapper(
+                actionType = "CONTACT_SUPPORT",
+                contactSupport = ContactSupportAction(
+                    reason = "Не удалось найти тикет по запросу",
+                    suggestedChannel = "email"
+                )
+            ))
+        }
+
+        // 6. Общее предложение создать тикет если нет других действий и вопрос нетривиальный
+        if (actions.isEmpty() && originalQuery.length > 20) {
+            actions.add(SuggestedActionWrapper(
+                actionType = "CREATE_TICKET",
+                createTicket = CreateTicketAction(
+                    title = "Support: ${extractBugTitle(originalQuery)}",
+                    description = "Вопрос пользователя:\n\n$originalQuery",
+                    suggestedList = "Inbox",
+                    suggestedLabels = listOf("support", "needs-triage")
                 )
             ))
         }
 
         return actions
+    }
+
+    /**
+     * Extract a short answer from AI response for FAQ
+     */
+    private fun extractShortAnswer(response: String): String {
+        // Take first 500 characters or first paragraph
+        val firstParagraph = response.split("\n\n").firstOrNull() ?: response
+        return if (firstParagraph.length > 500) {
+            firstParagraph.take(497) + "..."
+        } else {
+            firstParagraph
+        }
     }
 
     /**

@@ -218,6 +218,60 @@
     font-size: 11px;
 }
 
+.tech-support-panel .action-item .action-title {
+    font-weight: 500;
+    color: var(--text-primary, #1a1a2e);
+}
+
+/* Escalate action with priority */
+.tech-support-panel .action-item.escalate {
+    border-left: 3px solid #f59e0b;
+}
+
+.tech-support-panel .action-item.escalate.priority-urgent {
+    border-left-color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+}
+
+.tech-support-panel .action-item.escalate.priority-high {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.tech-support-panel .action-item.escalate.priority-normal {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.tech-support-panel .action-item.escalate.priority-low {
+    border-left-color: #6b7280;
+}
+
+/* Contact support action */
+.tech-support-panel .action-item.contact-support {
+    border-left: 3px solid #10b981;
+}
+
+/* Add to FAQ button */
+.tech-support-panel .action-btn.add-to-faq {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.tech-support-panel .action-btn.add-to-faq:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* View ticket action */
+.tech-support-panel .action-item.view-ticket {
+    border-left: 3px solid #667eea;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.tech-support-panel .action-item.view-ticket:hover {
+    background: rgba(102, 126, 234, 0.12);
+}
+
 /* Sources */
 .tech-support-panel .sources-list {
     font-size: 13px;

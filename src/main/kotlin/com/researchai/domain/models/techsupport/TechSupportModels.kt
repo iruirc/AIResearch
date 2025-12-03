@@ -111,6 +111,38 @@ data class ViewTicketAction(
 )
 
 /**
+ * Предложенное действие - эскалация на человека
+ */
+@Serializable
+data class EscalateAction(
+    val type: String = "ESCALATE",
+    val reason: String,
+    val priority: String = "normal", // low, normal, high, urgent
+    val suggestedTeam: String? = null
+)
+
+/**
+ * Предложенное действие - добавить в FAQ
+ */
+@Serializable
+data class AddToFaqAction(
+    val type: String = "ADD_TO_FAQ",
+    val question: String,
+    val suggestedAnswer: String,
+    val category: String? = null
+)
+
+/**
+ * Предложенное действие - связаться с поддержкой
+ */
+@Serializable
+data class ContactSupportAction(
+    val type: String = "CONTACT_SUPPORT",
+    val reason: String,
+    val suggestedChannel: String = "email" // email, chat, phone
+)
+
+/**
  * Ответ от техподдержки
  */
 @Serializable
@@ -131,7 +163,10 @@ data class TechSupportResponse(
 data class SuggestedActionWrapper(
     val actionType: String,
     val createTicket: CreateTicketAction? = null,
-    val viewTicket: ViewTicketAction? = null
+    val viewTicket: ViewTicketAction? = null,
+    val escalate: EscalateAction? = null,
+    val addToFaq: AddToFaqAction? = null,
+    val contactSupport: ContactSupportAction? = null
 )
 
 /**
