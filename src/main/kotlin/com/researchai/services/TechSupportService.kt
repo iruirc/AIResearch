@@ -1,0 +1,448 @@
+package com.researchai.services
+
+import com.researchai.data.mcp.MCPServerManager
+import com.researchai.domain.models.*
+import com.researchai.domain.models.techsupport.*
+import com.researchai.domain.provider.AIProviderFactory
+import com.researchai.domain.repository.ConfigRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.*
+import org.slf4j.LoggerFactory
+
+/**
+ * Service for handling tech support requests with RAG and Trello integration
+ */
+class TechSupportService(
+    private val mcpServerManager: MCPServerManager,
+    private val ragManager: RAGManager,
+    private val aiProviderFactory: AIProviderFactory,
+    private val configRepository: ConfigRepository,
+    private val assistantManager: AssistantManager,
+    private val preferencesManager: PreferencesManager,
+    private val config: TechSupportConfig = TechSupportConfig()
+) {
+    private val logger = LoggerFactory.getLogger(TechSupportService::class.java)
+
+    companion object {
+        const val TECH_SUPPORT_ASSISTANT_ID = "tech-support-assistant"
+    }
+
+    /**
+     * Process a tech support request
+     */
+    suspend fun processRequest(request: TechSupportRequest): Result<TechSupportResponse> {
+        val startTime = System.currentTimeMillis()
+
+        return runCatching {
+            logger.info("Processing tech support request: ${request.query.take(50)}...")
+
+            // 1. Classify the query type using AI
+            val queryType = classifyQuery(request.query)
+            logger.info("Query classified as: $queryType")
+
+            // 2. Gather context in parallel from RAG and Trello
+            val context = gatherContext(request, queryType)
+
+            // 3. Build enriched prompt with context
+            val enrichedPrompt = buildEnrichedPrompt(request.query, context)
+
+            // 4. Execute AI request
+            val aiResponse = executeAIRequest(enrichedPrompt, request)
+
+            // 5. Extract suggested actions
+            val suggestedActions = extractSuggestedActions(aiResponse, context, queryType)
+
+            TechSupportResponse(
+                answer = aiResponse,
+                sessionId = request.sessionId ?: "tech-support-${System.currentTimeMillis()}",
+                queryType = queryType,
+                sourcesUsed = SourcesUsed(
+                    ragSourceCount = context.ragContext?.sourceCount ?: 0,
+                    trelloTicketCount = context.ticketContext?.relatedTickets?.size ?: 0,
+                    ragSources = context.ragContext?.sources ?: emptyList(),
+                    trelloSources = context.ticketContext?.relatedTickets?.map { it.cardName } ?: emptyList()
+                ),
+                suggestedActions = suggestedActions,
+                relatedTickets = context.ticketContext?.relatedTickets ?: emptyList(),
+                processingTimeMs = System.currentTimeMillis() - startTime
+            )
+        }.onFailure { error ->
+            logger.error("Tech support request failed", error)
+        }
+    }
+
+    /**
+     * Classify query type using AI
+     */
+    private suspend fun classifyQuery(query: String): QueryType {
+        val classificationPrompt = """
+Classify this user query into one of these categories:
+- BUG_REPORT: User is reporting a bug, error, or something not working
+- HOW_TO: User is asking how to do something
+- STATUS_CHECK: User is asking about status of a ticket or issue
+- FEATURE_REQUEST: User is requesting a new feature
+- GENERAL: General question that doesn't fit above
+
+Query: "$query"
+
+Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
+        """.trim()
+
+        return try {
+            val preferences = preferencesManager.getPreferences()
+            val providerId = ProviderType.valueOf(preferences.providerId.uppercase())
+            val providerConfig = configRepository.getProviderConfig(providerId)
+                .getOrNull() ?: throw IllegalStateException("Provider $providerId not configured")
+            val provider = aiProviderFactory.create(providerId, providerConfig)
+
+            val aiRequest = AIRequest(
+                messages = listOf(Message(MessageRole.USER, MessageContent.Text(classificationPrompt))),
+                model = preferences.model,
+                parameters = RequestParameters(temperature = 0.0, maxTokens = 50)
+            )
+
+            val response = provider.sendMessage(aiRequest).getOrThrow()
+            val classification = response.content.trim().uppercase()
+
+            QueryType.entries.find { it.name == classification } ?: QueryType.GENERAL
+        } catch (e: Exception) {
+            logger.warn("Failed to classify query, defaulting to GENERAL", e)
+            QueryType.GENERAL
+        }
+    }
+
+    /**
+     * Gather context from RAG and Trello in parallel
+     */
+    private suspend fun gatherContext(
+        request: TechSupportRequest,
+        queryType: QueryType
+    ): TechSupportContext = coroutineScope {
+        val startTime = System.currentTimeMillis()
+
+        val ragDeferred = if (request.includeRag) {
+            async { fetchRagContext(request.query, request.maxRagResults) }
+        } else null
+
+        val trelloDeferred = if (request.includeTrello) {
+            async { fetchTrelloContext(request.query, request.trelloBoardId, request.maxTrelloResults) }
+        } else null
+
+        TechSupportContext(
+            ragContext = ragDeferred?.await(),
+            ticketContext = trelloDeferred?.await(),
+            queryType = queryType,
+            processingTimeMs = System.currentTimeMillis() - startTime
+        )
+    }
+
+    /**
+     * Fetch context from RAG knowledge base
+     */
+    private suspend fun fetchRagContext(query: String, maxResults: Int): RagContextResult? {
+        return try {
+            val results = ragManager.searchRelevantContext(
+                query = query,
+                topK = maxResults,
+                minScore = config.ragMinScore
+            )
+
+            if (results.isEmpty()) {
+                logger.info("No RAG results found for query")
+                null
+            } else {
+                logger.info("Found ${results.size} RAG results")
+                RagContextResult(
+                    formattedContext = formatRagResults(results),
+                    sourceCount = results.size,
+                    sources = results.map { it.documentName }.distinct()
+                )
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to fetch RAG context", e)
+            null
+        }
+    }
+
+    /**
+     * Fetch related tickets from Trello via MCP
+     */
+    private suspend fun fetchTrelloContext(
+        query: String,
+        boardId: String?,
+        maxResults: Int
+    ): TicketContextResult? {
+        return try {
+            val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
+            if (trelloClient == null) {
+                logger.warn("Trello MCP server not connected")
+                return null
+            }
+
+            // Search for cards
+            val searchResult = trelloClient.callTool(
+                name = "search_cards",
+                arguments = buildJsonObject {
+                    put("query", query)
+                    boardId?.let { put("board_id", it) }
+                    put("limit", maxResults)
+                }
+            )
+
+            if (!searchResult.success) {
+                logger.warn("Trello search failed: ${searchResult.error}")
+                return null
+            }
+
+            val tickets = parseTicketsFromMCP(searchResult)
+
+            if (tickets.isEmpty()) {
+                logger.info("No related tickets found")
+                null
+            } else {
+                logger.info("Found ${tickets.size} related tickets")
+                TicketContextResult(
+                    relatedTickets = tickets,
+                    formattedContext = formatTicketResults(tickets)
+                )
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to fetch Trello context", e)
+            null
+        }
+    }
+
+    /**
+     * Parse tickets from MCP result
+     */
+    private fun parseTicketsFromMCP(result: com.researchai.domain.models.mcp.MCPToolCallResult): List<TrelloTicketInfo> {
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val cards = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("cards") -> json["cards"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            cards.mapNotNull { cardJson ->
+                try {
+                    val card = cardJson.jsonObject
+                    TrelloTicketInfo(
+                        cardId = card["id"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                        cardName = card["name"]?.jsonPrimitive?.content ?: "Untitled",
+                        listName = card["list"]?.jsonObject?.get("name")?.jsonPrimitive?.content
+                            ?: card["idList"]?.jsonPrimitive?.content ?: "Unknown",
+                        description = card["desc"]?.jsonPrimitive?.contentOrNull,
+                        labels = card["labels"]?.jsonArray?.mapNotNull {
+                            it.jsonObject["name"]?.jsonPrimitive?.contentOrNull
+                        } ?: emptyList(),
+                        lastActivity = card["dateLastActivity"]?.jsonPrimitive?.contentOrNull,
+                        url = card["url"]?.jsonPrimitive?.contentOrNull
+                            ?: card["shortUrl"]?.jsonPrimitive?.contentOrNull
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse card: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse MCP response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Format RAG results for the prompt
+     */
+    private fun formatRagResults(results: List<SearchResult>): String {
+        return buildString {
+            appendLine("=== DOCUMENTATION CONTEXT ===")
+            results.forEachIndexed { idx, result ->
+                appendLine("\n[Source ${idx + 1}: ${result.documentName}]")
+                result.sourceFileName?.let { appendLine("File: $it") }
+                appendLine(result.text.trim())
+            }
+        }
+    }
+
+    /**
+     * Format tickets for the prompt
+     */
+    private fun formatTicketResults(tickets: List<TrelloTicketInfo>): String {
+        return buildString {
+            appendLine("=== RELATED TICKETS ===")
+            tickets.forEachIndexed { idx, ticket ->
+                appendLine("\n[Ticket ${idx + 1}: ${ticket.cardName}]")
+                appendLine("Status: ${ticket.listName}")
+                appendLine("Labels: ${ticket.labels.joinToString(", ").ifEmpty { "None" }}")
+                ticket.description?.take(300)?.let { appendLine("Description: $it") }
+                ticket.lastActivity?.let { appendLine("Last Activity: $it") }
+                ticket.url?.let { appendLine("URL: $it") }
+            }
+        }
+    }
+
+    /**
+     * Build enriched prompt with context
+     */
+    private fun buildEnrichedPrompt(query: String, context: TechSupportContext): String {
+        return buildString {
+            appendLine("# User Query")
+            appendLine(query)
+            appendLine()
+            appendLine("# Query Type: ${context.queryType}")
+            appendLine()
+
+            context.ragContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            context.ticketContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            if (context.ragContext == null && context.ticketContext == null) {
+                appendLine("# Note: No additional context available")
+                appendLine()
+            }
+
+            appendLine("# Instructions")
+            appendLine("Please provide a helpful response based on the context above.")
+            appendLine("If the issue cannot be resolved, suggest creating a support ticket.")
+        }
+    }
+
+    /**
+     * Execute AI request with tech support assistant
+     */
+    private suspend fun executeAIRequest(prompt: String, request: TechSupportRequest): String {
+        val preferences = preferencesManager.getPreferences()
+        val providerId = request.providerId
+        val providerConfig = configRepository.getProviderConfig(providerId)
+            .getOrNull() ?: throw IllegalStateException("Provider $providerId not configured")
+        val provider = aiProviderFactory.create(providerId, providerConfig)
+
+        val assistant = assistantManager.getAssistant(TECH_SUPPORT_ASSISTANT_ID)
+        val systemPrompt = assistant?.systemPrompt
+
+        val aiRequest = AIRequest(
+            messages = listOf(Message(MessageRole.USER, MessageContent.Text(prompt))),
+            model = request.model ?: preferences.model,
+            systemPrompt = systemPrompt,
+            parameters = RequestParameters(
+                temperature = preferences.temperature,
+                maxTokens = preferences.maxTokens
+            )
+        )
+
+        return provider.sendMessage(aiRequest).getOrThrow().content
+    }
+
+    /**
+     * Extract suggested actions from response and context
+     */
+    private fun extractSuggestedActions(
+        response: String,
+        context: TechSupportContext,
+        queryType: QueryType
+    ): List<SuggestedActionWrapper> {
+        val actions = mutableListOf<SuggestedActionWrapper>()
+
+        // Suggest creating ticket for bug reports without similar tickets
+        if (queryType == QueryType.BUG_REPORT &&
+            (context.ticketContext?.relatedTickets?.isEmpty() != false)) {
+            actions.add(SuggestedActionWrapper(
+                actionType = "CREATE_TICKET",
+                createTicket = CreateTicketAction(
+                    title = "Bug Report: ${extractBugTitle(response)}",
+                    description = "User reported an issue that may need investigation.",
+                    suggestedList = "Inbox",
+                    suggestedLabels = listOf("bug", "needs-triage")
+                )
+            ))
+        }
+
+        // Add links to related tickets
+        context.ticketContext?.relatedTickets?.take(2)?.forEach { ticket ->
+            actions.add(SuggestedActionWrapper(
+                actionType = "VIEW_TICKET",
+                viewTicket = ViewTicketAction(
+                    cardId = ticket.cardId,
+                    cardName = ticket.cardName,
+                    reason = "Similar issue found in tickets"
+                )
+            ))
+        }
+
+        return actions
+    }
+
+    /**
+     * Extract a short bug title from the response
+     */
+    private fun extractBugTitle(response: String): String {
+        // Try to find a summary or use first sentence
+        val firstSentence = response.split(Regex("[.!?]")).firstOrNull()?.trim() ?: "Issue"
+        return if (firstSentence.length > 50) {
+            firstSentence.take(47) + "..."
+        } else {
+            firstSentence
+        }
+    }
+
+    /**
+     * Create a ticket in Trello
+     */
+    suspend fun createTicket(request: CreateTicketRequest): Result<CreateTicketResponse> {
+        return runCatching {
+            val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
+                ?: throw IllegalStateException("Trello MCP server not connected")
+
+            val boardId = request.boardId ?: config.defaultBoardId
+                ?: throw IllegalArgumentException("Board ID is required. Set TRELLO_SUPPORT_BOARD_ID env variable or provide boardId.")
+
+            logger.info("Creating ticket: ${request.title} on board: $boardId")
+
+            val result = trelloClient.callTool(
+                name = "create_card",
+                arguments = buildJsonObject {
+                    put("board_id", boardId)
+                    put("list_name", request.listName)
+                    put("name", request.title)
+                    put("description", request.description)
+                    if (request.labels.isNotEmpty()) {
+                        put("labels", JsonArray(request.labels.map { JsonPrimitive(it) }))
+                    }
+                }
+            )
+
+            if (!result.success) {
+                throw RuntimeException("Failed to create card: ${result.error}")
+            }
+
+            val content = result.content.firstOrNull()?.text ?: "{}"
+            val json = Json.parseToJsonElement(content).jsonObject
+
+            CreateTicketResponse(
+                success = true,
+                cardId = json["id"]?.jsonPrimitive?.content,
+                cardUrl = json["url"]?.jsonPrimitive?.content
+                    ?: json["shortUrl"]?.jsonPrimitive?.content
+            )
+        }.onFailure { error ->
+            logger.error("Failed to create ticket", error)
+        }
+    }
+
+    /**
+     * Check if Trello is connected
+     */
+    fun isTrelloConnected(): Boolean {
+        return mcpServerManager.getClient(config.trelloMcpServerId) != null
+    }
+}

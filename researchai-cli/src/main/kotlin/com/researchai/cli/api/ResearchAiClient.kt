@@ -264,6 +264,30 @@ class ResearchAiClient(private val baseUrl: String) {
         return response.status.isSuccess()
     }
 
+    // ==================== Tech Support API ====================
+
+    /**
+     * Send a tech support query
+     */
+    suspend fun techSupport(request: TechSupportRequest): TechSupportResponse {
+        val response = client.post("$baseUrl/api/v2/tech-support") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            val errorMessage = try {
+                json.decodeFromString<ErrorResponse>(errorBody).error
+            } catch (e: Exception) {
+                errorBody
+            }
+            throw RuntimeException("Tech support request failed: $errorMessage")
+        }
+
+        return response.body()
+    }
+
     // ==================== MCP API ====================
 
     /**
@@ -508,4 +532,86 @@ data class ReviewMetadata(
     val tokensUsed: Int,
     val model: String,
     val provider: String
+)
+
+// ==================== Tech Support API Models ====================
+
+@Serializable
+data class TechSupportRequest(
+    val query: String,
+    val sessionId: String? = null,
+    val customerId: String? = null,
+    val trelloBoardId: String? = null,
+    val includeRag: Boolean = true,
+    val includeTrello: Boolean = true,
+    val maxRagResults: Int = 5,
+    val maxTrelloResults: Int = 3,
+    val providerId: String = "CLAUDE",
+    val model: String? = null
+)
+
+@Serializable
+data class TechSupportResponse(
+    val answer: String,
+    val sessionId: String,
+    val queryType: String,
+    val sourcesUsed: SourcesUsed,
+    val suggestedActions: List<SuggestedAction> = emptyList(),
+    val relatedTickets: List<TrelloTicketInfo> = emptyList(),
+    val processingTimeMs: Long
+)
+
+@Serializable
+data class SourcesUsed(
+    val ragSourceCount: Int = 0,
+    val trelloTicketCount: Int = 0,
+    val ragSources: List<String> = emptyList(),
+    val trelloSources: List<String> = emptyList()
+)
+
+@Serializable
+data class SuggestedAction(
+    val actionType: String,
+    val createTicket: CreateTicketAction? = null,
+    val viewTicket: ViewTicketAction? = null
+)
+
+@Serializable
+data class CreateTicketAction(
+    val title: String,
+    val description: String,
+    val suggestedLabels: List<String> = emptyList()
+)
+
+@Serializable
+data class ViewTicketAction(
+    val cardId: String,
+    val cardName: String,
+    val reason: String
+)
+
+@Serializable
+data class TrelloTicketInfo(
+    val cardId: String,
+    val cardName: String,
+    val listName: String,
+    val url: String? = null,
+    val labels: List<String> = emptyList()
+)
+
+@Serializable
+data class CreateTicketRequest(
+    val title: String,
+    val description: String,
+    val listName: String = "Inbox",
+    val labels: List<String> = emptyList(),
+    val boardId: String? = null
+)
+
+@Serializable
+data class CreateTicketResponse(
+    val success: Boolean,
+    val cardId: String? = null,
+    val cardUrl: String? = null,
+    val error: String? = null
 )

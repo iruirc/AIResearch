@@ -11,6 +11,7 @@ import com.researchai.routes.ollamaRoutes
 import com.researchai.routes.pipelineRoutes
 import com.researchai.routes.prReviewRoutes
 import com.researchai.routes.providerRoutes
+import com.researchai.routes.techSupportRoutes
 import com.researchai.routes.ragRoutes
 import com.researchai.routes.ragTestRoutes
 import com.researchai.routes.schedulerRoutes
@@ -78,6 +79,9 @@ fun Application.configureRouting(
 
         // API роуты для PR review
         prReviewRoutes(appModule.prReviewService)
+
+        // API роуты для техподдержки
+        techSupportRoutes(appModule.techSupportService)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

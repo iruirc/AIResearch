@@ -152,6 +152,27 @@ class AppModule(
         )
     }
 
+    // Tech Support Service
+    val techSupportConfig: com.researchai.domain.models.techsupport.TechSupportConfig by lazy {
+        com.researchai.domain.models.techsupport.TechSupportConfig(
+            ragMinScore = 0.5f,
+            defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID"),
+            trelloMcpServerId = "trello"
+        )
+    }
+
+    val techSupportService: com.researchai.services.TechSupportService by lazy {
+        com.researchai.services.TechSupportService(
+            mcpServerManager = mcpServerManager,
+            ragManager = ragManager,
+            aiProviderFactory = providerFactory,
+            configRepository = configRepository,
+            assistantManager = assistantManager,
+            preferencesManager = preferencesManager,
+            config = techSupportConfig
+        )
+    }
+
     // Ollama Connection Manager
     val ollamaConnectionManager: OllamaConnectionManager by lazy {
         val tokenCounter = JTokkitTokenCounter.forModel("llama3.2")

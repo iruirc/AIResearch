@@ -1,0 +1,167 @@
+package com.researchai.domain.models.techsupport
+
+import com.researchai.domain.models.ProviderType
+import kotlinx.serialization.Serializable
+
+/**
+ * Тип запроса в техподдержку (определяется AI)
+ */
+@Serializable
+enum class QueryType {
+    BUG_REPORT,       // Сообщение об ошибке
+    HOW_TO,           // Вопрос "как сделать"
+    STATUS_CHECK,     // Проверка статуса тикета
+    FEATURE_REQUEST,  // Запрос на новую фичу
+    GENERAL           // Общий вопрос
+}
+
+/**
+ * Запрос в техподдержку
+ */
+@Serializable
+data class TechSupportRequest(
+    val query: String,
+    val sessionId: String? = null,
+    val customerId: String? = null,
+    val trelloBoardId: String? = null,
+    val includeRag: Boolean = true,
+    val includeTrello: Boolean = true,
+    val maxRagResults: Int = 5,
+    val maxTrelloResults: Int = 3,
+    val providerId: ProviderType = ProviderType.CLAUDE,
+    val model: String? = null
+)
+
+/**
+ * Информация о тикете Trello
+ */
+@Serializable
+data class TrelloTicketInfo(
+    val cardId: String,
+    val cardName: String,
+    val listName: String,
+    val description: String?,
+    val labels: List<String>,
+    val lastActivity: String?,
+    val url: String?
+)
+
+/**
+ * Результат поиска контекста из RAG
+ */
+@Serializable
+data class RagContextResult(
+    val formattedContext: String,
+    val sourceCount: Int,
+    val sources: List<String>
+)
+
+/**
+ * Результат поиска тикетов из Trello
+ */
+@Serializable
+data class TicketContextResult(
+    val relatedTickets: List<TrelloTicketInfo>,
+    val formattedContext: String
+)
+
+/**
+ * Объединённый контекст
+ */
+@Serializable
+data class TechSupportContext(
+    val ragContext: RagContextResult?,
+    val ticketContext: TicketContextResult?,
+    val queryType: QueryType,
+    val processingTimeMs: Long
+)
+
+/**
+ * Использованные источники
+ */
+@Serializable
+data class SourcesUsed(
+    val ragSourceCount: Int,
+    val trelloTicketCount: Int,
+    val ragSources: List<String>,
+    val trelloSources: List<String>
+)
+
+/**
+ * Предложенное действие - создать тикет
+ */
+@Serializable
+data class CreateTicketAction(
+    val type: String = "CREATE_TICKET",
+    val title: String,
+    val description: String,
+    val suggestedList: String = "Inbox",
+    val suggestedLabels: List<String> = emptyList()
+)
+
+/**
+ * Предложенное действие - посмотреть тикет
+ */
+@Serializable
+data class ViewTicketAction(
+    val type: String = "VIEW_TICKET",
+    val cardId: String,
+    val cardName: String,
+    val reason: String
+)
+
+/**
+ * Ответ от техподдержки
+ */
+@Serializable
+data class TechSupportResponse(
+    val answer: String,
+    val sessionId: String,
+    val queryType: QueryType,
+    val sourcesUsed: SourcesUsed,
+    val suggestedActions: List<SuggestedActionWrapper>,
+    val relatedTickets: List<TrelloTicketInfo>,
+    val processingTimeMs: Long
+)
+
+/**
+ * Wrapper для suggested actions (для JSON сериализации)
+ */
+@Serializable
+data class SuggestedActionWrapper(
+    val actionType: String,
+    val createTicket: CreateTicketAction? = null,
+    val viewTicket: ViewTicketAction? = null
+)
+
+/**
+ * Запрос на создание тикета
+ */
+@Serializable
+data class CreateTicketRequest(
+    val title: String,
+    val description: String,
+    val listName: String = "Inbox",
+    val labels: List<String> = emptyList(),
+    val boardId: String? = null
+)
+
+/**
+ * Результат создания тикета
+ */
+@Serializable
+data class CreateTicketResponse(
+    val success: Boolean,
+    val cardId: String?,
+    val cardUrl: String?,
+    val error: String? = null
+)
+
+/**
+ * Конфигурация TechSupportService
+ */
+data class TechSupportConfig(
+    val ragMinScore: Float = 0.5f,
+    val defaultBoardId: String? = null,
+    val trelloMcpServerId: String = "trello"
+)

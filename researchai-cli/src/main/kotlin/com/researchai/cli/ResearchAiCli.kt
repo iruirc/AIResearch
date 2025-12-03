@@ -7,6 +7,7 @@ import com.researchai.cli.commands.ChatCommand
 import com.researchai.cli.commands.GitCommand
 import com.researchai.cli.commands.InitCommand
 import com.researchai.cli.commands.ReviewCommand
+import com.researchai.cli.commands.SupportCommand
 
 class ResearchAiCli : CliktCommand(
     name = "rai",
@@ -21,6 +22,7 @@ fun main(args: Array<String>) = ResearchAiCli()
         InitCommand(),
         AskCommand(),
         GitCommand(),
-        ReviewCommand()
+        ReviewCommand(),
+        SupportCommand()
     )
     .main(args)
