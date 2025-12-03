@@ -68,8 +68,9 @@ export class TechSupportMode {
 
     /**
      * Toggle tech support mode
+     * Creates a new Tech Support session when enabling
      */
-    toggle() {
+    async toggle() {
         this.isEnabled = !this.isEnabled;
 
         const button = document.getElementById('techSupportButton');
@@ -80,6 +81,18 @@ export class TechSupportMode {
         document.body.classList.toggle('tech-support-mode', this.isEnabled);
 
         if (this.isEnabled) {
+            // Create a new Tech Support session
+            try {
+                const result = await techSupportApi.createSession();
+                console.log('Created Tech Support session:', result.sessionId);
+
+                // Dispatch event for main.js to switch to this session
+                window.dispatchEvent(new CustomEvent('techSupportSessionCreated', {
+                    detail: { sessionId: result.sessionId }
+                }));
+            } catch (error) {
+                console.error('Failed to create Tech Support session:', error);
+            }
             this.show();
         } else {
             this.hide();

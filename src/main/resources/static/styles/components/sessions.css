@@ -75,6 +75,11 @@
     opacity: 0.8;
 }
 
+.session-icon-tech-support {
+    color: #10b981;
+    opacity: 0.8;
+}
+
 .session-item:hover .session-icon {
     opacity: 1;
 }

@@ -14,7 +14,8 @@ data class SessionListItem(
     val lastAccessedAt: Long,
     val assistantId: String? = null,
     val scheduledTaskId: String? = null,
-    val pipelineId: String? = null
+    val pipelineId: String? = null,
+    val isTechSupport: Boolean = false
 )
 
 /**

@@ -11,7 +11,7 @@ let categoryCount = null;
 let categoryIcon = null;
 
 // Current filter state
-let currentFilter = 'all'; // 'all', 'simple', 'agents', 'tasks', 'pipelines'
+let currentFilter = 'all'; // 'all', 'simple', 'agents', 'tasks', 'pipelines', 'tech-support'
 
 // Category labels mapping
 const categoryLabels = {
@@ -19,7 +19,8 @@ const categoryLabels = {
     'simple': 'Простые',
     'agents': 'Ассистенты',
     'tasks': 'Задачи',
-    'pipelines': 'Пайплайны'
+    'pipelines': 'Пайплайны',
+    'tech-support': 'Tech Support'
 };
 
 // Category icons SVG mapping
@@ -28,7 +29,8 @@ const categoryIcons = {
     'simple': `<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
     'agents': `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
     'tasks': `<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
-    'pipelines': `<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
+    'pipelines': `<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'tech-support': `<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`
 };
 
 /**
@@ -220,6 +222,7 @@ export const sessionsUI = {
         sessionItem.dataset.assistantId = session.assistantId || 'null';
         sessionItem.dataset.scheduledTaskId = session.scheduledTaskId || 'null';
         sessionItem.dataset.pipelineId = session.pipelineId || 'null';
+        sessionItem.dataset.isTechSupport = session.isTechSupport ? 'true' : 'false';
 
         if (session.id === currentSessionId) {
             sessionItem.classList.add('active');
@@ -230,10 +233,18 @@ export const sessionsUI = {
         const isScheduledTask = session.scheduledTaskId && session.scheduledTaskId !== 'null';
         const isAssistantChat = session.assistantId && session.assistantId !== 'null';
         const isPipelineChat = session.pipelineId && session.pipelineId !== 'null';
+        const isTechSupport = session.isTechSupport === true;
 
         // Choose icon based on chat type
         let chatIcon;
-        if (isScheduledTask) {
+        if (isTechSupport) {
+            // Tech Support icon (question mark in circle)
+            chatIcon = `<svg class="session-icon session-icon-tech-support" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>`;
+        } else if (isScheduledTask) {
             // Task icon (calendar)
             chatIcon = `<svg class="session-icon session-icon-task" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -365,16 +376,19 @@ export const sessionsUI = {
                     categorySessionCount = sessions.length;
                     break;
                 case 'simple':
-                    categorySessionCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId).length;
+                    categorySessionCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId && !s.isTechSupport).length;
                     break;
                 case 'agents':
-                    categorySessionCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId).length;
+                    categorySessionCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId && !s.isTechSupport).length;
                     break;
                 case 'tasks':
-                    categorySessionCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId).length;
+                    categorySessionCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId && !s.isTechSupport).length;
                     break;
                 case 'pipelines':
-                    categorySessionCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId).length;
+                    categorySessionCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId && !s.isTechSupport).length;
+                    break;
+                case 'tech-support':
+                    categorySessionCount = sessions.filter(s => s.isTechSupport === true).length;
                     break;
             }
         }
@@ -390,6 +404,7 @@ export const sessionsUI = {
             const assistantId = item.dataset.assistantId;
             const scheduledTaskId = item.dataset.scheduledTaskId;
             const pipelineId = item.dataset.pipelineId;
+            const isTechSupport = item.dataset.isTechSupport === 'true';
             let shouldShow = false;
 
             switch (category) {
@@ -399,22 +414,29 @@ export const sessionsUI = {
                 case 'simple':
                     shouldShow = (!assistantId || assistantId === 'null') &&
                                  (!scheduledTaskId || scheduledTaskId === 'null') &&
-                                 (!pipelineId || pipelineId === 'null');
+                                 (!pipelineId || pipelineId === 'null') &&
+                                 !isTechSupport;
                     break;
                 case 'agents':
                     shouldShow = assistantId && assistantId !== 'null' &&
                                  (!pipelineId || pipelineId === 'null') &&
-                                 (!scheduledTaskId || scheduledTaskId === 'null');
+                                 (!scheduledTaskId || scheduledTaskId === 'null') &&
+                                 !isTechSupport;
                     break;
                 case 'tasks':
                     shouldShow = scheduledTaskId && scheduledTaskId !== 'null' &&
                                  (!pipelineId || pipelineId === 'null') &&
-                                 (!assistantId || assistantId === 'null');
+                                 (!assistantId || assistantId === 'null') &&
+                                 !isTechSupport;
                     break;
                 case 'pipelines':
                     shouldShow = pipelineId && pipelineId !== 'null' &&
                                  (!assistantId || assistantId === 'null') &&
-                                 (!scheduledTaskId || scheduledTaskId === 'null');
+                                 (!scheduledTaskId || scheduledTaskId === 'null') &&
+                                 !isTechSupport;
+                    break;
+                case 'tech-support':
+                    shouldShow = isTechSupport;
                     break;
             }
 
@@ -434,10 +456,11 @@ export const sessionsUI = {
         if (!sessions) return;
 
         const allCount = sessions.length;
-        const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId).length;
-        const assistantsCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId).length;
-        const tasksCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId).length;
-        const pipelinesCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId).length;
+        const simpleCount = sessions.filter(s => !s.assistantId && !s.scheduledTaskId && !s.pipelineId && !s.isTechSupport).length;
+        const assistantsCount = sessions.filter(s => s.assistantId && !s.pipelineId && !s.scheduledTaskId && !s.isTechSupport).length;
+        const tasksCount = sessions.filter(s => s.scheduledTaskId && !s.pipelineId && !s.assistantId && !s.isTechSupport).length;
+        const pipelinesCount = sessions.filter(s => s.pipelineId && !s.assistantId && !s.scheduledTaskId && !s.isTechSupport).length;
+        const techSupportCount = sessions.filter(s => s.isTechSupport === true).length;
 
         // Update counts in dropdown menu items
         const allCountEl = document.getElementById('allCount');
@@ -445,12 +468,14 @@ export const sessionsUI = {
         const assistantsCountEl = document.getElementById('assistantsCount');
         const tasksCountEl = document.getElementById('tasksCount');
         const pipelinesCountEl = document.getElementById('pipelinesCount');
+        const techSupportCountEl = document.getElementById('techSupportCount');
 
         if (allCountEl) allCountEl.textContent = allCount;
         if (simpleCountEl) simpleCountEl.textContent = simpleCount;
         if (assistantsCountEl) assistantsCountEl.textContent = assistantsCount;
         if (tasksCountEl) tasksCountEl.textContent = tasksCount;
         if (pipelinesCountEl) pipelinesCountEl.textContent = pipelinesCount;
+        if (techSupportCountEl) techSupportCountEl.textContent = techSupportCount;
 
         // Also update the dropdown button count for current category
         const counts = {
@@ -458,7 +483,8 @@ export const sessionsUI = {
             'simple': simpleCount,
             'agents': assistantsCount,
             'tasks': tasksCount,
-            'pipelines': pipelinesCount
+            'pipelines': pipelinesCount,
+            'tech-support': techSupportCount
         };
         updateDropdownButton(currentFilter, counts[currentFilter] || 0);
     },
@@ -504,6 +530,8 @@ export const sessionsUI = {
                 return 'Нет запланированных задач';
             case 'pipelines':
                 return 'Нет пайплайнов';
+            case 'tech-support':
+                return 'Нет чатов Tech Support';
             default:
                 return 'Нет активных чатов';
         }

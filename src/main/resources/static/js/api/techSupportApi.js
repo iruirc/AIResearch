@@ -3,6 +3,43 @@
  */
 export const techSupportApi = {
     /**
+     * Create a new Tech Support session
+     * @returns {Promise<object>} { sessionId: string }
+     */
+    async createSession() {
+        const response = await fetch('/api/v2/tech-support/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.error || `Request failed: ${response.status}`);
+        }
+
+        return response.json();
+    },
+
+    /**
+     * Mark existing session as Tech Support
+     * @param {string} sessionId - Session ID to mark
+     * @returns {Promise<object>} { success: boolean, sessionId: string }
+     */
+    async markSessionAsTechSupport(sessionId) {
+        const response = await fetch(`/api/v2/tech-support/sessions/${sessionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.error || `Request failed: ${response.status}`);
+        }
+
+        return response.json();
+    },
+
+    /**
      * Send a tech support query
      * @param {string} query - The user's question
      * @param {object} options - Optional parameters

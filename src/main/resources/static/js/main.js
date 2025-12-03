@@ -144,6 +144,16 @@ function setupEventListeners() {
     document.getElementById('mcpServersButton').addEventListener('click', handleOpenMcpServersModal);
     document.getElementById('techSupportButton').addEventListener('click', () => techSupportMode.toggle());
 
+    // Tech Support session created event
+    window.addEventListener('techSupportSessionCreated', async (event) => {
+        const { sessionId } = event.detail;
+        console.log('Tech Support session created, switching to:', sessionId);
+
+        // Reload sessions list and switch to the new session
+        await sessionService.loadSessions();
+        await sessionService.switchSession(sessionId);
+    });
+
     // Close modal buttons
     document.getElementById('closeModal').addEventListener('click', () => modalsUI.closeModal('assistantModal'));
     document.getElementById('closeLlmModelModal').addEventListener('click', () => modalsUI.closeModal('llmModelModal'));

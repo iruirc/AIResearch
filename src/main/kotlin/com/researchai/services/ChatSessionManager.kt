@@ -40,13 +40,20 @@ class ChatSessionManager(
      * @param assistantId ID ассистента (опционально)
      * @param scheduledTaskId ID задачи планировщика (опционально)
      * @param pipelineId ID пайплайна (опционально)
+     * @param isTechSupport флаг Tech Support сессии (опционально)
      * @return ID новой сессии
      */
-    fun createSession(assistantId: String? = null, scheduledTaskId: String? = null, pipelineId: String? = null): String {
+    fun createSession(
+        assistantId: String? = null,
+        scheduledTaskId: String? = null,
+        pipelineId: String? = null,
+        isTechSupport: Boolean = false
+    ): String {
         val session = ChatSession(
             assistantId = assistantId,
             scheduledTaskId = scheduledTaskId,
-            pipelineId = pipelineId
+            pipelineId = pipelineId,
+            isTechSupport = isTechSupport
         )
         sessions[session.id] = session
 
@@ -54,6 +61,7 @@ class ChatSessionManager(
         persistenceManager?.markDirty(session)
 
         when {
+            isTechSupport -> logger.info("Created new Tech Support session: ${session.id}")
             assistantId != null -> logger.info("Created new session with assistant: ${session.id}, assistantId=$assistantId")
             scheduledTaskId != null -> logger.info("Created new session with scheduled task: ${session.id}, scheduledTaskId=$scheduledTaskId")
             pipelineId != null -> logger.info("Created new session with pipeline: ${session.id}, pipelineId=$pipelineId")
@@ -139,6 +147,25 @@ class ChatSessionManager(
             session.assistantId = assistantId
             persistenceManager?.markDirty(session)
             logger.info("Updated assistantId for session $sessionId: $assistantId")
+            true
+        } else {
+            logger.warn("Session not found: $sessionId")
+            false
+        }
+    }
+
+    /**
+     * Обновляет флаг Tech Support для сессии
+     * @param sessionId ID сессии
+     * @param isTechSupport флаг Tech Support
+     * @return true если обновлено, false если сессия не найдена
+     */
+    fun updateSessionTechSupport(sessionId: String, isTechSupport: Boolean): Boolean {
+        val session = sessions[sessionId]
+        return if (session != null) {
+            session.isTechSupport = isTechSupport
+            persistenceManager?.markDirty(session)
+            logger.info("Updated isTechSupport for session $sessionId: $isTechSupport")
             true
         } else {
             logger.warn("Session not found: $sessionId")
@@ -283,7 +310,8 @@ class ChatSessionManager(
                 lastAccessedAt = session.lastAccessedAt,
                 assistantId = session.assistantId,
                 scheduledTaskId = session.scheduledTaskId,
-                pipelineId = session.pipelineId
+                pipelineId = session.pipelineId,
+                isTechSupport = session.isTechSupport
             )
         }
     }
@@ -309,5 +337,6 @@ data class SessionInfo(
     val lastAccessedAt: Long,
     val assistantId: String? = null,
     val scheduledTaskId: String? = null,
-    val pipelineId: String? = null
+    val pipelineId: String? = null,
+    val isTechSupport: Boolean = false
 )

@@ -49,6 +49,7 @@ class JsonPersistenceStorage(
                 assistantId = session.assistantId,
                 scheduledTaskId = session.scheduledTaskId,
                 pipelineId = session.pipelineId,
+                isTechSupport = session.isTechSupport,
                 archivedMessages = session.archivedMessages,
                 compressionConfig = session.compressionConfig,
                 compressionCount = session.compressionCount
@@ -85,6 +86,7 @@ class JsonPersistenceStorage(
                 assistantId = sessionData.assistantId,
                 scheduledTaskId = sessionData.scheduledTaskId,
                 pipelineId = sessionData.pipelineId,
+                isTechSupport = sessionData.isTechSupport,
                 compressionConfig = sessionData.compressionConfig,
                 compressionCount = sessionData.compressionCount
             )
@@ -125,6 +127,7 @@ class JsonPersistenceStorage(
                         assistantId = sessionData.assistantId,
                         scheduledTaskId = sessionData.scheduledTaskId,
                         pipelineId = sessionData.pipelineId,
+                        isTechSupport = sessionData.isTechSupport,
                         compressionConfig = sessionData.compressionConfig,
                         compressionCount = sessionData.compressionCount
                     )
@@ -193,6 +196,7 @@ private data class SessionData(
     val assistantId: String? = null,
     val scheduledTaskId: String? = null,
     val pipelineId: String? = null,
+    val isTechSupport: Boolean = false,
     val archivedMessages: List<Message> = emptyList(),
     val compressionConfig: CompressionConfig = CompressionConfig(),
     val compressionCount: Int = 0

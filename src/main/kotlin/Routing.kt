@@ -81,7 +81,7 @@ fun Application.configureRouting(
         prReviewRoutes(appModule.prReviewService)
 
         // API роуты для техподдержки
-        techSupportRoutes(appModule.techSupportService)
+        techSupportRoutes(appModule.techSupportService, appModule.chatSessionManager)
 
         // Статические файлы (HTML, CSS, JS)
         staticResources("/", "static") {

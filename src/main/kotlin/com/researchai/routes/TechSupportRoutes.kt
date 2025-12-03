@@ -1,6 +1,7 @@
 package com.researchai.routes
 
 import com.researchai.domain.models.techsupport.*
+import com.researchai.services.ChatSessionManager
 import com.researchai.services.TechSupportService
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -11,8 +12,51 @@ import io.ktor.server.routing.*
 /**
  * Tech Support API routes
  */
-fun Route.techSupportRoutes(techSupportService: TechSupportService) {
+fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionManager: ChatSessionManager) {
     route("/api/v2/tech-support") {
+
+        /**
+         * POST /api/v2/tech-support/sessions
+         * Create a new Tech Support session
+         *
+         * Response: { sessionId: string }
+         */
+        post("/sessions") {
+            try {
+                val sessionId = chatSessionManager.createSession(isTechSupport = true)
+                call.respond(mapOf("sessionId" to sessionId))
+            } catch (e: Exception) {
+                call.application.environment.log.error("Failed to create tech support session", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to create session: ${e.message}")
+                )
+            }
+        }
+
+        /**
+         * PUT /api/v2/tech-support/sessions/{sessionId}
+         * Mark existing session as Tech Support
+         */
+        put("/sessions/{sessionId}") {
+            try {
+                val sessionId = call.parameters["sessionId"]
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Session ID required"))
+
+                val updated = chatSessionManager.updateSessionTechSupport(sessionId, true)
+                if (updated) {
+                    call.respond(mapOf("success" to true, "sessionId" to sessionId))
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Session not found"))
+                }
+            } catch (e: Exception) {
+                call.application.environment.log.error("Failed to update session", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Failed to update session: ${e.message}")
+                )
+            }
+        }
 
         /**
          * POST /api/v2/tech-support
