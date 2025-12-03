@@ -16,29 +16,8 @@ export class TechSupportMode {
      * Initialize the tech support UI
      */
     init() {
-        this.createToggleButton();
         this.createPanel();
         this.checkServiceHealth();
-    }
-
-    /**
-     * Create toggle button in sidebar
-     */
-    createToggleButton() {
-        const sidebar = document.querySelector('.sidebar-actions, .sidebar-nav');
-        if (!sidebar) {
-            console.warn('TechSupportMode: Could not find sidebar');
-            return;
-        }
-
-        const button = document.createElement('button');
-        button.id = 'tech-support-toggle';
-        button.className = 'sidebar-btn tech-support-toggle';
-        button.innerHTML = '<span class="icon">&#x1F3A7;</span> Tech Support';
-        button.title = 'Toggle Tech Support Mode';
-        button.onclick = () => this.toggle();
-
-        sidebar.appendChild(button);
     }
 
     /**
@@ -93,7 +72,7 @@ export class TechSupportMode {
     toggle() {
         this.isEnabled = !this.isEnabled;
 
-        const button = document.getElementById('tech-support-toggle');
+        const button = document.getElementById('techSupportButton');
         if (button) {
             button.classList.toggle('active', this.isEnabled);
         }

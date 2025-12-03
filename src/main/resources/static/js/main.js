@@ -27,6 +27,7 @@ import { initializeOllamaModal } from './ui/ollamaModal.js';
 import { initializeLlmModelModal } from './ui/llmModelModal.js';
 import { initializeRAGModal } from './ui/rag/index.js';
 import { ragPreviewModal } from './ui/ragPreview/index.js';
+import { TechSupportMode } from './ui/techSupportMode.js';
 
 // Import utilities
 import { debounce, generateSlug } from './utils/helpers.js';
@@ -34,6 +35,7 @@ import { debounce, generateSlug } from './utils/helpers.js';
 // DOM element references
 let messageInput = null;
 let sendButton = null;
+let techSupportMode = null;
 
 /**
  * Initialize application
@@ -71,6 +73,10 @@ async function initApp() {
 
     // Initialize RAG preview modal
     ragPreviewModal.init();
+
+    // Initialize Tech Support mode
+    techSupportMode = new TechSupportMode();
+    techSupportMode.init();
 
     // Set up callback for RAG preview modal send buttons
     ragPreviewModal.setOnSendCallback((query, useReranking) => {
@@ -136,6 +142,7 @@ function setupEventListeners() {
     document.getElementById('assistantsButton').addEventListener('click', handleOpenAssistantsModal);
     document.getElementById('llmModelButton').addEventListener('click', handleOpenLlmModelModal);
     document.getElementById('mcpServersButton').addEventListener('click', handleOpenMcpServersModal);
+    document.getElementById('techSupportButton').addEventListener('click', () => techSupportMode.toggle());
 
     // Close modal buttons
     document.getElementById('closeModal').addEventListener('click', () => modalsUI.closeModal('assistantModal'));
