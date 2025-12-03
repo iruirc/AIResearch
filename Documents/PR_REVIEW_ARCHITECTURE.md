@@ -483,12 +483,13 @@ class ReviewCommand : CliktCommand(
 
     private val serverUrl by option(
         "--server", "-s",
-        help = "ResearchAI server URL"
+        help = "ResearchAI server URL (optional, defaults to RESEARCHAI_SERVER_URL env var)"
     )
 
     override fun run() = runBlocking {
         val (owner, repo, prNumber) = parsePRUrl(prUrl)
 
+        // Priority: 1. --server flag, 2. RESEARCHAI_SERVER_URL env var, 3. config file, 4. default
         val client = ResearchAiClient(serverUrl ?: loadConfig().serverUrl)
 
         echo("Reviewing PR #$prNumber in $owner/$repo...")
@@ -645,14 +646,13 @@ jobs:
           curl -sSL https://researchai.example.com/install.sh | bash
           echo "$HOME/.researchai/bin" >> $GITHUB_PATH
 
-      - name: Configure CLI
-        run: |
-          rai config set server-url ${{ secrets.RESEARCHAI_SERVER_URL }}
-          rai config set api-key ${{ secrets.RESEARCHAI_API_KEY }}
-
       - name: Run AI Review
         id: review
+        env:
+          RESEARCHAI_SERVER_URL: ${{ secrets.RESEARCHAI_SERVER_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # CLI reads RESEARCHAI_SERVER_URL from environment
           rai review ${{ github.event.pull_request.html_url }} \
             --mode standard \
             --output json > review.json
@@ -663,11 +663,12 @@ jobs:
 
       - name: Post Review Comment
         if: always()
+        env:
+          RESEARCHAI_SERVER_URL: ${{ secrets.RESEARCHAI_SERVER_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           rai review ${{ github.event.pull_request.html_url }} \
             --post-comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check Quality Gate
         run: |
