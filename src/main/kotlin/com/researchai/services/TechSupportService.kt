@@ -400,9 +400,9 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
         val actions = mutableListOf<SuggestedActionWrapper>()
         val hasRelatedTickets = context.ticketContext?.relatedTickets?.isNotEmpty() == true
         val hasRagContext = context.ragContext != null && context.ragContext.sourceCount > 0
-        val ragScore = context.ragContext?.sources?.size ?: 0
+        val ragSourceCount = context.ragContext?.sourceCount ?: 0
 
-        // 1. CREATE_TICKET - для багов и feature requests
+        // 1. CREATE_TICKET - для багов, feature requests и HOW_TO вопросов
         when (queryType) {
             QueryType.BUG_REPORT -> {
                 actions.add(SuggestedActionWrapper(
@@ -426,6 +426,18 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
                     )
                 ))
             }
+            QueryType.HOW_TO -> {
+                // Всегда предлагаем создать тикет для HOW_TO вопросов (если ответ не помог)
+                actions.add(SuggestedActionWrapper(
+                    actionType = "CREATE_TICKET",
+                    createTicket = CreateTicketAction(
+                        title = extractBugTitle(originalQuery),
+                        description = "Вопрос пользователя:\n\n$originalQuery",
+                        suggestedList = "Support",
+                        suggestedLabels = listOf("question", "how-to")
+                    )
+                ))
+            }
             else -> {}
         }
 
@@ -441,8 +453,8 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             ))
         }
 
-        // 3. ADD_TO_FAQ - для HOW_TO вопросов если RAG дал хороший ответ
-        if (queryType == QueryType.HOW_TO && hasRagContext && ragScore >= 3) {
+        // 3. ADD_TO_FAQ - для HOW_TO вопросов если RAG нашёл релевантный контекст
+        if (queryType == QueryType.HOW_TO && hasRagContext && ragSourceCount >= 1) {
             actions.add(SuggestedActionWrapper(
                 actionType = "ADD_TO_FAQ",
                 addToFaq = AddToFaqAction(
@@ -477,11 +489,11 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
         }
 
         // 6. Общее предложение создать тикет если нет других действий и вопрос нетривиальный
-        if (actions.isEmpty() && originalQuery.length > 20) {
+        if (actions.isEmpty() && originalQuery.length > 10) {
             actions.add(SuggestedActionWrapper(
                 actionType = "CREATE_TICKET",
                 createTicket = CreateTicketAction(
-                    title = "Trello. Create ticket: ${extractBugTitle(originalQuery)}",
+                    title = extractBugTitle(originalQuery),
                     description = "Вопрос пользователя:\n\n$originalQuery",
                     suggestedList = "Inbox",
                     suggestedLabels = listOf("support", "needs-triage")

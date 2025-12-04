@@ -224,7 +224,7 @@ export class TechSupportMode {
                         return `
                             <button class="action-btn create-ticket"
                                     onclick="techSupportMode.createTicket('${title}', '${desc}')">
-                                <span class="icon">&#x1F4DD;</span> ${titleHtml}
+                                <span class="icon">&#x1F4DD;</span> Trello: ${titleHtml}
                             </button>
                         `;
                     }
