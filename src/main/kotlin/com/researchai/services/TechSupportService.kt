@@ -244,6 +244,25 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
     }
 
     /**
+     * Set active board in Trello MCP server to ensure operations work with the correct board
+     * @return true if board was set successfully, false otherwise
+     */
+    private suspend fun ensureActiveBoard(trelloClient: MCPClientWrapper, boardId: String): Boolean {
+        val result = trelloClient.callTool(
+            name = "set_active_board",
+            arguments = buildJsonObject {
+                put("boardId", boardId)
+            }
+        )
+        if (!result.success) {
+            logger.warn("Failed to set active board $boardId: ${result.error}")
+            return false
+        }
+        logger.debug("Active board set to: $boardId")
+        return true
+    }
+
+    /**
      * Fetch related tickets from Trello via MCP
      * Uses get_lists + get_cards_by_list_id since search_cards is not available
      */
@@ -263,6 +282,11 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
             if (effectiveBoardId == null) {
                 logger.warn("No board ID configured for Trello search")
                 return null
+            }
+
+            // Set active board to ensure we work with the correct board
+            if (!ensureActiveBoard(trelloClient, effectiveBoardId)) {
+                logger.warn("Could not set active board, continuing anyway")
             }
 
             // Get all lists on the board
@@ -785,6 +809,11 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
             val boardId = request.boardId ?: config.defaultBoardId
                 ?: throw IllegalArgumentException("Board ID is required. Set TRELLO_SUPPORT_BOARD_ID env variable or provide boardId.")
 
+            // Set active board to ensure we work with the correct board
+            if (!ensureActiveBoard(trelloClient, boardId)) {
+                logger.warn("Could not set active board for createTicket, continuing anyway")
+            }
+
             // Get list ID by name
             val listId = getListIdByName(trelloClient, boardId, request.listName)
                 ?: throw IllegalArgumentException("List '${request.listName}' not found on board $boardId")
@@ -906,6 +935,11 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
         val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
             ?: return emptyList()
 
+        // Set active board to ensure we work with the correct board
+        if (!ensureActiveBoard(trelloClient, boardId)) {
+            logger.warn("Could not set active board for fetchTasksByPriority, continuing anyway")
+        }
+
         // Get all lists
         val listsResult = trelloClient.callTool(
             name = "get_lists",
@@ -954,6 +988,11 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
     private suspend fun getProjectStatus(boardId: String): ProjectStatusAction? {
         val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
             ?: return null
+
+        // Set active board to ensure we work with the correct board
+        if (!ensureActiveBoard(trelloClient, boardId)) {
+            logger.warn("Could not set active board for getProjectStatus, continuing anyway")
+        }
 
         val listsResult = trelloClient.callTool(
             name = "get_lists",

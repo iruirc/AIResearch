@@ -36,6 +36,13 @@ class SendMessageUseCase(
 
     companion object {
         private const val MAX_TOOL_ITERATIONS = 5 // Prevent infinite loops
+
+        // Tools that return too much data and should be filtered for Tech Support sessions
+        private val TECH_SUPPORT_BLOCKED_TOOLS = setOf(
+            "get_my_cards",      // Returns cards from ALL boards - huge response
+            "list_boards",       // Lists all boards - not needed for support
+            "list_workspaces"    // Lists all workspaces - not needed for support
+        )
     }
 
     suspend operator fun invoke(
@@ -45,7 +52,8 @@ class SendMessageUseCase(
         model: String? = null,
         parameters: RequestParameters = RequestParameters(),
         skipUserMessage: Boolean = false,
-        useRerankingOverride: Boolean? = null // null = use global settings, true/false = override
+        useRerankingOverride: Boolean? = null, // null = use global settings, true/false = override
+        isTechSupport: Boolean = false // Filter MCP tools for Tech Support sessions
     ): Result<MessageResult> {
         return try {
             logger.info("SendMessageUseCase: Processing message for provider $providerId")
@@ -205,7 +213,19 @@ class SendMessageUseCase(
             // Поддержка для Claude и OpenAI
             val mcpTools = if (mcpOrchestrationService != null &&
                               (providerId == ProviderType.CLAUDE || providerId == ProviderType.OPENAI)) {
-                val tools = mcpOrchestrationService.getAvailableTools()
+                var tools = mcpOrchestrationService.getAvailableTools()
+
+                // Filter out problematic tools for Tech Support sessions
+                // These tools return data from ALL boards which exceeds context limits
+                if (isTechSupport && tools.isNotEmpty()) {
+                    val originalSize = tools.size
+                    tools = tools.filter { tool -> tool.name !in TECH_SUPPORT_BLOCKED_TOOLS }
+                    val filteredCount = originalSize - tools.size
+                    if (filteredCount > 0) {
+                        logger.info("Tech Support: Filtered out $filteredCount tools (blocked: ${TECH_SUPPORT_BLOCKED_TOOLS.joinToString()})")
+                    }
+                }
+
                 if (tools.isNotEmpty()) {
                     logger.info("MCP orchestration enabled: ${tools.size} tools available for $providerId")
                     mcpOrchestrationService.convertToClaudeTools(tools)

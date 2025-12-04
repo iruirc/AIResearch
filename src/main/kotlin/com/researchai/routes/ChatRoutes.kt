@@ -62,7 +62,8 @@ fun Route.chatRoutes(
                     providerId = providerId,
                     model = request.model,
                     parameters = parameters,
-                    useRerankingOverride = request.useReranking
+                    useRerankingOverride = request.useReranking,
+                    isTechSupport = session.isTechSupport
                 )
 
                 result.onSuccess { messageResult ->
