@@ -181,6 +181,79 @@ export const modalsUI = {
     },
 
     /**
+     * Update slider constraints based on model capabilities
+     * @param {Object} capabilities - Model capabilities object
+     */
+    updateSliderConstraints(capabilities) {
+        const temperatureSlider = document.getElementById('modalTemperatureSlider');
+        const temperatureValue = document.getElementById('modalTemperatureValue');
+        const maxTokensSlider = document.getElementById('modalMaxTokensSlider');
+        const maxTokensValue = document.getElementById('modalMaxTokensValue');
+        const maxTokensMinLabel = document.getElementById('maxTokensMinLabel');
+        const maxTokensMaxLabel = document.getElementById('maxTokensMaxLabel');
+
+        if (temperatureSlider && capabilities) {
+            const tempMin = capabilities.temperatureMin ?? 0;
+            const tempMax = capabilities.temperatureMax ?? 1;
+            const defaultTemp = capabilities.defaultTemperature ?? 1.0;
+
+            temperatureSlider.min = tempMin;
+            temperatureSlider.max = tempMax;
+
+            // Clamp current value within new range
+            let currentTemp = parseFloat(temperatureSlider.value);
+            if (currentTemp < tempMin) currentTemp = tempMin;
+            if (currentTemp > tempMax) currentTemp = tempMax;
+            temperatureSlider.value = currentTemp;
+
+            if (temperatureValue) {
+                temperatureValue.textContent = currentTemp.toFixed(1);
+            }
+        }
+
+        if (maxTokensSlider && capabilities) {
+            const maxTokens = capabilities.maxTokens ?? 64000;
+            const minTokens = 1000;
+
+            // Calculate appropriate step based on max tokens
+            let step = 1000;
+            if (maxTokens > 100000) step = 10000;
+            else if (maxTokens > 50000) step = 5000;
+            else if (maxTokens > 10000) step = 1000;
+            else step = 500;
+
+            maxTokensSlider.min = minTokens;
+            maxTokensSlider.max = maxTokens;
+            maxTokensSlider.step = step;
+
+            // Clamp current value within new range and round to step
+            let currentTokens = parseInt(maxTokensSlider.value) || minTokens;
+            if (currentTokens < minTokens) currentTokens = minTokens;
+            if (currentTokens > maxTokens) currentTokens = maxTokens;
+            // Round to nearest step
+            currentTokens = Math.round(currentTokens / step) * step;
+            if (currentTokens < minTokens) currentTokens = minTokens;
+            if (currentTokens > maxTokens) currentTokens = maxTokens;
+
+            maxTokensSlider.value = currentTokens;
+
+            if (maxTokensValue) {
+                maxTokensValue.textContent = currentTokens;
+            }
+
+            // Update labels if they exist
+            if (maxTokensMinLabel) {
+                maxTokensMinLabel.textContent = minTokens;
+            }
+            if (maxTokensMaxLabel) {
+                maxTokensMaxLabel.textContent = maxTokens;
+            }
+
+            console.log(`Updated max tokens slider: min=${minTokens}, max=${maxTokens}, step=${step}, value=${currentTokens}`);
+        }
+    },
+
+    /**
      * Update LLM model modal with current values
      * @param {Object} settings - Current settings object
      */
@@ -192,13 +265,27 @@ export const modalsUI = {
         const formatSelect = document.getElementById('modalFormatSelect');
 
         if (temperatureSlider && temperatureValue) {
-            temperatureSlider.value = settings.temperature;
-            temperatureValue.textContent = settings.temperature.toFixed(1);
+            // Clamp temperature within slider bounds
+            const tempMin = parseFloat(temperatureSlider.min) || 0;
+            const tempMax = parseFloat(temperatureSlider.max) || 1;
+            let temp = settings.temperature;
+            if (temp < tempMin) temp = tempMin;
+            if (temp > tempMax) temp = tempMax;
+
+            temperatureSlider.value = temp;
+            temperatureValue.textContent = temp.toFixed(1);
         }
 
         if (maxTokensSlider && maxTokensValue) {
-            maxTokensSlider.value = settings.maxTokens;
-            maxTokensValue.textContent = settings.maxTokens;
+            // Clamp maxTokens within slider bounds
+            const tokensMin = parseInt(maxTokensSlider.min) || 1000;
+            const tokensMax = parseInt(maxTokensSlider.max) || 64000;
+            let tokens = settings.maxTokens;
+            if (tokens < tokensMin) tokens = tokensMin;
+            if (tokens > tokensMax) tokens = tokensMax;
+
+            maxTokensSlider.value = tokens;
+            maxTokensValue.textContent = tokens;
         }
 
         if (formatSelect) {

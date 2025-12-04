@@ -168,6 +168,7 @@ function setupEventListeners() {
     document.getElementById('cancelLlmModelButton').addEventListener('click', () => modalsUI.closeModal('llmModelModal'));
     document.getElementById('resetLlmModelButton').addEventListener('click', handleResetLlmModel);
     document.getElementById('modalProviderSelect').addEventListener('change', handleProviderChange);
+    document.getElementById('modalModelSelect').addEventListener('change', handleModelChange);
 
     // LLM model sliders
     const temperatureSlider = document.getElementById('modalTemperatureSlider');
@@ -706,8 +707,35 @@ async function handleProviderChange(providerId) {
         const models = await llmModelService.loadModels(providerId);
         const state = appState.getState();
         modalsUI.renderModelsList(models, state.settings.model);
+
+        // Update slider constraints for the first model (or current model if it exists in the list)
+        if (models && models.length > 0) {
+            const currentModelInList = models.find(m => m.id === state.settings.model);
+            const selectedModel = currentModelInList || models[0];
+            if (selectedModel && selectedModel.capabilities) {
+                modalsUI.updateSliderConstraints(selectedModel.capabilities);
+            }
+        }
     } catch (error) {
         console.error('Error loading models:', error);
+    }
+}
+
+/**
+ * Handle model change - update sliders based on model capabilities
+ */
+function handleModelChange() {
+    const modelSelect = document.getElementById('modalModelSelect');
+    if (!modelSelect) return;
+
+    const selectedModelId = modelSelect.value;
+    const state = appState.getState();
+    const models = state.models || [];
+
+    // Find the selected model and update slider constraints
+    const selectedModel = models.find(m => m.id === selectedModelId);
+    if (selectedModel && selectedModel.capabilities) {
+        modalsUI.updateSliderConstraints(selectedModel.capabilities);
     }
 }
 
