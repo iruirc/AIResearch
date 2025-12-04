@@ -232,13 +232,24 @@ export class TechSupportMode {
 
                 case 'VIEW_TICKET':
                     if (action.viewTicket) {
-                        return `
-                            <div class="action-item view-ticket">
-                                <span class="icon">&#x1F440;</span>
-                                <span class="action-title">${this.escapeHtml(action.viewTicket.cardName)}</span>
-                                <small>${this.escapeHtml(action.viewTicket.reason)}</small>
-                            </div>
-                        `;
+                        const url = action.viewTicket.url;
+                        if (url) {
+                            return `
+                                <a href="${this.escapeHtml(url)}" target="_blank" rel="noopener noreferrer"
+                                   class="action-btn view-ticket-link">
+                                    <span class="icon">&#x1F440;</span>
+                                    <span class="action-title">${this.escapeHtml(action.viewTicket.cardName)}</span>
+                                </a>
+                            `;
+                        } else {
+                            return `
+                                <div class="action-item view-ticket">
+                                    <span class="icon">&#x1F440;</span>
+                                    <span class="action-title">${this.escapeHtml(action.viewTicket.cardName)}</span>
+                                    <small>${this.escapeHtml(action.viewTicket.reason)}</small>
+                                </div>
+                            `;
+                        }
                     }
                     break;
 

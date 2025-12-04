@@ -108,7 +108,8 @@ data class ViewTicketAction(
     val type: String = "VIEW_TICKET",
     val cardId: String,
     val cardName: String,
-    val reason: String
+    val reason: String,
+    val url: String? = null
 )
 
 /**

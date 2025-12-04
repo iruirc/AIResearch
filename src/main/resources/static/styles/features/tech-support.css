@@ -272,6 +272,16 @@
     background: rgba(102, 126, 234, 0.12);
 }
 
+/* View ticket link (clickable) */
+.tech-support-panel .action-btn.view-ticket-link {
+    background: linear-gradient(135deg, #0079bf 0%, #055a8c 100%);
+    text-decoration: none;
+}
+
+.tech-support-panel .action-btn.view-ticket-link:hover {
+    box-shadow: 0 4px 12px rgba(0, 121, 191, 0.4);
+}
+
 /* Sources */
 .tech-support-panel .sources-list {
     font-size: 13px;

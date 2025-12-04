@@ -565,7 +565,8 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
                 viewTicket = ViewTicketAction(
                     cardId = ticket.cardId,
                     cardName = ticket.cardName,
-                    reason = "Похожая проблема"
+                    reason = "Похожая проблема",
+                    url = ticket.url
                 )
             ))
         }
