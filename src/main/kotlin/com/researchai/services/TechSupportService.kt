@@ -480,7 +480,7 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             actions.add(SuggestedActionWrapper(
                 actionType = "CREATE_TICKET",
                 createTicket = CreateTicketAction(
-                    title = "Support: ${extractBugTitle(originalQuery)}",
+                    title = "Trello. Create ticket: ${extractBugTitle(originalQuery)}",
                     description = "Вопрос пользователя:\n\n$originalQuery",
                     suggestedList = "Inbox",
                     suggestedLabels = listOf("support", "needs-triage")
