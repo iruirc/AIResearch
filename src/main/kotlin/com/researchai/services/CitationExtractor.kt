@@ -18,7 +18,7 @@ class CitationExtractor {
         private val CITATION_PATTERN = Regex("""\(источник\s+(\d+)\)""", RegexOption.IGNORE_CASE)
 
         // Warning message when RAG context was available but no citations found
-        const val NO_CITATIONS_WARNING = "\n\n⚠️ Примечание: Ответ сформирован без явных ссылок на источники из базы знаний."
+        const val NO_CITATIONS_WARNING = "\n\n⚠️ Примечание: Модель не указала конкретные источники в тексте ответа. Использованный контекст показан в панели справа."
 
         // Message when no relevant context found in knowledge base
         const val NO_CONTEXT_MESSAGE = "Информация не найдена в базе знаний."
