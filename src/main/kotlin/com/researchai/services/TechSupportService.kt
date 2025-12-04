@@ -4,6 +4,7 @@ import com.researchai.data.mcp.MCPClientWrapper
 import com.researchai.data.mcp.MCPServerManager
 import com.researchai.domain.models.*
 import com.researchai.domain.models.techsupport.*
+import com.researchai.domain.models.workflow.*
 import com.researchai.domain.provider.AIProviderFactory
 import com.researchai.domain.repository.ConfigRepository
 import kotlinx.coroutines.async
@@ -21,6 +22,7 @@ class TechSupportService(
     private val configRepository: ConfigRepository,
     private val assistantManager: AssistantManager,
     private val preferencesManager: PreferencesManager,
+    private val taskWorkflowService: TaskWorkflowService,
     private val config: TechSupportConfig = TechSupportConfig()
 ) {
     private val logger = LoggerFactory.getLogger(TechSupportService::class.java)
@@ -37,6 +39,12 @@ class TechSupportService(
 
         return runCatching {
             logger.info("Processing tech support request: ${request.query.take(50)}...")
+
+            // Check if this is a workflow query first (before AI classification to save tokens)
+            if (taskWorkflowService.isWorkflowQuery(request.query)) {
+                logger.info("Detected as workflow query, processing with TaskWorkflowService")
+                return@runCatching processWorkflowRequest(request, startTime)
+            }
 
             // 1. Classify the query type using AI
             val queryType = classifyQuery(request.query)
@@ -1712,5 +1720,98 @@ Based on the repository information above:
 Respond in the same language as the user's query.
             """.trimIndent())
         }
+    }
+
+    // ==================== Task Workflow Integration ====================
+
+    /**
+     * Process a workflow request (start/complete task)
+     */
+    private suspend fun processWorkflowRequest(request: TechSupportRequest, startTime: Long): TechSupportResponse {
+        val workflowRequest = TaskWorkflowRequest(
+            query = request.query,
+            githubOwner = request.githubOwner,
+            githubRepo = request.githubRepo,
+            trelloBoardId = request.trelloBoardId
+        )
+
+        val result = taskWorkflowService.processWorkflow(workflowRequest)
+
+        // Build suggested actions from workflow result
+        val suggestedActions = buildWorkflowSuggestedActions(result)
+
+        return TechSupportResponse(
+            answer = result.message,
+            sessionId = request.sessionId ?: "workflow-${System.currentTimeMillis()}",
+            queryType = QueryType.TASK_WORKFLOW,
+            sourcesUsed = SourcesUsed(
+                ragSourceCount = 0,
+                trelloTicketCount = if (result.trelloResult != null) 1 else 0,
+                githubItemCount = if (result.githubResult != null) 1 else 0,
+                ragSources = emptyList(),
+                trelloSources = result.trelloResult?.let { listOf(it.cardName) } ?: emptyList(),
+                githubSources = result.githubResult?.branchName?.let { listOf(it) } ?: emptyList()
+            ),
+            suggestedActions = suggestedActions,
+            relatedTickets = emptyList(),
+            processingTimeMs = System.currentTimeMillis() - startTime
+        )
+    }
+
+    /**
+     * Build suggested actions from workflow result
+     */
+    private fun buildWorkflowSuggestedActions(result: TaskWorkflowResult): List<SuggestedActionWrapper> {
+        val actions = mutableListOf<SuggestedActionWrapper>()
+
+        // If successful and has Trello result, suggest viewing the ticket
+        result.trelloResult?.takeIf { it.success }?.let { trello ->
+            actions.add(
+                SuggestedActionWrapper(
+                    actionType = "VIEW_TICKET",
+                    viewTicket = ViewTicketAction(
+                        cardId = trello.cardId,
+                        cardName = trello.cardName,
+                        reason = "Задача ${result.taskId} перемещена в ${trello.toList}",
+                        url = trello.cardUrl
+                    )
+                )
+            )
+        }
+
+        // If successful and has GitHub result with PR, suggest viewing PR
+        result.githubResult?.takeIf { it.prCreated }?.let { github ->
+            actions.add(
+                SuggestedActionWrapper(
+                    actionType = "VIEW_PR",
+                    viewPullRequest = ViewPullRequestAction(
+                        number = github.prNumber ?: 0,
+                        title = "PR для ${result.taskId}",
+                        state = "open",
+                        sourceBranch = github.branchName ?: "",
+                        targetBranch = "main",
+                        url = github.prUrl
+                    )
+                )
+            )
+        }
+
+        // If successful and has GitHub result with branch, suggest viewing branch
+        result.githubResult?.takeIf { it.branchCreated || it.branchAlreadyExists }?.let { github ->
+            if (!github.prCreated) {  // Only if no PR was created
+                actions.add(
+                    SuggestedActionWrapper(
+                        actionType = "VIEW_BRANCH",
+                        viewBranch = ViewBranchAction(
+                            branchName = github.branchName ?: "",
+                            sha = "",
+                            isDefault = false
+                        )
+                    )
+                )
+            }
+        }
+
+        return actions
     }
 }

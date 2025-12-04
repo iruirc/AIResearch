@@ -14,6 +14,7 @@ enum class QueryType {
     FEATURE_REQUEST,     // Запрос на новую фичу
     PROJECT_MANAGEMENT,  // Запрос о статусе проекта, приоритизации задач
     GITHUB_INFO,         // Вопрос о GitHub репозитории (ветки, коммиты, issues, PRs)
+    TASK_WORKFLOW,       // Workflow задач: начать/завершить работу над задачей
     GENERAL              // Общий вопрос
 }
 

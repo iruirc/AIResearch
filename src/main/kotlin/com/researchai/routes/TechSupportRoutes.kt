@@ -1,8 +1,10 @@
 package com.researchai.routes
 
 import com.researchai.domain.models.techsupport.*
+import com.researchai.domain.models.workflow.*
 import com.researchai.services.ChatSessionManager
 import com.researchai.services.TechSupportService
+import com.researchai.services.TaskWorkflowService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -12,7 +14,11 @@ import io.ktor.server.routing.*
 /**
  * Tech Support API routes
  */
-fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionManager: ChatSessionManager) {
+fun Route.techSupportRoutes(
+    techSupportService: TechSupportService,
+    chatSessionManager: ChatSessionManager,
+    taskWorkflowService: TaskWorkflowService
+) {
     route("/api/v2/tech-support") {
 
         /**
@@ -278,6 +284,59 @@ fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionM
                         trelloConnected = false,
                         githubConnected = false,
                         error = e.message ?: "Unknown error"
+                    )
+                )
+            }
+        }
+
+        /**
+         * POST /api/v2/tech-support/workflow
+         * Execute task workflow (start/complete task)
+         *
+         * Request body: TaskWorkflowRequest
+         * Response: TaskWorkflowResult
+         */
+        post("/workflow") {
+            try {
+                val request = call.receive<TaskWorkflowRequest>()
+
+                if (request.query.isBlank()) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        TaskWorkflowResult(
+                            success = false,
+                            taskId = "unknown",
+                            action = TaskAction.START,
+                            message = "Query cannot be empty",
+                            errors = listOf("Query cannot be empty")
+                        )
+                    )
+                    return@post
+                }
+
+                val result = taskWorkflowService.processWorkflow(request)
+                call.respond(if (result.success) HttpStatusCode.OK else HttpStatusCode.BadRequest, result)
+            } catch (e: ContentTransformationException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    TaskWorkflowResult(
+                        success = false,
+                        taskId = "unknown",
+                        action = TaskAction.START,
+                        message = "Invalid request format: ${e.message}",
+                        errors = listOf("Invalid request format")
+                    )
+                )
+            } catch (e: Exception) {
+                call.application.environment.log.error("Workflow request failed", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    TaskWorkflowResult(
+                        success = false,
+                        taskId = "unknown",
+                        action = TaskAction.START,
+                        message = "Request processing failed: ${e.message}",
+                        errors = listOf(e.message ?: "Unknown error")
                     )
                 )
             }
