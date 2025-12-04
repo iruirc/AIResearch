@@ -255,10 +255,18 @@ fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionM
                     false
                 }
 
+                val githubConnected = try {
+                    techSupportService.isGithubConnected()
+                } catch (e: Exception) {
+                    call.application.environment.log.warn("Failed to check GitHub connection", e)
+                    false
+                }
+
                 call.respond(TechSupportHealthResponse(
                     status = "ok",
                     ragEnabled = true,
-                    trelloConnected = trelloConnected
+                    trelloConnected = trelloConnected,
+                    githubConnected = githubConnected
                 ))
             } catch (e: Exception) {
                 call.application.environment.log.error("Health check failed", e)
@@ -268,6 +276,7 @@ fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionM
                         status = "error",
                         ragEnabled = false,
                         trelloConnected = false,
+                        githubConnected = false,
                         error = e.message ?: "Unknown error"
                     )
                 )

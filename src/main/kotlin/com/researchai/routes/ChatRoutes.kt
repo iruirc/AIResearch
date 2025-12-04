@@ -66,6 +66,9 @@ fun Route.chatRoutes(
                     toolChoice = toolChoiceMode
                 )
 
+                // Get Tech Support GitHub defaults if session is Tech Support
+                val techSupportConfig = if (session.isTechSupport) appModule.techSupportConfig else null
+
                 val result = appModule.sendMessageUseCase(
                     message = request.message,
                     sessionId = sessionId,
@@ -73,7 +76,9 @@ fun Route.chatRoutes(
                     model = request.model,
                     parameters = parameters,
                     useRerankingOverride = request.useReranking,
-                    isTechSupport = session.isTechSupport
+                    isTechSupport = session.isTechSupport,
+                    techSupportGithubOwner = techSupportConfig?.defaultGithubOwner,
+                    techSupportGithubRepo = techSupportConfig?.defaultGithubRepo
                 )
 
                 result.onSuccess { messageResult ->

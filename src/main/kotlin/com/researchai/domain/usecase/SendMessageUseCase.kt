@@ -53,7 +53,9 @@ class SendMessageUseCase(
         parameters: RequestParameters = RequestParameters(),
         skipUserMessage: Boolean = false,
         useRerankingOverride: Boolean? = null, // null = use global settings, true/false = override
-        isTechSupport: Boolean = false // Filter MCP tools for Tech Support sessions
+        isTechSupport: Boolean = false, // Filter MCP tools for Tech Support sessions
+        techSupportGithubOwner: String? = null, // Default GitHub owner for Tech Support
+        techSupportGithubRepo: String? = null // Default GitHub repo for Tech Support
     ): Result<MessageResult> {
         return try {
             logger.info("SendMessageUseCase: Processing message for provider $providerId")
@@ -183,6 +185,18 @@ class SendMessageUseCase(
                 if (ragContext != null) {
                     append(ragContext)
                     append("\n\n")
+                }
+                // Inject GitHub defaults for Tech Support sessions
+                if (isTechSupport && (techSupportGithubOwner != null || techSupportGithubRepo != null)) {
+                    append("## GitHub Configuration\n")
+                    append("For GitHub operations, use the following default repository:\n")
+                    if (techSupportGithubOwner != null) {
+                        append("- Owner: $techSupportGithubOwner\n")
+                    }
+                    if (techSupportGithubRepo != null) {
+                        append("- Repository: $techSupportGithubRepo\n")
+                    }
+                    append("Use these defaults when the user asks about branches, commits, issues, or pull requests without specifying a repository.\n\n")
                 }
                 if (systemPrompt != null) {
                     append(systemPrompt)

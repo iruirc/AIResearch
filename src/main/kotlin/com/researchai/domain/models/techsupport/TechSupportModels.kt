@@ -13,6 +13,7 @@ enum class QueryType {
     STATUS_CHECK,        // Проверка статуса тикета
     FEATURE_REQUEST,     // Запрос на новую фичу
     PROJECT_MANAGEMENT,  // Запрос о статусе проекта, приоритизации задач
+    GITHUB_INFO,         // Вопрос о GitHub репозитории (ветки, коммиты, issues, PRs)
     GENERAL              // Общий вопрос
 }
 
@@ -25,10 +26,14 @@ data class TechSupportRequest(
     val sessionId: String? = null,
     val customerId: String? = null,
     val trelloBoardId: String? = null,
+    val githubOwner: String? = null,
+    val githubRepo: String? = null,
     val includeRag: Boolean = true,
     val includeTrello: Boolean = true,
+    val includeGithub: Boolean = true,
     val maxRagResults: Int = 5,
     val maxTrelloResults: Int = 3,
+    val maxGithubResults: Int = 10,
     val providerId: ProviderType = ProviderType.CLAUDE,
     val model: String? = null,
     val existingAnswer: String? = null  // Skip AI call if answer already provided from main chat
@@ -46,6 +51,92 @@ data class TrelloTicketInfo(
     val labels: List<String>,
     val lastActivity: String?,
     val url: String?
+)
+
+// ==================== GitHub Models ====================
+
+/**
+ * Информация о ветке GitHub
+ */
+@Serializable
+data class GitHubBranchInfo(
+    val name: String,
+    val sha: String,
+    val isProtected: Boolean = false,
+    val isDefault: Boolean = false,
+    val url: String? = null
+)
+
+/**
+ * Информация о коммите GitHub
+ */
+@Serializable
+data class GitHubCommitInfo(
+    val sha: String,
+    val message: String,
+    val author: String,
+    val date: String,
+    val url: String? = null
+)
+
+/**
+ * Информация об Issue GitHub
+ */
+@Serializable
+data class GitHubIssueInfo(
+    val number: Int,
+    val title: String,
+    val state: String,  // "open" or "closed"
+    val author: String,
+    val labels: List<String>,
+    val createdAt: String,
+    val updatedAt: String?,
+    val body: String?,
+    val url: String?
+)
+
+/**
+ * Информация о Pull Request GitHub
+ */
+@Serializable
+data class GitHubPRInfo(
+    val number: Int,
+    val title: String,
+    val state: String,  // "open", "closed", "merged"
+    val author: String,
+    val sourceBranch: String,
+    val targetBranch: String,
+    val labels: List<String>,
+    val createdAt: String,
+    val updatedAt: String?,
+    val isDraft: Boolean = false,
+    val url: String?
+)
+
+/**
+ * Результат поиска контекста из GitHub
+ */
+@Serializable
+data class GitHubContextResult(
+    val formattedContext: String,
+    val branches: List<GitHubBranchInfo> = emptyList(),
+    val commits: List<GitHubCommitInfo> = emptyList(),
+    val issues: List<GitHubIssueInfo> = emptyList(),
+    val pullRequests: List<GitHubPRInfo> = emptyList(),
+    val repositoryInfo: GitHubRepoInfo? = null
+)
+
+/**
+ * Базовая информация о репозитории
+ */
+@Serializable
+data class GitHubRepoInfo(
+    val owner: String,
+    val name: String,
+    val fullName: String,
+    val defaultBranch: String,
+    val description: String?,
+    val url: String
 )
 
 /**
@@ -74,6 +165,7 @@ data class TicketContextResult(
 data class TechSupportContext(
     val ragContext: RagContextResult?,
     val ticketContext: TicketContextResult?,
+    val githubContext: GitHubContextResult?,
     val queryType: QueryType,
     val processingTimeMs: Long
 )
@@ -85,8 +177,10 @@ data class TechSupportContext(
 data class SourcesUsed(
     val ragSourceCount: Int,
     val trelloTicketCount: Int,
+    val githubItemCount: Int = 0,
     val ragSources: List<String>,
-    val trelloSources: List<String>
+    val trelloSources: List<String>,
+    val githubSources: List<String> = emptyList()
 )
 
 /**
@@ -201,6 +295,82 @@ data class ProjectStatusAction(
     val byStatus: Map<String, Int>     // {"To Do": 10, "In Progress": 5, "Done": 3}
 )
 
+// ==================== GitHub Actions ====================
+
+/**
+ * Предложенное действие - посмотреть ветку GitHub
+ */
+@Serializable
+data class ViewBranchAction(
+    val type: String = "VIEW_BRANCH",
+    val branchName: String,
+    val sha: String,
+    val isDefault: Boolean = false,
+    val url: String? = null
+)
+
+/**
+ * Предложенное действие - посмотреть коммит GitHub
+ */
+@Serializable
+data class ViewCommitAction(
+    val type: String = "VIEW_COMMIT",
+    val sha: String,
+    val message: String,
+    val author: String,
+    val url: String? = null
+)
+
+/**
+ * Предложенное действие - посмотреть Issue GitHub
+ */
+@Serializable
+data class ViewIssueAction(
+    val type: String = "VIEW_ISSUE",
+    val number: Int,
+    val title: String,
+    val state: String,
+    val url: String? = null
+)
+
+/**
+ * Предложенное действие - посмотреть PR GitHub
+ */
+@Serializable
+data class ViewPullRequestAction(
+    val type: String = "VIEW_PR",
+    val number: Int,
+    val title: String,
+    val state: String,
+    val sourceBranch: String,
+    val targetBranch: String,
+    val url: String? = null
+)
+
+/**
+ * Предложенное действие - показать список веток
+ */
+@Serializable
+data class ListBranchesAction(
+    val type: String = "LIST_BRANCHES",
+    val branches: List<GitHubBranchInfo>,
+    val defaultBranch: String?,
+    val totalCount: Int
+)
+
+/**
+ * Предложенное действие - показать репозиторий
+ */
+@Serializable
+data class ViewRepoAction(
+    val type: String = "VIEW_REPO",
+    val owner: String,
+    val name: String,
+    val defaultBranch: String,
+    val description: String?,
+    val url: String
+)
+
 /**
  * Ответ от техподдержки
  */
@@ -229,7 +399,14 @@ data class SuggestedActionWrapper(
     // Project Management actions
     val listTasks: ListTasksAction? = null,
     val prioritize: PrioritizeAction? = null,
-    val projectStatus: ProjectStatusAction? = null
+    val projectStatus: ProjectStatusAction? = null,
+    // GitHub actions
+    val viewBranch: ViewBranchAction? = null,
+    val viewCommit: ViewCommitAction? = null,
+    val viewIssue: ViewIssueAction? = null,
+    val viewPullRequest: ViewPullRequestAction? = null,
+    val listBranches: ListBranchesAction? = null,
+    val viewRepo: ViewRepoAction? = null
 )
 
 /**
@@ -282,7 +459,11 @@ data class AddFaqResponse(
 data class TechSupportConfig(
     val ragMinScore: Float = 0.5f,
     val defaultBoardId: String? = null,
-    val trelloMcpServerId: String = "trello"
+    val trelloMcpServerId: String = "trello",
+    // GitHub settings
+    val defaultGithubOwner: String? = null,
+    val defaultGithubRepo: String? = null,
+    val githubMcpServerId: String = "github"
 )
 
 /**
@@ -294,5 +475,6 @@ data class TechSupportHealthResponse(
     val service: String = "tech-support",
     val ragEnabled: Boolean,
     val trelloConnected: Boolean,
+    val githubConnected: Boolean = false,
     val error: String? = null
 )

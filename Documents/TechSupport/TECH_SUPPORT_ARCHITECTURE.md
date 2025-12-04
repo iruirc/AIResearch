@@ -4,7 +4,8 @@
 
 Tech Support AI Assistant is a mini-service that provides intelligent technical support by combining:
 - **RAG (Retrieval-Augmented Generation)** - for documentation and FAQ search
-- **MCP (Model Context Protocol)** - for CRM/Trello integration
+- **Trello MCP** - for CRM/ticket management integration
+- **GitHub MCP** - for repository information (branches, commits, issues, PRs)
 - **AI Classification** - for automatic query categorization
 
 ## High-Level Architecture
@@ -34,22 +35,23 @@ Tech Support AI Assistant is a mini-service that provides intelligent technical 
 │  │    ├── classifyQuery()         → AI-based classification            │    │
 │  │    ├── gatherContext()         → Parallel data fetching             │    │
 │  │    │     ├── fetchRagContext()                                      │    │
-│  │    │     └── fetchTrelloContext()                                   │    │
+│  │    │     ├── fetchTrelloContext()                                   │    │
+│  │    │     └── fetchGithubContext()                                   │    │
 │  │    └── executeAIRequest()      → Generate response                  │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
           │                      │                       │
           ▼                      ▼                       ▼
-┌─────────────────┐  ┌─────────────────────┐  ┌─────────────────────────────┐
-│   RAGManager    │  │  MCPServerManager   │  │    AIProviderFactory        │
-│  (Data Layer)   │  │   (Trello MCP)      │  │   (Claude/OpenAI/etc)       │
-└─────────────────┘  └─────────────────────┘  └─────────────────────────────┘
+┌─────────────────┐  ┌─────────────────────────────────────┐  ┌──────────────┐
+│   RAGManager    │  │        MCPServerManager             │  │AIProviderFact│
+│  (Data Layer)   │  │   (Trello MCP + GitHub MCP)         │  │(Claude/etc)  │
+└─────────────────┘  └─────────────────────────────────────┘  └──────────────┘
           │                      │                       │
           ▼                      ▼                       ▼
-┌─────────────────┐  ┌─────────────────────┐  ┌─────────────────────────────┐
-│  Vector Store   │  │    Trello API       │  │      AI Provider API        │
-│  (Embeddings)   │  │   (via MCP)         │  │  (Anthropic/OpenAI/etc)     │
-└─────────────────┘  └─────────────────────┘  └─────────────────────────────┘
+┌─────────────────┐  ┌─────────────────────────────────────┐  ┌──────────────┐
+│  Vector Store   │  │    Trello API    │    GitHub API    │  │AI Provider   │
+│  (Embeddings)   │  │   (via MCP)      │   (via MCP)      │  │    API       │
+└─────────────────┘  └─────────────────────────────────────┘  └──────────────┘
 ```
 
 ## Component Details
@@ -64,6 +66,7 @@ enum class QueryType {
     STATUS_CHECK,       // User asks about ticket/issue status
     FEATURE_REQUEST,    // User requests new functionality
     PROJECT_MANAGEMENT, // User asks about project status, task priorities
+    GITHUB_INFO,        // User asks about GitHub repo (branches, commits, issues, PRs)
     GENERAL             // General questions
 }
 
@@ -73,10 +76,14 @@ data class TechSupportRequest(
     val sessionId: String? = null,
     val customerId: String? = null,
     val trelloBoardId: String? = null,
+    val githubOwner: String? = null,      // GitHub repository owner
+    val githubRepo: String? = null,        // GitHub repository name
     val includeRag: Boolean = true,
     val includeTrello: Boolean = true,
+    val includeGithub: Boolean = true,     // Enable GitHub context
     val maxRagResults: Int = 5,
     val maxTrelloResults: Int = 3,
+    val maxGithubResults: Int = 10,
     val providerId: ProviderType = ProviderType.CLAUDE,
     val model: String? = null
 )
@@ -138,11 +145,13 @@ Main orchestration service that coordinates all components.
 | `gatherContext()` | Parallel fetch of RAG and Trello context |
 | `fetchRagContext()` | Searches documentation via RAGManager |
 | `fetchTrelloContext()` | Fetches tickets via Trello MCP |
+| `fetchGithubContext()` | Fetches repo info via GitHub MCP |
 | `fetchTasksByPriority()` | Fetches tasks filtered by priority labels |
 | `getProjectStatus()` | Gets project statistics by priority/status |
 | `executeAIRequest()` | Generates response using AI provider |
 | `createTicket()` | Creates new Trello ticket via MCP |
 | `extractPrioritization()` | Extracts task recommendations from AI response |
+| `isGithubConnected()` | Checks if GitHub MCP server is connected |
 | `checkHealth()` | Returns service health status |
 
 **Flow Diagram:**
@@ -162,11 +171,16 @@ Main orchestration service that coordinates all components.
        ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 2. GATHER CONTEXT (Parallel)                                 │
-│    ┌─────────────────────┐    ┌─────────────────────────┐   │
-│    │ fetchRagContext()   │    │ fetchTrelloContext()    │   │
-│    │ - Search docs       │    │ - Search cards via MCP  │   │
-│    │ - Get top K results │    │ - Get related tickets   │   │
-│    └─────────────────────┘    └─────────────────────────┘   │
+│    ┌─────────────────────┐  ┌─────────────────────────┐     │
+│    │ fetchRagContext()   │  │ fetchTrelloContext()    │     │
+│    │ - Search docs       │  │ - Search cards via MCP  │     │
+│    │ - Get top K results │  │ - Get related tickets   │     │
+│    └─────────────────────┘  └─────────────────────────┘     │
+│    ┌─────────────────────┐                                   │
+│    │ fetchGithubContext()│  (for GITHUB_INFO queries)       │
+│    │ - Branches, commits │                                   │
+│    │ - Issues, PRs       │                                   │
+│    └─────────────────────┘                                   │
 └──────────────────────────────────────────────────────────────┘
        │
        ▼
@@ -248,6 +262,85 @@ private suspend fun fetchTrelloContext(query: String, request: TechSupportReques
 - `create_card` - Create new card
 - `get_lists` - Get board lists
 
+### 4.1 GitHub MCP Integration
+
+Uses MCP protocol to interact with GitHub:
+
+```kotlin
+private suspend fun fetchGithubContext(
+    query: String,
+    owner: String,
+    repo: String,
+    maxResults: Int
+): GitHubContextResult? {
+    val githubClient = mcpServerManager.getClient(config.githubMcpServerId)
+
+    // Determine what to fetch based on query keywords
+    val branches = if (query.contains("ветк") || query.contains("branch")) {
+        fetchGithubBranches(githubClient, owner, repo, maxResults)
+    } else emptyList()
+
+    val commits = if (query.contains("коммит") || query.contains("commit")) {
+        fetchGithubCommits(githubClient, owner, repo, maxResults)
+    } else emptyList()
+
+    // ... similar for issues and PRs
+
+    return GitHubContextResult(
+        formattedContext = formatGithubContext(...),
+        branches = branches,
+        commits = commits,
+        issues = issues,
+        pullRequests = pullRequests,
+        repositoryInfo = repoInfo
+    )
+}
+```
+
+**GitHub Context Models:**
+
+```kotlin
+data class GitHubBranchInfo(
+    val name: String,
+    val sha: String,
+    val isProtected: Boolean,
+    val isDefault: Boolean,
+    val url: String?
+)
+
+data class GitHubCommitInfo(
+    val sha: String,
+    val message: String,
+    val author: String,
+    val date: String,
+    val url: String?
+)
+
+data class GitHubIssueInfo(
+    val number: Int,
+    val title: String,
+    val state: String,
+    val author: String,
+    val labels: List<String>,
+    val url: String?
+)
+
+data class GitHubPRInfo(
+    val number: Int,
+    val title: String,
+    val state: String,
+    val sourceBranch: String,
+    val targetBranch: String,
+    val url: String?
+)
+```
+
+**Available GitHub MCP Tools:**
+- `list_branches` - List repository branches
+- `list_commits` - List recent commits
+- `list_issues` - List repository issues
+- `list_pull_requests` - List pull requests
+
 ### 5. AI Classification
 
 Query classification using AI:
@@ -261,6 +354,7 @@ private suspend fun classifyQuery(query: String): QueryType {
         - STATUS_CHECK: User asks about status
         - FEATURE_REQUEST: User requests new feature
         - PROJECT_MANAGEMENT: User asks about project status, task priorities
+        - GITHUB_INFO: User asks about repo (branches, commits, issues, PRs)
         - GENERAL: Other questions
 
         Query: "$query"
@@ -457,7 +551,8 @@ Check service health.
 {
   "status": "healthy",
   "ragEnabled": true,
-  "trelloConnected": true
+  "trelloConnected": true,
+  "githubConnected": true
 }
 ```
 
@@ -471,7 +566,11 @@ val techSupportConfig: TechSupportConfig by lazy {
     TechSupportConfig(
         ragMinScore = 0.5f,
         defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID"),
-        trelloMcpServerId = "trello"
+        trelloMcpServerId = "trello",
+        // GitHub settings - must be configured via .env
+        defaultGithubOwner = System.getenv("GITHUB_DEFAULT_OWNER"),
+        defaultGithubRepo = System.getenv("GITHUB_DEFAULT_REPO"),
+        githubMcpServerId = "github"
     )
 }
 

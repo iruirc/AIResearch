@@ -5,6 +5,7 @@
 Tech Support AI Assistant helps answer technical questions by combining:
 - Documentation and FAQ database (RAG)
 - Trello bug tracking integration
+- **GitHub Integration**: Repository info (branches, commits, issues, PRs)
 - AI-powered intelligent responses
 - **Project Management**: Task prioritization and project status
 
@@ -14,7 +15,8 @@ Tech Support AI Assistant helps answer technical questions by combining:
 
 1. **Server running**: ResearchAI server must be started
 2. **Trello configured** (optional): For ticket integration, configure Trello MCP server
-3. **RAG indexed** (optional): Index documentation for knowledge base search
+3. **GitHub configured** (optional): For repository info, configure GitHub MCP server
+4. **RAG indexed** (optional): Index documentation for knowledge base search
 
 ### Configuration
 
@@ -25,6 +27,11 @@ Set environment variables in `.env`:
 TRELLO_SUPPORT_BOARD_ID=your-board-id
 TRELLO_API_KEY=your-api-key
 TRELLO_TOKEN=your-token
+
+# GitHub integration (optional)
+GITHUB_DEFAULT_OWNER=your-github-owner
+GITHUB_DEFAULT_REPO=your-repo-name
+GITHUB_TOKEN=ghp_your_token
 ```
 
 ### Trello Defaults
@@ -44,6 +51,15 @@ TRELLO_TOKEN=your-token
 | `GENERAL` / Other | `Inbox` | support, needs-triage |
 
 > **Note:** Ensure the board specified in `TRELLO_SUPPORT_BOARD_ID` has the required lists ("Inbox", "Bugs", "Ideas"), or provide a custom `listName` when creating tickets.
+
+### GitHub Defaults
+
+| Operation | Default Value | Override |
+|-----------|---------------|----------|
+| **Repository Owner** | `GITHUB_DEFAULT_OWNER` env variable | `githubOwner` in request |
+| **Repository Name** | `GITHUB_DEFAULT_REPO` env variable | `githubRepo` in request |
+
+> **Note:** GitHub integration requires `GITHUB_TOKEN` environment variable for authentication.
 
 ## User Scenarios
 
@@ -492,7 +508,79 @@ Suggested Actions:
 
 ---
 
-### Scenario 11: Getting JSON Output
+### Scenario 11: GitHub - Viewing Repository Branches
+
+**User Story**: As a developer, I want to see all branches in the repository.
+
+**CLI:**
+```bash
+rai support "Какие ветки в репозитории?"
+# or in English
+rai support "What branches are in the repository?"
+```
+
+**Expected Response:**
+```
+Query Type: [GITHUB]
+
+Answer:
+В репозитории iruirc/AIResearch обнаружены следующие ветки:
+
+1. **main** [DEFAULT] - основная ветка разработки
+2. **feature/trello_git** - текущая feature ветка
+3. **develop** - ветка разработки
+
+Suggested Actions:
+  1. 📂 Repository: iruirc/AIResearch
+     URL: https://github.com/iruirc/AIResearch
+
+  2. 🌿 Branches (3 total):
+     [*] main (default)
+         SHA: abc1234
+         URL: https://github.com/iruirc/AIResearch/tree/main
+
+     [ ] feature/trello_git
+         SHA: def5678
+         URL: https://github.com/iruirc/AIResearch/tree/feature/trello_git
+```
+
+---
+
+### Scenario 12: GitHub - Viewing Recent Commits
+
+**User Story**: As a developer, I want to see recent commits in the repository.
+
+**CLI:**
+```bash
+rai support "Покажи последние коммиты"
+# or
+rai support "Show recent commits"
+```
+
+**Expected Response:**
+```
+Query Type: [GITHUB]
+
+Answer:
+Последние коммиты в репозитории iruirc/AIResearch:
+
+1. [398675c] feat(mcp): add configurable toolChoice for OpenAI and Claude
+   Author: Developer | Date: 2025-12-04
+
+2. [7451883] fix(tech-support): restrict Trello access to TRELLO_SUPPORT_BOARD_ID
+   Author: Developer | Date: 2025-12-04
+
+Suggested Actions:
+  1. 📝 Recent Commits:
+     [398675c] feat(mcp): add configurable toolChoice...
+         URL: https://github.com/iruirc/AIResearch/commit/398675c
+
+  2. 👀 View Commit: 398675c
+```
+
+---
+
+### Scenario 13: Getting JSON Output
 
 **User Story**: I need to programmatically process the response.
 
@@ -553,6 +641,12 @@ The panel intelligently suggests actions based on query type and context:
 | **List Tasks** | 📋 | PROJECT_MANAGEMENT queries | Shows filtered tasks with priority indicators |
 | **Prioritize** | 🎯 | PROJECT_MANAGEMENT queries with multiple tasks | AI recommendations for task order |
 | **Project Status** | 📊 | PROJECT_MANAGEMENT status queries | Shows statistics by priority and status |
+| **View Branch** | 🌿 | GITHUB_INFO queries about branches | Links to specific branch on GitHub |
+| **View Commit** | 📝 | GITHUB_INFO queries about commits | Links to specific commit on GitHub |
+| **View Issue** | 🐛 | GITHUB_INFO queries about issues | Links to specific issue on GitHub |
+| **View Pull Request** | 🔀 | GITHUB_INFO queries about PRs | Links to specific pull request on GitHub |
+| **List Branches** | 📂 | GITHUB_INFO queries requesting branch list | Shows all branches in repository |
+| **View Repository** | 🏠 | GITHUB_INFO queries about repo info | Links to repository homepage |
 
 **Priority Indicators (Escalate action):**
 - 🚨 **Urgent** - Critical issues requiring immediate attention
@@ -569,6 +663,7 @@ The panel intelligently suggests actions based on query type and context:
 | `HOW_TO` | Add to FAQ (if good RAG match) |
 | `STATUS_CHECK` | Contact Support (if no tickets found) |
 | `PROJECT_MANAGEMENT` | List Tasks + Prioritize + View Ticket (top tasks) |
+| `GITHUB_INFO` | List Branches + View Branch/Commit/Issue/PR + View Repository |
 | `GENERAL` | Escalate (if no context) or Create Ticket (fallback) |
 
 **Task Priority Indicators (List Tasks action):**
@@ -605,6 +700,11 @@ Options:
   --status              Show project status summary
   -r, --recommend       Get AI recommendations for task prioritization
 
+  # GitHub Options
+  --github-owner TEXT   Override GitHub repository owner
+  --github-repo TEXT    Override GitHub repository name
+  --no-github           Disable GitHub integration
+
 Examples:
   rai support "How do I configure OAuth?"
   rai support --session abc123 "Follow-up question"
@@ -616,6 +716,11 @@ Examples:
   rai support --status                 # Show project status
   rai support --recommend              # Get AI recommendations
   rai support "What tasks should I do first?"
+
+  # GitHub Examples
+  rai support "What branches are in the repo?"
+  rai support --github-owner owner --github-repo repo "Show recent commits"
+  rai support --no-github "Query without GitHub context"
 ```
 
 ## Best Practices
@@ -664,6 +769,16 @@ rai support --server http://your-server:8080 "query"
 1. Check MCP server configuration
 2. Verify Trello API credentials in `.env`
 3. Ensure Trello MCP server is registered
+
+### "GitHub not connected"
+
+1. Check MCP server configuration for `github` server
+2. Verify `GITHUB_TOKEN` is set in `.env`
+3. Ensure GitHub MCP server is registered in `mcp-config.json`
+4. For repository access, configure:
+   - `GITHUB_DEFAULT_OWNER` - Repository owner (e.g., `iruirc`)
+   - `GITHUB_DEFAULT_REPO` - Repository name (e.g., `AIResearch`)
+5. Check health endpoint: `GET /api/v2/tech-support/health`
 
 ### "No relevant context found"
 

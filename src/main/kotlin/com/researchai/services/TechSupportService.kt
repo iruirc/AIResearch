@@ -59,6 +59,15 @@ class TechSupportService(
             // 4. Extract suggested actions
             val suggestedActions = extractSuggestedActions(aiResponse, context, queryType, request.query)
 
+            // Calculate GitHub item count
+            val githubItemCount = (context.githubContext?.branches?.size ?: 0) +
+                    (context.githubContext?.commits?.size ?: 0) +
+                    (context.githubContext?.issues?.size ?: 0) +
+                    (context.githubContext?.pullRequests?.size ?: 0)
+
+            val githubSources = mutableListOf<String>()
+            context.githubContext?.repositoryInfo?.let { githubSources.add(it.fullName) }
+
             TechSupportResponse(
                 answer = aiResponse,
                 sessionId = request.sessionId ?: "tech-support-${System.currentTimeMillis()}",
@@ -66,8 +75,10 @@ class TechSupportService(
                 sourcesUsed = SourcesUsed(
                     ragSourceCount = context.ragContext?.sourceCount ?: 0,
                     trelloTicketCount = context.ticketContext?.relatedTickets?.size ?: 0,
+                    githubItemCount = githubItemCount,
                     ragSources = context.ragContext?.sources ?: emptyList(),
-                    trelloSources = context.ticketContext?.relatedTickets?.map { it.cardName } ?: emptyList()
+                    trelloSources = context.ticketContext?.relatedTickets?.map { it.cardName } ?: emptyList(),
+                    githubSources = githubSources
                 ),
                 suggestedActions = suggestedActions,
                 relatedTickets = context.ticketContext?.relatedTickets ?: emptyList(),
@@ -122,6 +133,14 @@ class TechSupportService(
             return QueryType.PROJECT_MANAGEMENT
         }
 
+        // GitHub keywords
+        val githubKeywords = listOf("ветк", "branch", "коммит", "commit", "pull request", "pr", "issue",
+            "репозитор", "repository", "repo", "git", "merge", "push", "код", "code review",
+            "github", "ветви", "branches", "commits", "история изменений", "последние изменения")
+        if (githubKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.GITHUB_INFO
+        }
+
         return QueryType.GENERAL
     }
 
@@ -136,6 +155,7 @@ Classify this user query into one of these categories:
 - STATUS_CHECK: User is asking about status of a ticket or issue
 - FEATURE_REQUEST: User is requesting a new feature
 - PROJECT_MANAGEMENT: User is asking about project status, task priorities, what to do next, or listing tasks
+- GITHUB_INFO: User is asking about GitHub repository info (branches, commits, pull requests, issues, code changes)
 - GENERAL: General question that doesn't fit above
 
 Query: "$query"
@@ -167,7 +187,7 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
     }
 
     /**
-     * Gather context from RAG and Trello in parallel
+     * Gather context from RAG, Trello, and GitHub in parallel
      */
     private suspend fun gatherContext(
         request: TechSupportRequest,
@@ -207,9 +227,24 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
             }
         } else null
 
+        // Fetch GitHub context for GITHUB_INFO queries or when explicitly requested
+        val githubDeferred = if (request.includeGithub && queryType == QueryType.GITHUB_INFO) {
+            async {
+                val owner = request.githubOwner ?: config.defaultGithubOwner
+                val repo = request.githubRepo ?: config.defaultGithubRepo
+                if (owner != null && repo != null) {
+                    fetchGithubContext(request.query, owner, repo, request.maxGithubResults)
+                } else {
+                    logger.warn("No GitHub owner/repo configured for GITHUB_INFO query")
+                    null
+                }
+            }
+        } else null
+
         TechSupportContext(
             ragContext = ragDeferred?.await(),
             ticketContext = trelloDeferred?.await(),
+            githubContext = githubDeferred?.await(),
             queryType = queryType,
             processingTimeMs = System.currentTimeMillis() - startTime
         )
@@ -513,6 +548,11 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
             return buildProjectManagementPrompt(query, context)
         }
 
+        // Use specialized prompt for GITHUB_INFO queries
+        if (context.queryType == QueryType.GITHUB_INFO) {
+            return buildGithubPrompt(query, context)
+        }
+
         return buildString {
             appendLine("# User Query")
             appendLine(query)
@@ -530,7 +570,12 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
                 appendLine()
             }
 
-            if (context.ragContext == null && context.ticketContext == null) {
+            context.githubContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            if (context.ragContext == null && context.ticketContext == null && context.githubContext == null) {
                 appendLine("# Note: No additional context available")
                 appendLine()
             }
@@ -628,6 +673,93 @@ Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
                         cardName = task.cardName,
                         reason = "Priority task",
                         url = task.url
+                    )
+                ))
+            }
+
+            return actions
+        }
+
+        // Handle GITHUB_INFO queries specially
+        if (queryType == QueryType.GITHUB_INFO && context.githubContext != null) {
+            val github = context.githubContext
+
+            // Add LIST_BRANCHES action if we have branches
+            if (github.branches.isNotEmpty()) {
+                actions.add(SuggestedActionWrapper(
+                    actionType = "LIST_BRANCHES",
+                    listBranches = ListBranchesAction(
+                        branches = github.branches,
+                        defaultBranch = github.branches.find { it.isDefault }?.name,
+                        totalCount = github.branches.size
+                    )
+                ))
+            }
+
+            // Add VIEW_REPO action
+            github.repositoryInfo?.let { repo ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_REPO",
+                    viewRepo = ViewRepoAction(
+                        owner = repo.owner,
+                        name = repo.name,
+                        defaultBranch = repo.defaultBranch,
+                        description = repo.description,
+                        url = repo.url
+                    )
+                ))
+            }
+
+            // Add VIEW_BRANCH for each branch (limit to 5)
+            github.branches.take(5).forEach { branch ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_BRANCH",
+                    viewBranch = ViewBranchAction(
+                        branchName = branch.name,
+                        sha = branch.sha,
+                        isDefault = branch.isDefault,
+                        url = branch.url
+                    )
+                ))
+            }
+
+            // Add VIEW_COMMIT for recent commits (limit to 3)
+            github.commits.take(3).forEach { commit ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_COMMIT",
+                    viewCommit = ViewCommitAction(
+                        sha = commit.sha,
+                        message = commit.message,
+                        author = commit.author,
+                        url = commit.url
+                    )
+                ))
+            }
+
+            // Add VIEW_ISSUE for open issues (limit to 3)
+            github.issues.take(3).forEach { issue ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_ISSUE",
+                    viewIssue = ViewIssueAction(
+                        number = issue.number,
+                        title = issue.title,
+                        state = issue.state,
+                        url = issue.url
+                    )
+                ))
+            }
+
+            // Add VIEW_PR for open pull requests (limit to 3)
+            github.pullRequests.take(3).forEach { pr ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_PR",
+                    viewPullRequest = ViewPullRequestAction(
+                        number = pr.number,
+                        title = pr.title,
+                        state = pr.state,
+                        sourceBranch = pr.sourceBranch,
+                        targetBranch = pr.targetBranch,
+                        url = pr.url
                     )
                 ))
             }
@@ -1150,5 +1282,435 @@ Respond in the same language as the user's query.
         }
 
         return recommendations
+    }
+
+    // ==================== GitHub Integration Methods ====================
+
+    /**
+     * Fetch context from GitHub via MCP
+     */
+    private suspend fun fetchGithubContext(
+        query: String,
+        owner: String,
+        repo: String,
+        maxResults: Int
+    ): GitHubContextResult? {
+        return try {
+            val githubClient = mcpServerManager.getClient(config.githubMcpServerId)
+            if (githubClient == null) {
+                logger.warn("GitHub MCP server not connected")
+                return null
+            }
+
+            logger.info("Fetching GitHub context for $owner/$repo")
+
+            // Determine what type of GitHub info to fetch based on query
+            val queryLower = query.lowercase()
+            val branches = mutableListOf<GitHubBranchInfo>()
+            val commits = mutableListOf<GitHubCommitInfo>()
+            val issues = mutableListOf<GitHubIssueInfo>()
+            val pullRequests = mutableListOf<GitHubPRInfo>()
+
+            // Fetch branches if query mentions branches
+            if (queryLower.contains("ветк") || queryLower.contains("branch")) {
+                branches.addAll(fetchGithubBranches(githubClient, owner, repo, maxResults))
+            }
+
+            // Fetch commits if query mentions commits
+            if (queryLower.contains("коммит") || queryLower.contains("commit") ||
+                queryLower.contains("изменен") || queryLower.contains("change")) {
+                commits.addAll(fetchGithubCommits(githubClient, owner, repo, maxResults))
+            }
+
+            // Fetch issues if query mentions issues
+            if (queryLower.contains("issue") || queryLower.contains("проблем") ||
+                queryLower.contains("баг") || queryLower.contains("bug")) {
+                issues.addAll(fetchGithubIssues(githubClient, owner, repo, maxResults))
+            }
+
+            // Fetch PRs if query mentions pull requests
+            if (queryLower.contains("pr") || queryLower.contains("pull") ||
+                queryLower.contains("мерж") || queryLower.contains("merge")) {
+                pullRequests.addAll(fetchGithubPullRequests(githubClient, owner, repo, maxResults))
+            }
+
+            // If no specific query, fetch basic info (branches and recent commits)
+            if (branches.isEmpty() && commits.isEmpty() && issues.isEmpty() && pullRequests.isEmpty()) {
+                branches.addAll(fetchGithubBranches(githubClient, owner, repo, maxResults))
+                commits.addAll(fetchGithubCommits(githubClient, owner, repo, 5))
+            }
+
+            val repoInfo = GitHubRepoInfo(
+                owner = owner,
+                name = repo,
+                fullName = "$owner/$repo",
+                defaultBranch = branches.find { it.isDefault }?.name ?: "main",
+                description = null,
+                url = "https://github.com/$owner/$repo"
+            )
+
+            GitHubContextResult(
+                formattedContext = formatGithubContext(branches, commits, issues, pullRequests, repoInfo),
+                branches = branches,
+                commits = commits,
+                issues = issues,
+                pullRequests = pullRequests,
+                repositoryInfo = repoInfo
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to fetch GitHub context", e)
+            null
+        }
+    }
+
+    /**
+     * Fetch branches from GitHub via MCP
+     */
+    private suspend fun fetchGithubBranches(
+        githubClient: MCPClientWrapper,
+        owner: String,
+        repo: String,
+        maxResults: Int
+    ): List<GitHubBranchInfo> {
+        val result = githubClient.callTool(
+            name = "list_branches",
+            arguments = buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+            }
+        )
+
+        if (!result.success) {
+            logger.warn("Failed to fetch branches: ${result.error}")
+            return emptyList()
+        }
+
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val branchesArray = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("branches") -> json["branches"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            branchesArray.take(maxResults).mapNotNull { branchJson ->
+                try {
+                    val branch = branchJson.jsonObject
+                    GitHubBranchInfo(
+                        name = branch["name"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                        sha = branch["commit"]?.jsonObject?.get("sha")?.jsonPrimitive?.content
+                            ?: branch["sha"]?.jsonPrimitive?.content ?: "",
+                        isProtected = branch["protected"]?.jsonPrimitive?.booleanOrNull ?: false,
+                        isDefault = branch["name"]?.jsonPrimitive?.content == "main" ||
+                                   branch["name"]?.jsonPrimitive?.content == "master",
+                        url = "https://github.com/$owner/$repo/tree/${branch["name"]?.jsonPrimitive?.content}"
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse branch: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse branches response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch commits from GitHub via MCP
+     */
+    private suspend fun fetchGithubCommits(
+        githubClient: MCPClientWrapper,
+        owner: String,
+        repo: String,
+        maxResults: Int
+    ): List<GitHubCommitInfo> {
+        val result = githubClient.callTool(
+            name = "list_commits",
+            arguments = buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("per_page", maxResults)
+            }
+        )
+
+        if (!result.success) {
+            logger.warn("Failed to fetch commits: ${result.error}")
+            return emptyList()
+        }
+
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val commitsArray = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("commits") -> json["commits"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            commitsArray.take(maxResults).mapNotNull { commitJson ->
+                try {
+                    val commit = commitJson.jsonObject
+                    val commitData = commit["commit"]?.jsonObject
+                    GitHubCommitInfo(
+                        sha = commit["sha"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                        message = commitData?.get("message")?.jsonPrimitive?.content?.take(100) ?: "No message",
+                        author = commitData?.get("author")?.jsonObject?.get("name")?.jsonPrimitive?.content
+                            ?: commit["author"]?.jsonObject?.get("login")?.jsonPrimitive?.content ?: "Unknown",
+                        date = commitData?.get("author")?.jsonObject?.get("date")?.jsonPrimitive?.content ?: "",
+                        url = commit["html_url"]?.jsonPrimitive?.content
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse commit: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse commits response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch issues from GitHub via MCP
+     */
+    private suspend fun fetchGithubIssues(
+        githubClient: MCPClientWrapper,
+        owner: String,
+        repo: String,
+        maxResults: Int
+    ): List<GitHubIssueInfo> {
+        val result = githubClient.callTool(
+            name = "list_issues",
+            arguments = buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("state", "open")
+                put("per_page", maxResults)
+            }
+        )
+
+        if (!result.success) {
+            logger.warn("Failed to fetch issues: ${result.error}")
+            return emptyList()
+        }
+
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val issuesArray = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("issues") -> json["issues"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            issuesArray.take(maxResults).mapNotNull { issueJson ->
+                try {
+                    val issue = issueJson.jsonObject
+                    // Skip pull requests (they appear in issues list)
+                    if (issue.containsKey("pull_request")) return@mapNotNull null
+
+                    GitHubIssueInfo(
+                        number = issue["number"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null,
+                        title = issue["title"]?.jsonPrimitive?.content ?: "Untitled",
+                        state = issue["state"]?.jsonPrimitive?.content ?: "open",
+                        author = issue["user"]?.jsonObject?.get("login")?.jsonPrimitive?.content ?: "Unknown",
+                        labels = issue["labels"]?.jsonArray?.mapNotNull {
+                            it.jsonObject["name"]?.jsonPrimitive?.content
+                        } ?: emptyList(),
+                        createdAt = issue["created_at"]?.jsonPrimitive?.content ?: "",
+                        updatedAt = issue["updated_at"]?.jsonPrimitive?.contentOrNull,
+                        body = issue["body"]?.jsonPrimitive?.contentOrNull?.take(200),
+                        url = issue["html_url"]?.jsonPrimitive?.content
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse issue: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse issues response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch pull requests from GitHub via MCP
+     */
+    private suspend fun fetchGithubPullRequests(
+        githubClient: MCPClientWrapper,
+        owner: String,
+        repo: String,
+        maxResults: Int
+    ): List<GitHubPRInfo> {
+        val result = githubClient.callTool(
+            name = "list_pull_requests",
+            arguments = buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("state", "open")
+                put("per_page", maxResults)
+            }
+        )
+
+        if (!result.success) {
+            logger.warn("Failed to fetch pull requests: ${result.error}")
+            return emptyList()
+        }
+
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val prsArray = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("pull_requests") -> json["pull_requests"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            prsArray.take(maxResults).mapNotNull { prJson ->
+                try {
+                    val pr = prJson.jsonObject
+                    GitHubPRInfo(
+                        number = pr["number"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null,
+                        title = pr["title"]?.jsonPrimitive?.content ?: "Untitled",
+                        state = pr["state"]?.jsonPrimitive?.content ?: "open",
+                        author = pr["user"]?.jsonObject?.get("login")?.jsonPrimitive?.content ?: "Unknown",
+                        sourceBranch = pr["head"]?.jsonObject?.get("ref")?.jsonPrimitive?.content ?: "unknown",
+                        targetBranch = pr["base"]?.jsonObject?.get("ref")?.jsonPrimitive?.content ?: "main",
+                        labels = pr["labels"]?.jsonArray?.mapNotNull {
+                            it.jsonObject["name"]?.jsonPrimitive?.content
+                        } ?: emptyList(),
+                        createdAt = pr["created_at"]?.jsonPrimitive?.content ?: "",
+                        updatedAt = pr["updated_at"]?.jsonPrimitive?.contentOrNull,
+                        isDraft = pr["draft"]?.jsonPrimitive?.booleanOrNull ?: false,
+                        url = pr["html_url"]?.jsonPrimitive?.content
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse pull request: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse pull requests response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Format GitHub context for prompt
+     */
+    private fun formatGithubContext(
+        branches: List<GitHubBranchInfo>,
+        commits: List<GitHubCommitInfo>,
+        issues: List<GitHubIssueInfo>,
+        pullRequests: List<GitHubPRInfo>,
+        repoInfo: GitHubRepoInfo
+    ): String {
+        return buildString {
+            appendLine("=== GITHUB REPOSITORY CONTEXT ===")
+            appendLine("Repository: ${repoInfo.fullName}")
+            appendLine("URL: ${repoInfo.url}")
+            appendLine()
+
+            if (branches.isNotEmpty()) {
+                appendLine("## Branches (${branches.size})")
+                branches.forEach { branch ->
+                    val defaultMarker = if (branch.isDefault) " [DEFAULT]" else ""
+                    val protectedMarker = if (branch.isProtected) " [PROTECTED]" else ""
+                    appendLine("- ${branch.name}$defaultMarker$protectedMarker")
+                    appendLine("  SHA: ${branch.sha.take(7)}")
+                }
+                appendLine()
+            }
+
+            if (commits.isNotEmpty()) {
+                appendLine("## Recent Commits (${commits.size})")
+                commits.forEach { commit ->
+                    appendLine("- [${commit.sha.take(7)}] ${commit.message}")
+                    appendLine("  Author: ${commit.author} | Date: ${commit.date}")
+                }
+                appendLine()
+            }
+
+            if (issues.isNotEmpty()) {
+                appendLine("## Open Issues (${issues.size})")
+                issues.forEach { issue ->
+                    appendLine("- #${issue.number}: ${issue.title}")
+                    appendLine("  State: ${issue.state} | Author: ${issue.author}")
+                    if (issue.labels.isNotEmpty()) {
+                        appendLine("  Labels: ${issue.labels.joinToString(", ")}")
+                    }
+                }
+                appendLine()
+            }
+
+            if (pullRequests.isNotEmpty()) {
+                appendLine("## Open Pull Requests (${pullRequests.size})")
+                pullRequests.forEach { pr ->
+                    val draftMarker = if (pr.isDraft) " [DRAFT]" else ""
+                    appendLine("- #${pr.number}: ${pr.title}$draftMarker")
+                    appendLine("  ${pr.sourceBranch} → ${pr.targetBranch} | Author: ${pr.author}")
+                    if (pr.labels.isNotEmpty()) {
+                        appendLine("  Labels: ${pr.labels.joinToString(", ")}")
+                    }
+                }
+                appendLine()
+            }
+        }
+    }
+
+    /**
+     * Check if GitHub MCP server is connected
+     */
+    fun isGithubConnected(): Boolean {
+        return mcpServerManager.getClient(config.githubMcpServerId) != null
+    }
+
+    /**
+     * Build GitHub-specific prompt
+     */
+    private fun buildGithubPrompt(query: String, context: TechSupportContext): String {
+        return buildString {
+            appendLine("# User Query")
+            appendLine(query)
+            appendLine()
+
+            appendLine("# Query Type: GITHUB_INFO")
+            appendLine()
+
+            // Add GitHub context
+            context.githubContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            // Add RAG context (if relevant documentation exists)
+            context.ragContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            appendLine("# Instructions")
+            appendLine("""
+You are a helpful assistant answering questions about a GitHub repository.
+Based on the repository information above:
+
+1. Answer the user's question accurately using the provided data
+2. If asking about branches:
+   - List available branches
+   - Highlight the default branch
+   - Mention protected branches if any
+3. If asking about commits:
+   - Summarize recent changes
+   - Mention key contributors
+4. If asking about issues or pull requests:
+   - Summarize open items
+   - Highlight important labels
+5. Provide URLs where helpful so user can click through
+
+Respond in the same language as the user's query.
+            """.trimIndent())
+        }
     }
 }

@@ -274,6 +274,14 @@ All providers are configured via environment variables (loaded from `.env` file)
 - `HUGGINGFACE_MAX_TOKENS` - Optional, defaults to 8192
 - `HUGGINGFACE_TEMPERATURE` - Optional, defaults to 1.0
 
+**Tech Support** (optional):
+- `TRELLO_SUPPORT_BOARD_ID` - Trello board ID for ticket management
+- `GITHUB_DEFAULT_OWNER` - Default GitHub repository owner for Tech Support queries
+- `GITHUB_DEFAULT_REPO` - Default GitHub repository name for Tech Support queries
+
+**GitHub MCP** (required for GitHub features):
+- `GITHUB_TOKEN` - GitHub personal access token for GitHub MCP server
+
 ### Configuration Loading
 
 Configuration is loaded at application startup in `Application.kt`:
@@ -524,6 +532,75 @@ override suspend fun onTaskError(error: Exception) {
 - **Auto-loading**: Tasks are restored and started on application restart
 - **Graceful Shutdown**: Always use proper shutdown to save all tasks
 - **Documentation**: See `Documents/TASK_SCHEDULER.md` for comprehensive details
+
+## Tech Support
+
+The application provides an **AI-powered Tech Support** service with RAG, Trello, and GitHub integration.
+
+### Overview
+
+Tech Support automatically classifies user queries and enriches AI responses with context from multiple sources:
+
+**Data Sources:**
+- **RAG** - Knowledge base documentation for answering how-to questions
+- **Trello** - Ticket management for bug reports and feature requests
+- **GitHub** - Repository information (branches, commits, issues, PRs)
+
+### Query Types
+
+The service automatically classifies queries into:
+- `BUG_REPORT` - Error reports and issues
+- `HOW_TO` - How-to questions
+- `STATUS_CHECK` - Ticket status inquiries
+- `FEATURE_REQUEST` - New feature requests
+- `PROJECT_MANAGEMENT` - Task priorities and project status
+- `GITHUB_INFO` - Repository information (branches, commits, issues, PRs)
+- `GENERAL` - Other questions
+
+### GitHub Integration
+
+When a query is classified as `GITHUB_INFO`, the service fetches context from GitHub MCP:
+
+**Supported queries:**
+- "Какие ветки в репозитории?" → fetches branches
+- "Покажи последние коммиты" → fetches recent commits
+- "Какие открытые issues?" → fetches open issues
+- "Какие открытые pull requests?" → fetches PRs
+
+**Configuration:**
+```env
+GITHUB_DEFAULT_OWNER=owner-name
+GITHUB_DEFAULT_REPO=repo-name
+GITHUB_TOKEN=ghp_xxx
+```
+
+**API Request (override defaults):**
+```json
+{
+  "query": "Какие ветки?",
+  "githubOwner": "custom-owner",
+  "githubRepo": "custom-repo",
+  "includeGithub": true
+}
+```
+
+### API Endpoints
+
+- `POST /tech-support/query` - Process tech support request
+- `POST /tech-support/create-ticket` - Create Trello ticket
+- `POST /tech-support/add-faq` - Add FAQ to RAG
+- `GET /tech-support/health` - Health check (RAG, Trello, GitHub status)
+
+### Health Check Response
+
+```json
+{
+  "status": "ok",
+  "ragEnabled": true,
+  "trelloConnected": true,
+  "githubConnected": true
+}
+```
 
 ## PR Review
 
