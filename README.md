@@ -467,3 +467,6 @@ ResearchAI/
 ## Лицензия
 
 MIT
+
+
+TEST
