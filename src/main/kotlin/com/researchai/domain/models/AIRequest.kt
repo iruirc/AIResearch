@@ -17,6 +17,18 @@ data class AIRequest(
     val tools: List<ClaudeTool> = emptyList() // MCP tools available for this request
 )
 
+/**
+ * Tool choice mode for function calling
+ * - AUTO: Model decides whether to call tools (default)
+ * - REQUIRED: Model must call at least one tool
+ * - NONE: Model cannot call tools
+ */
+enum class ToolChoiceMode {
+    AUTO,
+    REQUIRED,
+    NONE
+}
+
 @Serializable
 data class RequestParameters(
     val temperature: Double = 1.0,
@@ -27,5 +39,6 @@ data class RequestParameters(
     val presencePenalty: Double? = null,
     val stopSequences: List<String> = emptyList(),
     val responseFormat: com.researchai.models.ResponseFormat = com.researchai.models.ResponseFormat.PLAIN_TEXT,
-    val streamingEnabled: Boolean = false
+    val streamingEnabled: Boolean = false,
+    val toolChoice: ToolChoiceMode = ToolChoiceMode.AUTO
 )

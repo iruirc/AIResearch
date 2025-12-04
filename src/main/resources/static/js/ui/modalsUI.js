@@ -291,6 +291,11 @@ export const modalsUI = {
         if (formatSelect) {
             formatSelect.value = settings.format;
         }
+
+        const toolChoiceSelect = document.getElementById('modalToolChoiceSelect');
+        if (toolChoiceSelect) {
+            toolChoiceSelect.value = settings.toolChoice || 'auto';
+        }
     },
 
     /**
@@ -303,13 +308,15 @@ export const modalsUI = {
         const temperatureSlider = document.getElementById('modalTemperatureSlider');
         const maxTokensSlider = document.getElementById('modalMaxTokensSlider');
         const formatSelect = document.getElementById('modalFormatSelect');
+        const toolChoiceSelect = document.getElementById('modalToolChoiceSelect');
 
         return {
             providerId: providerSelect?.value,
             model: modelSelect?.value,
             temperature: parseFloat(temperatureSlider?.value),
             maxTokens: parseInt(maxTokensSlider?.value),
-            format: formatSelect?.value
+            format: formatSelect?.value,
+            toolChoice: toolChoiceSelect?.value || 'auto'
         };
     },
 

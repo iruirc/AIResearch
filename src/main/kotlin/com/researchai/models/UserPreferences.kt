@@ -16,6 +16,7 @@ data class UserPreferences(
     val format: ResponseFormat = ResponseFormat.PLAIN_TEXT,
     val ollamaConnections: List<OllamaConnection> = emptyList(),
     val activeOllamaConnectionId: String? = null,
+    val toolChoice: String = "auto", // "auto", "required", "none"
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     companion object {

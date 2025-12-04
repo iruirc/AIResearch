@@ -4,12 +4,14 @@ import com.researchai.domain.models.*
 import com.researchai.domain.mcp.ClaudeTool
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import org.slf4j.LoggerFactory
 
 /**
  * Маппер для конвертации между domain моделями и OpenAI API моделями
  */
 class OpenAIMapper {
 
+    private val logger = LoggerFactory.getLogger(OpenAIMapper::class.java)
     private val json = Json { ignoreUnknownKeys = true }
 
     fun toOpenAIRequest(
@@ -104,6 +106,17 @@ class OpenAIMapper {
             request.tools.map { convertToOpenAITool(it) }
         } else null
 
+        // Convert ToolChoiceMode to OpenAI API format
+        val toolChoiceStr = if (openAITools != null) {
+            when (request.parameters.toolChoice) {
+                ToolChoiceMode.AUTO -> "auto"
+                ToolChoiceMode.REQUIRED -> "required"
+                ToolChoiceMode.NONE -> "none"
+            }
+        } else null
+
+        logger.info("OpenAI toolChoice: $toolChoiceStr (from ${request.parameters.toolChoice})")
+
         return OpenAIApiRequest(
             model = request.model,
             messages = messages,
@@ -115,7 +128,7 @@ class OpenAIMapper {
             presencePenalty = request.parameters.presencePenalty,
             stop = request.parameters.stopSequences.takeIf { it.isNotEmpty() },
             tools = openAITools,
-            toolChoice = if (openAITools != null) "auto" else null
+            toolChoice = toolChoiceStr
         )
     }
 
@@ -134,8 +147,17 @@ class OpenAIMapper {
     }
 
     fun fromOpenAIResponse(response: OpenAIApiResponse): AIResponse {
+        logger.info("OpenAI Response - id: ${response.id}, model: ${response.model}")
+        logger.info("OpenAI Response - choices count: ${response.choices.size}")
+
         val choice = response.choices.firstOrNull()
             ?: throw AIError.ParseException("No choices in OpenAI response")
+
+        logger.info("OpenAI Choice - finishReason: ${choice.finishReason}")
+        logger.info("OpenAI Choice - message.content isNull: ${choice.message.content == null}")
+        logger.info("OpenAI Choice - message.content length: ${choice.message.content?.length ?: 0}")
+        logger.info("OpenAI Choice - message.content preview: ${choice.message.content?.take(200) ?: "<NULL>"}")
+        logger.info("OpenAI Choice - message.toolCalls count: ${choice.message.toolCalls?.size ?: 0}")
 
         // Извлечение tool_calls если они есть
         val toolUses = extractToolCalls(choice.message)
@@ -145,9 +167,16 @@ class OpenAIMapper {
             mapFinishReason(choice.finishReason)
         }
 
+        logger.info("OpenAI Mapped - toolUses count: ${toolUses.size}, finishReason: $finishReason")
+
+        val contentResult = choice.message.content ?: ""
+        if (contentResult.isEmpty()) {
+            logger.warn("OpenAI Response content is EMPTY! finishReason=$finishReason, toolUses=${toolUses.size}")
+        }
+
         return AIResponse(
             id = response.id,
-            content = choice.message.content ?: "",
+            content = contentResult,
             role = MessageRole.ASSISTANT,
             model = response.model,
             usage = TokenUsage(

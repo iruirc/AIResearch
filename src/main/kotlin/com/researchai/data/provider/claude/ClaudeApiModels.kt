@@ -22,7 +22,21 @@ data class ClaudeApiRequest(
     @SerialName("stop_sequences")
     val stopSequences: List<String>? = null,
     val system: String? = null,
-    val tools: List<ClaudeApiTool>? = null
+    val tools: List<ClaudeApiTool>? = null,
+    @SerialName("tool_choice")
+    val toolChoice: ClaudeToolChoice? = null
+)
+
+/**
+ * Claude tool_choice options:
+ * - auto: Model decides whether to call tools (default)
+ * - any: Model must call at least one tool (equivalent to "required" in OpenAI)
+ * - {"type": "tool", "name": "tool_name"}: Call a specific tool
+ */
+@Serializable
+data class ClaudeToolChoice(
+    val type: String,  // "auto", "any", or "tool"
+    val name: String? = null  // Required only when type = "tool"
 )
 
 @Serializable

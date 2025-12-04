@@ -49,11 +49,21 @@ fun Route.chatRoutes(
                     assistantManager.getAssistant(assistantId)?.systemPrompt
                 }
 
+                // Get toolChoice from request or preferences
+                val preferences = appModule.preferencesManager.getPreferences()
+                val toolChoiceStr = request.toolChoice ?: preferences.toolChoice
+                val toolChoiceMode = when (toolChoiceStr.lowercase()) {
+                    "required" -> com.researchai.domain.models.ToolChoiceMode.REQUIRED
+                    "none" -> com.researchai.domain.models.ToolChoiceMode.NONE
+                    else -> com.researchai.domain.models.ToolChoiceMode.AUTO
+                }
+
                 // Используем новую архитектуру с SendMessageUseCase
                 val parameters = com.researchai.domain.models.RequestParameters(
                     temperature = request.temperature ?: 1.0,
                     maxTokens = request.maxTokens ?: 4096,
-                    responseFormat = request.format
+                    responseFormat = request.format,
+                    toolChoice = toolChoiceMode
                 )
 
                 val result = appModule.sendMessageUseCase(

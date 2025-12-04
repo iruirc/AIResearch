@@ -10,7 +10,8 @@ data class ChatRequest(
     val model: String? = null, // ID модели Claude для использования
     val temperature: Double? = null, // Температура для генерации ответа (0.0 - 1.0)
     val maxTokens: Int? = null, // Максимальное количество токенов в ответе
-    val useReranking: Boolean? = null // Override reranking setting for this request (null = use global settings)
+    val useReranking: Boolean? = null, // Override reranking setting for this request (null = use global settings)
+    val toolChoice: String? = null // Override tool choice: "auto", "required", "none" (null = use global settings)
 )
 
 @Serializable

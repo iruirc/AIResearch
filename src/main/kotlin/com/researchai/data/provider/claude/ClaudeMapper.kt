@@ -92,6 +92,16 @@ class ClaudeMapper {
             }
         } else null
 
+        // Convert ToolChoiceMode to Claude API format
+        // Claude uses: "auto", "any" (equivalent to OpenAI "required"), or {"type": "tool", "name": "..."}
+        val claudeToolChoice = if (claudeTools != null) {
+            when (request.parameters.toolChoice) {
+                ToolChoiceMode.AUTO -> ClaudeToolChoice(type = "auto")
+                ToolChoiceMode.REQUIRED -> ClaudeToolChoice(type = "any")
+                ToolChoiceMode.NONE -> null  // Claude doesn't have explicit "none", just don't send tools
+            }
+        } else null
+
         return ClaudeApiRequest(
             model = request.model,
             messages = messages,
@@ -101,7 +111,8 @@ class ClaudeMapper {
             topK = request.parameters.topK,
             stopSequences = request.parameters.stopSequences.takeIf { it.isNotEmpty() },
             system = request.systemPrompt,
-            tools = claudeTools
+            tools = if (request.parameters.toolChoice == ToolChoiceMode.NONE) null else claudeTools,
+            toolChoice = claudeToolChoice
         )
     }
 
