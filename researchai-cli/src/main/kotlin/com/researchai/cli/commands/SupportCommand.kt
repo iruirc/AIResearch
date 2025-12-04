@@ -107,11 +107,11 @@ class SupportCommand : CliktCommand(
             }
 
             // Build query based on project management shortcuts
-            val actualQuery = when {
+            val actualQuery: String = when {
                 status -> "Show project status summary"
                 recommend -> "What tasks should I do first and why?"
                 priority != null -> "Show tasks with $priority priority"
-                query != null -> query
+                query != null -> query!!
                 else -> {
                     // Interactive mode
                     echo("Tech Support Assistant")
