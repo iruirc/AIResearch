@@ -156,7 +156,7 @@ class AppModule(
     val techSupportConfig: com.researchai.domain.models.techsupport.TechSupportConfig by lazy {
         com.researchai.domain.models.techsupport.TechSupportConfig(
             ragMinScore = 0.5f,
-            defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID"),
+            defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID") ?: System.getProperty("TRELLO_SUPPORT_BOARD_ID"),
             trelloMcpServerId = "trello"
         )
     }

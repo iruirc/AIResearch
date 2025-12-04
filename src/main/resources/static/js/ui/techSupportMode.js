@@ -218,12 +218,13 @@ export class TechSupportMode {
             switch (action.actionType) {
                 case 'CREATE_TICKET':
                     if (action.createTicket) {
-                        const title = this.escapeHtml(action.createTicket.title);
-                        const desc = this.escapeHtml(action.createTicket.description).replace(/'/g, "\\'");
+                        const title = this.escapeJs(action.createTicket.title);
+                        const titleHtml = this.escapeHtml(action.createTicket.title);
+                        const desc = this.escapeJs(action.createTicket.description);
                         return `
                             <button class="action-btn create-ticket"
                                     onclick="techSupportMode.createTicket('${title}', '${desc}')">
-                                <span class="icon">&#x1F4DD;</span> ${title}
+                                <span class="icon">&#x1F4DD;</span> ${titleHtml}
                             </button>
                         `;
                     }
@@ -256,9 +257,10 @@ export class TechSupportMode {
 
                 case 'ADD_TO_FAQ':
                     if (action.addToFaq) {
+                        const question = this.escapeJs(action.addToFaq.question);
                         return `
                             <button class="action-btn add-to-faq"
-                                    onclick="techSupportMode.addToFaq('${this.escapeHtml(action.addToFaq.question)}')">
+                                    onclick="techSupportMode.addToFaq('${question}')">
                                 <span class="icon">&#x1F4D6;</span> Add to FAQ
                             </button>
                         `;
@@ -308,10 +310,39 @@ export class TechSupportMode {
     }
 
     /**
-     * Add question to FAQ (placeholder)
+     * Add question to FAQ
+     * @param {string} question - The question to add
      */
     async addToFaq(question) {
-        alert(`FAQ functionality coming soon!\n\nQuestion: ${question}`);
+        // Get the answer from the last response
+        if (!this.lastResponse || !this.lastResponse.answer) {
+            alert('No answer available to add to FAQ');
+            return;
+        }
+
+        const answer = this.lastResponse.answer;
+        const category = this.lastResponse.queryType?.toLowerCase() || 'general';
+
+        // Confirm with user
+        const confirmed = confirm(
+            `Add to FAQ?\n\nQuestion:\n${question.substring(0, 100)}...\n\nAnswer will be added to RAG knowledge base.`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const result = await techSupportApi.addFaq(question, answer, category);
+
+            if (result.success) {
+                alert(`FAQ added successfully!\n\nDocument: ${result.documentName}\nThis FAQ will now be used to answer similar questions.`);
+            } else {
+                alert(`Failed to add FAQ: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            alert(`Failed to add FAQ: ${error.message}`);
+        }
     }
 
     /**
@@ -370,6 +401,16 @@ export class TechSupportMode {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Escape string for use in JavaScript onclick handlers
+     * Uses JSON.stringify for proper escaping of all special characters
+     */
+    escapeJs(text) {
+        if (!text) return '';
+        // JSON.stringify adds quotes, so we slice them off
+        return JSON.stringify(text).slice(1, -1);
     }
 }
 

@@ -44,13 +44,18 @@ class TechSupportService(
             // 2. Gather context in parallel from RAG and Trello
             val context = gatherContext(request, queryType)
 
-            // 3. Build enriched prompt with context
-            val enrichedPrompt = buildEnrichedPrompt(request.query, context)
+            // 3. Use existing answer if provided, otherwise generate new one
+            val aiResponse = if (request.existingAnswer != null) {
+                logger.info("Using existing answer from main chat (skipping AI call)")
+                request.existingAnswer
+            } else {
+                // Build enriched prompt with context
+                val enrichedPrompt = buildEnrichedPrompt(request.query, context)
+                // Execute AI request
+                executeAIRequest(enrichedPrompt, request)
+            }
 
-            // 4. Execute AI request
-            val aiResponse = executeAIRequest(enrichedPrompt, request)
-
-            // 5. Extract suggested actions
+            // 4. Extract suggested actions
             val suggestedActions = extractSuggestedActions(aiResponse, context, queryType, request.query)
 
             TechSupportResponse(
@@ -70,6 +75,45 @@ class TechSupportService(
         }.onFailure { error ->
             logger.error("Tech support request failed", error)
         }
+    }
+
+    /**
+     * Fast query classification using keyword heuristics (no AI call)
+     * Can be used as fallback or for quick classification
+     */
+    @Suppress("unused")
+    private fun classifyQueryFast(query: String): QueryType {
+        val lowerQuery = query.lowercase()
+
+        // Bug report keywords
+        val bugKeywords = listOf("ошибка", "баг", "bug", "error", "crash", "не работает", "doesn't work",
+            "сломалось", "broken", "падает", "exception", "failed", "fail", "проблема", "issue", "500", "404")
+        if (bugKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.BUG_REPORT
+        }
+
+        // How-to keywords
+        val howToKeywords = listOf("как ", "how to", "how do", "как сделать", "как настроить",
+            "как использовать", "configure", "setup", "set up", "настройка", "can i", "могу ли")
+        if (howToKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.HOW_TO
+        }
+
+        // Status check keywords
+        val statusKeywords = listOf("статус", "status", "где мой", "what happened", "progress",
+            "когда будет", "when will", "ticket", "тикет", "заявка")
+        if (statusKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.STATUS_CHECK
+        }
+
+        // Feature request keywords
+        val featureKeywords = listOf("хотелось бы", "было бы хорошо", "feature", "добавить",
+            "add", "implement", "want", "хочу", "можно ли добавить", "suggestion")
+        if (featureKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.FEATURE_REQUEST
+        }
+
+        return QueryType.GENERAL
     }
 
     /**
@@ -514,6 +558,53 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             )
         }.onFailure { error ->
             logger.error("Failed to create ticket", error)
+        }
+    }
+
+    /**
+     * Add FAQ entry to RAG knowledge base
+     */
+    suspend fun addFaq(request: AddFaqRequest): Result<AddFaqResponse> {
+        return runCatching {
+            val category = request.category ?: "general"
+            val timestamp = System.currentTimeMillis()
+            val docName = "FAQ_${category}_$timestamp"
+
+            // Create markdown content for FAQ
+            val content = buildString {
+                appendLine("# FAQ: ${request.question}")
+                appendLine()
+                appendLine("**Category:** $category")
+                appendLine()
+                appendLine("## Question")
+                appendLine(request.question)
+                appendLine()
+                appendLine("## Answer")
+                appendLine(request.answer)
+                appendLine()
+                appendLine("---")
+                appendLine("*Added to FAQ: ${java.time.Instant.ofEpochMilli(timestamp)}*")
+            }
+
+            logger.info("Adding FAQ to RAG: $docName")
+
+            val document = ragManager.addDocument(
+                name = docName,
+                content = content,
+                chunkingStrategy = ChunkingStrategy.SEMANTIC,
+                enabled = true,
+                originalFileName = "faq_${category}_$timestamp.md"
+            )
+
+            logger.info("FAQ added successfully: ${document.id}, chunks: ${document.chunks.size}")
+
+            AddFaqResponse(
+                success = true,
+                documentId = document.id,
+                documentName = document.name
+            )
+        }.onFailure { error ->
+            logger.error("Failed to add FAQ", error)
         }
     }
 

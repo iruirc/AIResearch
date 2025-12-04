@@ -171,6 +171,76 @@ fun Route.techSupportRoutes(techSupportService: TechSupportService, chatSessionM
         }
 
         /**
+         * POST /api/v2/tech-support/faq
+         * Add FAQ entry to RAG knowledge base
+         *
+         * Request body: AddFaqRequest
+         * Response: AddFaqResponse
+         */
+        post("/faq") {
+            try {
+                val request = call.receive<AddFaqRequest>()
+
+                if (request.question.isBlank()) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        AddFaqResponse(
+                            success = false,
+                            error = "Question cannot be empty"
+                        )
+                    )
+                    return@post
+                }
+
+                if (request.answer.isBlank()) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        AddFaqResponse(
+                            success = false,
+                            error = "Answer cannot be empty"
+                        )
+                    )
+                    return@post
+                }
+
+                val result = techSupportService.addFaq(request)
+
+                result.fold(
+                    onSuccess = { response ->
+                        call.respond(HttpStatusCode.Created, response)
+                    },
+                    onFailure = { error ->
+                        call.application.environment.log.error("Failed to add FAQ", error)
+                        call.respond(
+                            HttpStatusCode.InternalServerError,
+                            AddFaqResponse(
+                                success = false,
+                                error = error.message ?: "Failed to add FAQ"
+                            )
+                        )
+                    }
+                )
+            } catch (e: ContentTransformationException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    AddFaqResponse(
+                        success = false,
+                        error = "Invalid request format: ${e.message}"
+                    )
+                )
+            } catch (e: Exception) {
+                call.application.environment.log.error("FAQ request failed", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    AddFaqResponse(
+                        success = false,
+                        error = e.message ?: "Request processing failed"
+                    )
+                )
+            }
+        }
+
+        /**
          * GET /api/v2/tech-support/health
          * Check service health status
          *

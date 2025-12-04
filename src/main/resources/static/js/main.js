@@ -344,7 +344,8 @@ async function sendMessageWithText(message, useReranking = null) {
                 await techSupportMode.sendQuery(message, {
                     sessionId: state.currentSessionId,
                     providerId: state.currentProvider?.toUpperCase() || 'CLAUDE',
-                    model: state.settings?.model
+                    model: state.settings?.model,
+                    existingAnswer: response.response  // Pass AI response to skip duplicate AI call
                 });
                 console.log('Tech support panel updated');
             } catch (e) {

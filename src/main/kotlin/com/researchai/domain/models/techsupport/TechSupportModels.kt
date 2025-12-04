@@ -29,7 +29,8 @@ data class TechSupportRequest(
     val maxRagResults: Int = 5,
     val maxTrelloResults: Int = 3,
     val providerId: ProviderType = ProviderType.CLAUDE,
-    val model: String? = null
+    val model: String? = null,
+    val existingAnswer: String? = null  // Skip AI call if answer already provided from main chat
 )
 
 /**
@@ -189,6 +190,27 @@ data class CreateTicketResponse(
     val success: Boolean,
     val cardId: String?,
     val cardUrl: String?,
+    val error: String? = null
+)
+
+/**
+ * Запрос на добавление FAQ в RAG
+ */
+@Serializable
+data class AddFaqRequest(
+    val question: String,
+    val answer: String,
+    val category: String? = "general"
+)
+
+/**
+ * Ответ на добавление FAQ
+ */
+@Serializable
+data class AddFaqResponse(
+    val success: Boolean,
+    val documentId: String? = null,
+    val documentName: String? = null,
     val error: String? = null
 )
 

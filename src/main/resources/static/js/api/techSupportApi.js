@@ -59,7 +59,8 @@ export const techSupportApi = {
                 maxRagResults: options.maxRagResults || 5,
                 maxTrelloResults: options.maxTrelloResults || 3,
                 providerId: options.providerId || 'CLAUDE',
-                model: options.model || null
+                model: options.model || null,
+                existingAnswer: options.existingAnswer || null  // Skip AI call if answer provided
             })
         });
 
@@ -100,6 +101,32 @@ export const techSupportApi = {
      */
     async getHealth() {
         const response = await fetch('/api/v2/tech-support/health');
+        return response.json();
+    },
+
+    /**
+     * Add FAQ entry to RAG knowledge base
+     * @param {string} question - The question
+     * @param {string} answer - The answer
+     * @param {string} category - Optional category (default: 'general')
+     * @returns {Promise<object>} Add FAQ response
+     */
+    async addFaq(question, answer, category = 'general') {
+        const response = await fetch('/api/v2/tech-support/faq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question,
+                answer,
+                category
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(error.error || `Request failed: ${response.status}`);
+        }
+
         return response.json();
     }
 };
