@@ -375,6 +375,54 @@ export class TechSupportMode {
                         `;
                     }
                     break;
+
+                case 'VIEW_PR':
+                    if (action.viewPullRequest) {
+                        const pr = action.viewPullRequest;
+                        if (pr.url) {
+                            return `
+                                <a href="${this.escapeHtml(pr.url)}" target="_blank" rel="noopener noreferrer"
+                                   class="action-btn view-pr-link">
+                                    <span class="icon">&#x1F500;</span>
+                                    <span class="action-title">PR #${pr.number}: ${this.escapeHtml(pr.title)}</span>
+                                    <small>${this.escapeHtml(pr.sourceBranch)} → ${this.escapeHtml(pr.targetBranch)}</small>
+                                </a>
+                            `;
+                        } else {
+                            return `
+                                <div class="action-item view-pr">
+                                    <span class="icon">&#x1F500;</span>
+                                    <span class="action-title">PR #${pr.number}: ${this.escapeHtml(pr.title)}</span>
+                                    <small>${this.escapeHtml(pr.sourceBranch)} → ${this.escapeHtml(pr.targetBranch)}</small>
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
+
+                case 'VIEW_BRANCH':
+                    if (action.viewBranch) {
+                        const branch = action.viewBranch;
+                        if (branch.url) {
+                            return `
+                                <a href="${this.escapeHtml(branch.url)}" target="_blank" rel="noopener noreferrer"
+                                   class="action-btn view-branch-link">
+                                    <span class="icon">&#x1F33F;</span>
+                                    <span class="action-title">${this.escapeHtml(branch.branchName)}</span>
+                                    ${branch.isDefault ? '<small>[default]</small>' : ''}
+                                </a>
+                            `;
+                        } else {
+                            return `
+                                <div class="action-item view-branch">
+                                    <span class="icon">&#x1F33F;</span>
+                                    <span class="action-title">${this.escapeHtml(branch.branchName)}</span>
+                                    ${branch.isDefault ? '<small>[default]</small>' : ''}
+                                </div>
+                            `;
+                        }
+                    }
+                    break;
             }
             return '';
         }).join('');

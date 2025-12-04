@@ -331,28 +331,48 @@ async function sendMessageWithText(message, useReranking = null) {
     }
 
     try {
-        // Send message via chat service with reranking override
-        const response = await chatService.sendMessage(message, useReranking);
-        console.log('Message sent, response sessionId:', response.sessionId, 'useReranking:', useReranking);
+        let response;
 
-        // Add assistant message to UI with metadata and timestamp
-        messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());
-
-        // If tech support mode is enabled, update the panel with suggestions
+        // If tech support mode is enabled, route through tech support API first
+        // This handles workflow queries (start/complete task) that should NOT go to regular chat
         if (techSupportMode && techSupportMode.isEnabled) {
             try {
                 const state = appState.getState();
-                await techSupportMode.sendQuery(message, {
+                const techSupportResponse = await techSupportMode.sendQuery(message, {
                     sessionId: state.currentSessionId,
                     providerId: state.currentProvider?.toUpperCase() || 'CLAUDE',
-                    model: state.settings?.model,
-                    existingAnswer: response.response  // Pass AI response to skip duplicate AI call
+                    model: state.settings?.model
+                    // No existingAnswer - let tech support handle it
                 });
-                console.log('Tech support panel updated');
+                console.log('Tech support response received, queryType:', techSupportResponse?.queryType);
+
+                // Use tech support answer as the response
+                if (techSupportResponse && techSupportResponse.answer) {
+                    response = {
+                        response: techSupportResponse.answer,
+                        sessionId: techSupportResponse.sessionId,
+                        metadata: {
+                            time: (techSupportResponse.processingTimeMs / 1000).toFixed(2),
+                            model: state.settings?.model || 'tech-support',
+                            queryType: techSupportResponse.queryType
+                        }
+                    };
+                    console.log('Using tech support answer as response');
+                }
             } catch (e) {
-                console.error('Tech support query failed:', e);
+                console.error('Tech support query failed, falling back to regular chat:', e);
+                // Fall through to regular chat if tech support fails
             }
         }
+
+        // If no response from tech support (or tech support mode disabled), use regular chat
+        if (!response) {
+            response = await chatService.sendMessage(message, useReranking);
+            console.log('Message sent via regular chat, response sessionId:', response.sessionId, 'useReranking:', useReranking);
+        }
+
+        // Add assistant message to UI with metadata and timestamp
+        messagesUI.addMessage(response.response, 'assistant', response.metadata, response.timestamp || Date.now());
 
         // Reload sessions list to update message count
         await sessionService.loadSessions();
