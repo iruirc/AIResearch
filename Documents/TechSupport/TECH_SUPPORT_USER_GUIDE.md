@@ -6,6 +6,7 @@ Tech Support AI Assistant helps answer technical questions by combining:
 - Documentation and FAQ database (RAG)
 - Trello bug tracking integration
 - AI-powered intelligent responses
+- **Project Management**: Task prioritization and project status
 
 ## Getting Started
 
@@ -335,7 +336,163 @@ rai support --no-rag --no-trello "Explain OAuth 2.0 flow"
 
 ---
 
-### Scenario 8: Getting JSON Output
+### Scenario 8: Project Management - Task Prioritization
+
+**User Story**: As a developer, I want to see high priority tasks and get recommendations on what to do first.
+
+**CLI:**
+```bash
+# Show high priority tasks
+rai support --priority high
+
+# Get AI recommendations on task order
+rai support --recommend
+
+# Show project status summary
+rai support --status
+
+# Combined query
+rai support "Show me high priority tasks and recommend what to do first"
+```
+
+**Expected Response:**
+```
+Query Type: [PROJECT]
+
+Answer:
+Based on the current tasks with high priority, I recommend the following order:
+
+1. **AUTH-789: Fix token refresh logic** - This is blocking other features
+   and affects user experience directly.
+
+2. **API-456: Add rate limiting** - Security improvement that should be
+   done before the upcoming release.
+
+3. **DB-123: Optimize queries** - Performance improvement, can be done
+   after critical issues are resolved.
+
+Suggested Actions:
+  1. 📋 Tasks (high): 3 total
+     [!] 1. AUTH-789: Fix token refresh logic
+         Status: To Do
+         URL: https://trello.com/c/auth789
+
+     [!] 2. API-456: Add rate limiting
+         Status: In Progress
+         URL: https://trello.com/c/api456
+
+     [!] 3. DB-123: Optimize queries
+         Status: To Do
+         URL: https://trello.com/c/db123
+
+  2. 🎯 AI Recommendations:
+     #1. AUTH-789: Fix token refresh logic
+         Reason: Recommended by AI analysis
+     #2. API-456: Add rate limiting
+         Reason: Recommended by AI analysis
+     #3. DB-123: Optimize queries
+         Reason: Recommended by AI analysis
+
+  3. 👀 View Ticket: AUTH-789 - Fix token refresh logic
+     URL: https://trello.com/c/auth789
+```
+
+---
+
+### Scenario 9: Project Management - Project Status
+
+**User Story**: As a project manager, I want to see an overview of the project status.
+
+**CLI:**
+```bash
+rai support --status
+# or
+rai support "What is the project status?"
+```
+
+**Expected Response:**
+```
+Query Type: [PROJECT]
+
+Answer:
+Here's the current project status:
+
+**Summary:**
+- Total Tasks: 24
+- High Priority: 5 (21%)
+- Medium Priority: 12 (50%)
+- Low Priority: 7 (29%)
+
+**By Status:**
+- To Do: 10 tasks
+- In Progress: 8 tasks
+- Review: 4 tasks
+- Done: 2 tasks
+
+**Recommendations:**
+- 5 high priority tasks need attention
+- Consider completing the 4 tasks in Review before starting new work
+
+Suggested Actions:
+  1. 📊 Project Status:
+     Total Tasks: 24
+     By Priority:
+       - high: 5
+       - medium: 12
+       - low: 7
+     By Status:
+       - To Do: 10
+       - In Progress: 8
+       - Review: 4
+       - Done: 2
+```
+
+---
+
+### Scenario 10: Project Management - Filter by Priority
+
+**User Story**: I want to see all tasks with a specific priority level.
+
+**CLI:**
+```bash
+# High priority tasks
+rai support --priority high
+
+# Medium priority tasks
+rai support --priority medium
+
+# Low priority tasks
+rai support --priority low
+```
+
+**Expected Response (--priority medium):**
+```
+Query Type: [PROJECT]
+
+Answer:
+Here are the medium priority tasks:
+
+1. FEAT-001: Add dark mode support
+2. REFACTOR-002: Clean up legacy code
+3. DOCS-003: Update API documentation
+...
+
+Suggested Actions:
+  1. 📋 Tasks (medium): 12 total
+     [~] 1. FEAT-001: Add dark mode support
+         Status: In Progress
+
+     [~] 2. REFACTOR-002: Clean up legacy code
+         Status: To Do
+
+     [~] 3. DOCS-003: Update API documentation
+         Status: To Do
+     ...
+```
+
+---
+
+### Scenario 11: Getting JSON Output
 
 **User Story**: I need to programmatically process the response.
 
@@ -393,6 +550,9 @@ The panel intelligently suggests actions based on query type and context:
 | **Escalate** | 🚨/⚠/📢 | Bug reports or questions without RAG/Trello context | Suggests escalating to human support (with priority indicator) |
 | **Add to FAQ** | 📖 | HOW_TO questions with good RAG matches (3+ sources) | Suggests adding Q&A to documentation |
 | **Contact Support** | 📧 | Status check queries when no matching tickets found | Suggests contacting support via email/chat/phone |
+| **List Tasks** | 📋 | PROJECT_MANAGEMENT queries | Shows filtered tasks with priority indicators |
+| **Prioritize** | 🎯 | PROJECT_MANAGEMENT queries with multiple tasks | AI recommendations for task order |
+| **Project Status** | 📊 | PROJECT_MANAGEMENT status queries | Shows statistics by priority and status |
 
 **Priority Indicators (Escalate action):**
 - 🚨 **Urgent** - Critical issues requiring immediate attention
@@ -408,7 +568,14 @@ The panel intelligently suggests actions based on query type and context:
 | `FEATURE_REQUEST` | Create Ticket (Ideas list) |
 | `HOW_TO` | Add to FAQ (if good RAG match) |
 | `STATUS_CHECK` | Contact Support (if no tickets found) |
+| `PROJECT_MANAGEMENT` | List Tasks + Prioritize + View Ticket (top tasks) |
 | `GENERAL` | Escalate (if no context) or Create Ticket (fallback) |
+
+**Task Priority Indicators (List Tasks action):**
+- `[!]` **High** - Critical tasks (red border)
+- `[~]` **Medium** - Normal priority tasks (yellow border)
+- `[-]` **Low** - Low priority tasks (blue border)
+- `[ ]` **None** - Tasks without priority label
 
 **Sources Used:**
 - Lists documentation files used for the answer
@@ -433,11 +600,22 @@ Options:
   -m, --model TEXT      AI model to use
   -h, --help            Show help message
 
+  # Project Management Options
+  -p, --priority TEXT   Filter tasks by priority: high, medium, low
+  --status              Show project status summary
+  -r, --recommend       Get AI recommendations for task prioritization
+
 Examples:
   rai support "How do I configure OAuth?"
   rai support --session abc123 "Follow-up question"
   rai support --no-trello "Documentation only query"
   rai support --output json "Get JSON response"
+
+  # Project Management Examples
+  rai support --priority high          # Show high priority tasks
+  rai support --status                 # Show project status
+  rai support --recommend              # Get AI recommendations
+  rai support "What tasks should I do first?"
 ```
 
 ## Best Practices

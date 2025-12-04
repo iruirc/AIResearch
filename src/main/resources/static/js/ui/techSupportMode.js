@@ -290,6 +290,91 @@ export class TechSupportMode {
                         `;
                     }
                     break;
+
+                case 'LIST_TASKS':
+                    if (action.listTasks) {
+                        const tasks = action.listTasks.tasks || [];
+                        return `
+                            <div class="action-item list-tasks">
+                                <div class="action-header">
+                                    <span class="icon">&#x1F4CB;</span>
+                                    <span class="action-title">Tasks (${this.escapeHtml(action.listTasks.filter)}): ${tasks.length}</span>
+                                </div>
+                                <div class="tasks-list">
+                                    ${tasks.map((task, idx) => `
+                                        <div class="task-item priority-${task.priority || 'none'}">
+                                            <span class="task-order">${idx + 1}</span>
+                                            ${task.url
+                                                ? `<a href="${this.escapeHtml(task.url)}" target="_blank">${this.escapeHtml(task.cardName)}</a>`
+                                                : `<span>${this.escapeHtml(task.cardName)}</span>`
+                                            }
+                                            <span class="task-status">${this.escapeHtml(task.listName)}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'PRIORITIZE':
+                    if (action.prioritize) {
+                        const recs = action.prioritize.recommendedOrder || [];
+                        return `
+                            <div class="action-item prioritize">
+                                <div class="action-header">
+                                    <span class="icon">&#x1F3AF;</span>
+                                    <span class="action-title">AI Recommendations</span>
+                                </div>
+                                <div class="recommendations-list">
+                                    ${recs.map(rec => `
+                                        <div class="recommendation-item">
+                                            <span class="rec-order">#${rec.order}</span>
+                                            <div class="rec-content">
+                                                <strong>${this.escapeHtml(rec.cardName)}</strong>
+                                                <small>${this.escapeHtml(rec.reason)}</small>
+                                                ${rec.estimatedEffort ? `<span class="effort">${this.escapeHtml(rec.estimatedEffort)}</span>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    break;
+
+                case 'PROJECT_STATUS':
+                    if (action.projectStatus) {
+                        const status = action.projectStatus;
+                        return `
+                            <div class="action-item project-status">
+                                <div class="action-header">
+                                    <span class="icon">&#x1F4CA;</span>
+                                    <span class="action-title">Project Status</span>
+                                </div>
+                                <div class="status-summary">
+                                    <div class="stat-total">Total: ${status.totalTasks} tasks</div>
+                                    ${status.byPriority && Object.keys(status.byPriority).length > 0 ? `
+                                        <div class="stat-group">
+                                            <strong>By Priority:</strong>
+                                            ${Object.entries(status.byPriority).map(([p, c]) =>
+                                                `<span class="stat priority-${p}">${p}: ${c}</span>`
+                                            ).join('')}
+                                        </div>
+                                    ` : ''}
+                                    ${status.byStatus && Object.keys(status.byStatus).length > 0 ? `
+                                        <div class="stat-group">
+                                            <strong>By Status:</strong>
+                                            ${Object.entries(status.byStatus).map(([s, c]) =>
+                                                `<span class="stat">${this.escapeHtml(s)}: ${c}</span>`
+                                            ).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    break;
             }
             return '';
         }).join('');

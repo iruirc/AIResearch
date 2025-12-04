@@ -323,6 +323,206 @@ body.tech-support-mode .chat-container {
     margin-right: 360px;
 }
 
+/* ==================== PROJECT MANAGEMENT STYLES ==================== */
+
+/* Task List Action */
+.tech-support-panel .action-item.list-tasks {
+    flex-direction: column;
+}
+
+.tech-support-panel .action-item.list-tasks .action-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tech-support-panel .action-item.list-tasks .tasks-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.tech-support-panel .task-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-left: 3px solid var(--border-color, #e1e5e9);
+    margin-bottom: 4px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 0 4px 4px 0;
+}
+
+.tech-support-panel .task-item.priority-high {
+    border-left-color: #dc2626;
+}
+
+.tech-support-panel .task-item.priority-medium {
+    border-left-color: #f59e0b;
+}
+
+.tech-support-panel .task-item.priority-low {
+    border-left-color: #3b82f6;
+}
+
+.tech-support-panel .task-item.priority-none {
+    border-left-color: #9ca3af;
+}
+
+.tech-support-panel .task-order {
+    font-weight: 600;
+    color: var(--text-secondary, #6c757d);
+    min-width: 20px;
+    font-size: 12px;
+}
+
+.tech-support-panel .task-item a {
+    color: var(--primary-color, #667eea);
+    text-decoration: none;
+    flex: 1;
+    font-size: 12px;
+}
+
+.tech-support-panel .task-item a:hover {
+    text-decoration: underline;
+}
+
+.tech-support-panel .task-item span {
+    flex: 1;
+    font-size: 12px;
+}
+
+.tech-support-panel .task-status {
+    font-size: 10px;
+    color: var(--text-secondary, #6c757d);
+    white-space: nowrap;
+}
+
+/* Recommendations (Prioritize) */
+.tech-support-panel .action-item.prioritize {
+    flex-direction: column;
+    border-left: 3px solid #10b981;
+}
+
+.tech-support-panel .action-item.prioritize .action-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tech-support-panel .recommendations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tech-support-panel .recommendation-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 6px;
+}
+
+.tech-support-panel .rec-order {
+    font-weight: 700;
+    color: var(--primary-color, #667eea);
+    font-size: 14px;
+    min-width: 24px;
+}
+
+.tech-support-panel .rec-content {
+    flex: 1;
+}
+
+.tech-support-panel .rec-content strong {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 2px;
+    color: var(--text-primary, #1a1a2e);
+}
+
+.tech-support-panel .rec-content small {
+    font-size: 11px;
+    color: var(--text-secondary, #6c757d);
+}
+
+.tech-support-panel .rec-content .effort {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 6px;
+    background: var(--bg-tertiary, #f1f3f4);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--text-secondary, #6c757d);
+}
+
+/* Project Status */
+.tech-support-panel .action-item.project-status {
+    flex-direction: column;
+    border-left: 3px solid #8b5cf6;
+}
+
+.tech-support-panel .action-item.project-status .action-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tech-support-panel .status-summary {
+    font-size: 12px;
+}
+
+.tech-support-panel .stat-total {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary, #1a1a2e);
+}
+
+.tech-support-panel .stat-group {
+    margin-bottom: 6px;
+}
+
+.tech-support-panel .stat-group strong {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary, #6c757d);
+    margin-bottom: 4px;
+}
+
+.tech-support-panel .stat {
+    display: inline-block;
+    margin-right: 6px;
+    margin-bottom: 4px;
+    padding: 3px 8px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.tech-support-panel .stat.priority-high {
+    background: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
+}
+
+.tech-support-panel .stat.priority-medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+}
+
+.tech-support-panel .stat.priority-low {
+    background: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+}
+
+.tech-support-panel .stat.priority-none {
+    background: rgba(156, 163, 175, 0.15);
+    color: #6b7280;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .tech-support-panel {

@@ -8,11 +8,12 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 enum class QueryType {
-    BUG_REPORT,       // Сообщение об ошибке
-    HOW_TO,           // Вопрос "как сделать"
-    STATUS_CHECK,     // Проверка статуса тикета
-    FEATURE_REQUEST,  // Запрос на новую фичу
-    GENERAL           // Общий вопрос
+    BUG_REPORT,          // Сообщение об ошибке
+    HOW_TO,              // Вопрос "как сделать"
+    STATUS_CHECK,        // Проверка статуса тикета
+    FEATURE_REQUEST,     // Запрос на новую фичу
+    PROJECT_MANAGEMENT,  // Запрос о статусе проекта, приоритизации задач
+    GENERAL              // Общий вопрос
 }
 
 /**
@@ -145,6 +146,62 @@ data class ContactSupportAction(
 )
 
 /**
+ * Краткая информация о задаче для списка
+ */
+@Serializable
+data class TaskSummary(
+    val cardId: String,
+    val cardName: String,
+    val listName: String,
+    val priority: String?,  // "high", "medium", "low" or null
+    val url: String?
+)
+
+/**
+ * Предложенное действие - показать список задач
+ */
+@Serializable
+data class ListTasksAction(
+    val type: String = "LIST_TASKS",
+    val filter: String,  // "high", "medium", "low", "all"
+    val tasks: List<TaskSummary>,
+    val totalCount: Int
+)
+
+/**
+ * Рекомендация AI по задаче
+ */
+@Serializable
+data class TaskRecommendation(
+    val order: Int,
+    val cardId: String,
+    val cardName: String,
+    val reason: String,
+    val estimatedEffort: String? = null,  // "small", "medium", "large"
+    val dependencies: List<String> = emptyList()
+)
+
+/**
+ * Предложенное действие - приоритизация задач
+ */
+@Serializable
+data class PrioritizeAction(
+    val type: String = "PRIORITIZE",
+    val recommendedOrder: List<TaskRecommendation>
+)
+
+/**
+ * Предложенное действие - показать статус проекта
+ */
+@Serializable
+data class ProjectStatusAction(
+    val type: String = "PROJECT_STATUS",
+    val totalTasks: Int,
+    val byPriority: Map<String, Int>,  // {"high": 5, "medium": 10, "low": 3}
+    val byStatus: Map<String, Int>     // {"To Do": 10, "In Progress": 5, "Done": 3}
+)
+
+/**
  * Ответ от техподдержки
  */
 @Serializable
@@ -168,7 +225,11 @@ data class SuggestedActionWrapper(
     val viewTicket: ViewTicketAction? = null,
     val escalate: EscalateAction? = null,
     val addToFaq: AddToFaqAction? = null,
-    val contactSupport: ContactSupportAction? = null
+    val contactSupport: ContactSupportAction? = null,
+    // Project Management actions
+    val listTasks: ListTasksAction? = null,
+    val prioritize: PrioritizeAction? = null,
+    val projectStatus: ProjectStatusAction? = null
 )
 
 /**

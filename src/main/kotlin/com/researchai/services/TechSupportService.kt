@@ -114,6 +114,14 @@ class TechSupportService(
             return QueryType.FEATURE_REQUEST
         }
 
+        // Project management keywords
+        val projectKeywords = listOf("задачи", "tasks", "приоритет", "priority", "high", "medium", "low",
+            "что делать", "what to do", "первым", "first", "статус проекта", "project status",
+            "покажи задачи", "show tasks", "list tasks", "рекомендации", "recommend")
+        if (projectKeywords.any { lowerQuery.contains(it) }) {
+            return QueryType.PROJECT_MANAGEMENT
+        }
+
         return QueryType.GENERAL
     }
 
@@ -127,11 +135,12 @@ Classify this user query into one of these categories:
 - HOW_TO: User is asking how to do something
 - STATUS_CHECK: User is asking about status of a ticket or issue
 - FEATURE_REQUEST: User is requesting a new feature
+- PROJECT_MANAGEMENT: User is asking about project status, task priorities, what to do next, or listing tasks
 - GENERAL: General question that doesn't fit above
 
 Query: "$query"
 
-Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
+Respond with ONLY the category name (e.g., "PROJECT_MANAGEMENT"), nothing else.
         """.trim()
 
         return try {
@@ -170,8 +179,32 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             async { fetchRagContext(request.query, request.maxRagResults) }
         } else null
 
+        // For PROJECT_MANAGEMENT, fetch tasks by priority instead of text search
         val trelloDeferred = if (request.includeTrello) {
-            async { fetchTrelloContext(request.query, request.trelloBoardId, request.maxTrelloResults) }
+            async {
+                if (queryType == QueryType.PROJECT_MANAGEMENT) {
+                    val boardId = request.trelloBoardId ?: config.defaultBoardId
+                    if (boardId != null) {
+                        val priority = extractPriorityFromQuery(request.query)
+                        val tasks = fetchTasksByPriority(
+                            boardId = boardId,
+                            priority = priority,
+                            maxResults = request.maxTrelloResults * 3  // Get more for prioritization
+                        )
+                        if (tasks.isNotEmpty()) {
+                            TicketContextResult(
+                                relatedTickets = tasks,
+                                formattedContext = formatTasksForPrompt(tasks, priority)
+                            )
+                        } else null
+                    } else {
+                        logger.warn("No board ID configured for PROJECT_MANAGEMENT")
+                        null
+                    }
+                } else {
+                    fetchTrelloContext(request.query, request.trelloBoardId, request.maxTrelloResults)
+                }
+            }
         } else null
 
         TechSupportContext(
@@ -451,6 +484,11 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
      * Build enriched prompt with context
      */
     private fun buildEnrichedPrompt(query: String, context: TechSupportContext): String {
+        // Use specialized prompt for PROJECT_MANAGEMENT queries
+        if (context.queryType == QueryType.PROJECT_MANAGEMENT) {
+            return buildProjectManagementPrompt(query, context)
+        }
+
         return buildString {
             appendLine("# User Query")
             appendLine(query)
@@ -518,6 +556,60 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
         val hasRelatedTickets = context.ticketContext?.relatedTickets?.isNotEmpty() == true
         val hasRagContext = context.ragContext != null && context.ragContext.sourceCount > 0
         val ragSourceCount = context.ragContext?.sourceCount ?: 0
+        val tasks = context.ticketContext?.relatedTickets ?: emptyList()
+
+        // Handle PROJECT_MANAGEMENT queries specially
+        if (queryType == QueryType.PROJECT_MANAGEMENT && tasks.isNotEmpty()) {
+            val priority = extractPriorityFromQuery(originalQuery)
+
+            // 1. Add LIST_TASKS action
+            actions.add(SuggestedActionWrapper(
+                actionType = "LIST_TASKS",
+                listTasks = ListTasksAction(
+                    filter = priority ?: "all",
+                    tasks = tasks.map { task ->
+                        TaskSummary(
+                            cardId = task.cardId,
+                            cardName = task.cardName,
+                            listName = task.listName,
+                            priority = task.labels.firstOrNull {
+                                it.lowercase() in listOf("high", "medium", "low")
+                            },
+                            url = task.url
+                        )
+                    },
+                    totalCount = tasks.size
+                )
+            ))
+
+            // 2. Add PRIORITIZE action with AI recommendations if multiple tasks
+            if (tasks.size > 1) {
+                val recommendations = extractPrioritization(response, tasks)
+                if (recommendations.isNotEmpty()) {
+                    actions.add(SuggestedActionWrapper(
+                        actionType = "PRIORITIZE",
+                        prioritize = PrioritizeAction(
+                            recommendedOrder = recommendations
+                        )
+                    ))
+                }
+            }
+
+            // 3. Add VIEW_TICKET for top priority tasks (clickable links)
+            tasks.take(3).forEach { task ->
+                actions.add(SuggestedActionWrapper(
+                    actionType = "VIEW_TICKET",
+                    viewTicket = ViewTicketAction(
+                        cardId = task.cardId,
+                        cardName = task.cardName,
+                        reason = "Priority task",
+                        url = task.url
+                    )
+                ))
+            }
+
+            return actions
+        }
 
         // 1. CREATE_TICKET - для багов, feature requests и HOW_TO вопросов
         when (queryType) {
@@ -782,5 +874,242 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
      */
     fun isTrelloConnected(): Boolean {
         return mcpServerManager.getClient(config.trelloMcpServerId) != null
+    }
+
+    // ==================== PROJECT MANAGEMENT METHODS ====================
+
+    /**
+     * Extract priority filter from user query
+     * @return "high", "medium", "low", or null for all priorities
+     */
+    private fun extractPriorityFromQuery(query: String): String? {
+        val lowerQuery = query.lowercase()
+        return when {
+            lowerQuery.contains("high") || lowerQuery.contains("высок") || lowerQuery.contains("важн") -> "high"
+            lowerQuery.contains("medium") || lowerQuery.contains("средн") -> "medium"
+            lowerQuery.contains("low") || lowerQuery.contains("низк") -> "low"
+            else -> null  // Return all tasks
+        }
+    }
+
+    /**
+     * Fetch tasks from Trello filtered by priority label
+     * @param boardId Trello board ID
+     * @param priority Priority filter: "high", "medium", "low", or null for all
+     * @param maxResults Maximum tasks to return
+     */
+    private suspend fun fetchTasksByPriority(
+        boardId: String,
+        priority: String?,
+        maxResults: Int
+    ): List<TrelloTicketInfo> {
+        val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
+            ?: return emptyList()
+
+        // Get all lists
+        val listsResult = trelloClient.callTool(
+            name = "get_lists",
+            arguments = buildJsonObject { put("boardId", boardId) }
+        )
+        if (!listsResult.success) {
+            logger.warn("Failed to get lists for project management: ${listsResult.error}")
+            return emptyList()
+        }
+
+        val lists = parseListsFromMCP(listsResult)
+        val allTasks = mutableListOf<TrelloTicketInfo>()
+
+        // Get cards from each list
+        for (list in lists) {
+            if (allTasks.size >= maxResults) break
+
+            val cardsResult = trelloClient.callTool(
+                name = "get_cards_by_list_id",
+                arguments = buildJsonObject { put("listId", list.id) }
+            )
+
+            if (cardsResult.success) {
+                val cards = parseCardsFromListMCP(cardsResult, list.name)
+
+                // Filter by priority if specified
+                val filtered = if (priority != null) {
+                    cards.filter { card ->
+                        card.labels.any { it.equals(priority, ignoreCase = true) }
+                    }
+                } else {
+                    cards
+                }
+
+                allTasks.addAll(filtered.take(maxResults - allTasks.size))
+            }
+        }
+
+        logger.info("Fetched ${allTasks.size} tasks with priority filter: ${priority ?: "all"}")
+        return allTasks
+    }
+
+    /**
+     * Get project status summary from Trello board
+     */
+    private suspend fun getProjectStatus(boardId: String): ProjectStatusAction? {
+        val trelloClient = mcpServerManager.getClient(config.trelloMcpServerId)
+            ?: return null
+
+        val listsResult = trelloClient.callTool(
+            name = "get_lists",
+            arguments = buildJsonObject { put("boardId", boardId) }
+        )
+        if (!listsResult.success) {
+            logger.warn("Failed to get lists for project status: ${listsResult.error}")
+            return null
+        }
+
+        val lists = parseListsFromMCP(listsResult)
+        val byStatus = mutableMapOf<String, Int>()
+        val byPriority = mutableMapOf("high" to 0, "medium" to 0, "low" to 0, "none" to 0)
+        var totalTasks = 0
+
+        for (list in lists) {
+            val cardsResult = trelloClient.callTool(
+                name = "get_cards_by_list_id",
+                arguments = buildJsonObject { put("listId", list.id) }
+            )
+
+            if (cardsResult.success) {
+                val cards = parseCardsFromListMCP(cardsResult, list.name)
+                byStatus[list.name] = cards.size
+                totalTasks += cards.size
+
+                // Count by priority
+                cards.forEach { card ->
+                    val cardPriority = card.labels.firstOrNull {
+                        it.lowercase() in listOf("high", "medium", "low")
+                    }?.lowercase() ?: "none"
+                    byPriority[cardPriority] = (byPriority[cardPriority] ?: 0) + 1
+                }
+            }
+        }
+
+        logger.info("Project status: $totalTasks total tasks")
+        return ProjectStatusAction(
+            totalTasks = totalTasks,
+            byPriority = byPriority.filterValues { it > 0 },
+            byStatus = byStatus
+        )
+    }
+
+    /**
+     * Format tasks for AI prompt in PROJECT_MANAGEMENT queries
+     */
+    private fun formatTasksForPrompt(tasks: List<TrelloTicketInfo>, priority: String?): String {
+        return buildString {
+            appendLine("=== PROJECT TASKS ===")
+            appendLine("Filter: ${priority ?: "all priorities"}")
+            appendLine("Total: ${tasks.size} tasks")
+            appendLine()
+
+            tasks.forEachIndexed { idx, task ->
+                appendLine("[Task ${idx + 1}]")
+                appendLine("Name: ${task.cardName}")
+                appendLine("Status: ${task.listName}")
+                val taskPriority = task.labels.firstOrNull {
+                    it.lowercase() in listOf("high", "medium", "low")
+                } ?: "none"
+                appendLine("Priority: $taskPriority")
+                appendLine("Labels: ${task.labels.joinToString(", ").ifEmpty { "none" }}")
+                task.description?.take(200)?.let { appendLine("Description: $it") }
+                appendLine()
+            }
+        }
+    }
+
+    /**
+     * Build prompt specifically for PROJECT_MANAGEMENT queries
+     */
+    private fun buildProjectManagementPrompt(
+        query: String,
+        context: TechSupportContext
+    ): String {
+        return buildString {
+            appendLine("# User Query")
+            appendLine(query)
+            appendLine()
+
+            appendLine("# Query Type: PROJECT_MANAGEMENT")
+            appendLine()
+
+            // Add task context
+            context.ticketContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            // Add RAG context (project documentation)
+            context.ragContext?.let {
+                appendLine(it.formattedContext)
+                appendLine()
+            }
+
+            appendLine("# Instructions")
+            appendLine("""
+You are a project management assistant. Based on the tasks and project context above:
+
+1. If user asks about task priorities or what to do first:
+   - Analyze each task's importance based on priority labels (high > medium > low)
+   - Consider task status (To Do tasks need attention first)
+   - Consider any dependencies mentioned in descriptions
+   - Recommend a clear order to tackle tasks
+   - Explain your reasoning briefly for each recommendation
+
+2. If user asks about project status:
+   - Summarize the current state (total tasks, by priority, by status)
+   - Highlight any blockers or risks
+   - Suggest next steps
+
+3. Format your response clearly with:
+   - Numbered recommendations
+   - Brief reasoning for each
+   - Any warnings about blockers or dependencies
+
+Respond in the same language as the user's query.
+            """.trimIndent())
+        }
+    }
+
+    /**
+     * Extract task prioritization recommendations from AI response
+     */
+    private fun extractPrioritization(
+        response: String,
+        tasks: List<TrelloTicketInfo>
+    ): List<TaskRecommendation> {
+        val recommendations = mutableListOf<TaskRecommendation>()
+
+        // Match task names mentioned in response and extract order
+        val mentionedTasks = tasks.filter { task ->
+            response.contains(task.cardName, ignoreCase = true)
+        }
+
+        // Add mentioned tasks in order they appear in response
+        mentionedTasks.forEachIndexed { idx, task ->
+            recommendations.add(TaskRecommendation(
+                order = idx + 1,
+                cardId = task.cardId,
+                cardName = task.cardName,
+                reason = "Recommended by AI analysis"
+            ))
+        }
+
+        // Add remaining tasks at the end (those not mentioned by AI)
+        tasks.filter { it !in mentionedTasks }.forEachIndexed { idx, task ->
+            recommendations.add(TaskRecommendation(
+                order = recommendations.size + idx + 1,
+                cardId = task.cardId,
+                cardName = task.cardName,
+                reason = "Additional task"
+            ))
+        }
+
+        return recommendations
     }
 }

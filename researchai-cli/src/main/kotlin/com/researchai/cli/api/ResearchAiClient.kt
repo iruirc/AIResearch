@@ -573,7 +573,14 @@ data class SourcesUsed(
 data class SuggestedAction(
     val actionType: String,
     val createTicket: CreateTicketAction? = null,
-    val viewTicket: ViewTicketAction? = null
+    val viewTicket: ViewTicketAction? = null,
+    val escalate: EscalateAction? = null,
+    val addToFaq: AddToFaqAction? = null,
+    val contactSupport: ContactSupportAction? = null,
+    // Project Management actions
+    val listTasks: ListTasksAction? = null,
+    val prioritize: PrioritizeAction? = null,
+    val projectStatus: ProjectStatusAction? = null
 )
 
 @Serializable
@@ -587,7 +594,67 @@ data class CreateTicketAction(
 data class ViewTicketAction(
     val cardId: String,
     val cardName: String,
-    val reason: String
+    val reason: String,
+    val url: String? = null
+)
+
+@Serializable
+data class EscalateAction(
+    val reason: String,
+    val priority: String = "normal",
+    val suggestedTeam: String? = null
+)
+
+@Serializable
+data class AddToFaqAction(
+    val question: String,
+    val suggestedAnswer: String,
+    val category: String? = null
+)
+
+@Serializable
+data class ContactSupportAction(
+    val reason: String,
+    val suggestedChannel: String = "email"
+)
+
+// Project Management action types
+@Serializable
+data class TaskSummary(
+    val cardId: String,
+    val cardName: String,
+    val listName: String,
+    val priority: String? = null,
+    val url: String? = null
+)
+
+@Serializable
+data class ListTasksAction(
+    val filter: String,
+    val tasks: List<TaskSummary> = emptyList(),
+    val totalCount: Int = 0
+)
+
+@Serializable
+data class TaskRecommendation(
+    val order: Int,
+    val cardId: String,
+    val cardName: String,
+    val reason: String,
+    val estimatedEffort: String? = null,
+    val dependencies: List<String> = emptyList()
+)
+
+@Serializable
+data class PrioritizeAction(
+    val recommendedOrder: List<TaskRecommendation> = emptyList()
+)
+
+@Serializable
+data class ProjectStatusAction(
+    val totalTasks: Int = 0,
+    val byPriority: Map<String, Int> = emptyMap(),
+    val byStatus: Map<String, Int> = emptyMap()
 )
 
 @Serializable

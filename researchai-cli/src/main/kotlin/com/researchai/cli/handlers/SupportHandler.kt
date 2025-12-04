@@ -88,6 +88,7 @@ class SupportHandler(
             "HOW_TO" -> "[HOW-TO]"
             "STATUS_CHECK" -> "[STATUS]"
             "FEATURE_REQUEST" -> "[FEATURE]"
+            "PROJECT_MANAGEMENT" -> "[PROJECT]"
             else -> "[INFO]"
         }
         output("Query Type: $queryTypeIcon ${response.queryType}", true)
@@ -153,9 +154,73 @@ class SupportHandler(
                     }
                     "VIEW_TICKET" -> {
                         action.viewTicket?.let { view ->
-                            output("  ${index + 1}. View Related Ticket:", true)
-                            output("     Ticket: ${view.cardName}", true)
+                            output("  ${index + 1}. View Ticket: ${view.cardName}", true)
                             output("     Reason: ${view.reason}", true)
+                            view.url?.let { output("     URL: $it", true) }
+                        }
+                    }
+                    "LIST_TASKS" -> {
+                        action.listTasks?.let { list ->
+                            output("  ${index + 1}. Tasks (${list.filter}): ${list.totalCount} total", true)
+                            list.tasks.forEachIndexed { idx, task ->
+                                val priorityIcon = when (task.priority?.lowercase()) {
+                                    "high" -> "[!]"
+                                    "medium" -> "[~]"
+                                    "low" -> "[-]"
+                                    else -> "[ ]"
+                                }
+                                output("     $priorityIcon ${idx + 1}. ${task.cardName}", true)
+                                output("        Status: ${task.listName}", true)
+                                task.url?.let { output("        URL: $it", true) }
+                            }
+                        }
+                    }
+                    "PRIORITIZE" -> {
+                        action.prioritize?.let { prioritize ->
+                            output("  ${index + 1}. AI Recommendations:", true)
+                            prioritize.recommendedOrder.forEach { rec ->
+                                output("     #${rec.order}. ${rec.cardName}", true)
+                                output("        Reason: ${rec.reason}", true)
+                                rec.estimatedEffort?.let { output("        Effort: $it", true) }
+                            }
+                        }
+                    }
+                    "PROJECT_STATUS" -> {
+                        action.projectStatus?.let { status ->
+                            output("  ${index + 1}. Project Status:", true)
+                            output("     Total Tasks: ${status.totalTasks}", true)
+                            if (status.byPriority.isNotEmpty()) {
+                                output("     By Priority:", true)
+                                status.byPriority.forEach { (priority, count) ->
+                                    output("       - $priority: $count", true)
+                                }
+                            }
+                            if (status.byStatus.isNotEmpty()) {
+                                output("     By Status:", true)
+                                status.byStatus.forEach { (statusName, count) ->
+                                    output("       - $statusName: $count", true)
+                                }
+                            }
+                        }
+                    }
+                    "ESCALATE" -> {
+                        action.escalate?.let { escalate ->
+                            output("  ${index + 1}. Escalate to Support:", true)
+                            output("     Reason: ${escalate.reason}", true)
+                            output("     Priority: ${escalate.priority}", true)
+                        }
+                    }
+                    "ADD_TO_FAQ" -> {
+                        action.addToFaq?.let { faq ->
+                            output("  ${index + 1}. Add to FAQ:", true)
+                            output("     Question: ${faq.question.take(50)}...", true)
+                        }
+                    }
+                    "CONTACT_SUPPORT" -> {
+                        action.contactSupport?.let { contact ->
+                            output("  ${index + 1}. Contact Support:", true)
+                            output("     Channel: ${contact.suggestedChannel}", true)
+                            output("     Reason: ${contact.reason}", true)
                         }
                     }
                 }

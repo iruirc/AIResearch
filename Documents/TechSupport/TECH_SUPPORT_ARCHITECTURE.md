@@ -59,11 +59,12 @@ Tech Support AI Assistant is a mini-service that provides intelligent technical 
 ```kotlin
 // Query classification types
 enum class QueryType {
-    BUG_REPORT,      // User reports a bug
-    HOW_TO,          // User asks how to do something
-    STATUS_CHECK,    // User asks about ticket/issue status
-    FEATURE_REQUEST, // User requests new functionality
-    GENERAL          // General questions
+    BUG_REPORT,         // User reports a bug
+    HOW_TO,             // User asks how to do something
+    STATUS_CHECK,       // User asks about ticket/issue status
+    FEATURE_REQUEST,    // User requests new functionality
+    PROJECT_MANAGEMENT, // User asks about project status, task priorities
+    GENERAL             // General questions
 }
 
 // Main request/response models
@@ -89,6 +90,39 @@ data class TechSupportResponse(
     val relatedTickets: List<TrelloTicketInfo>,
     val processingTimeMs: Long
 )
+
+// Project Management action types
+data class TaskSummary(
+    val cardId: String,
+    val cardName: String,
+    val listName: String,
+    val priority: String?,  // "high", "medium", "low"
+    val url: String?
+)
+
+data class ListTasksAction(
+    val filter: String,
+    val tasks: List<TaskSummary>,
+    val totalCount: Int
+)
+
+data class TaskRecommendation(
+    val order: Int,
+    val cardId: String,
+    val cardName: String,
+    val reason: String,
+    val estimatedEffort: String?
+)
+
+data class PrioritizeAction(
+    val recommendedOrder: List<TaskRecommendation>
+)
+
+data class ProjectStatusAction(
+    val totalTasks: Int,
+    val byPriority: Map<String, Int>,
+    val byStatus: Map<String, Int>
+)
 ```
 
 ### 2. TechSupportService
@@ -104,8 +138,11 @@ Main orchestration service that coordinates all components.
 | `gatherContext()` | Parallel fetch of RAG and Trello context |
 | `fetchRagContext()` | Searches documentation via RAGManager |
 | `fetchTrelloContext()` | Fetches tickets via Trello MCP |
+| `fetchTasksByPriority()` | Fetches tasks filtered by priority labels |
+| `getProjectStatus()` | Gets project statistics by priority/status |
 | `executeAIRequest()` | Generates response using AI provider |
 | `createTicket()` | Creates new Trello ticket via MCP |
+| `extractPrioritization()` | Extracts task recommendations from AI response |
 | `checkHealth()` | Returns service health status |
 
 **Flow Diagram:**
@@ -223,6 +260,7 @@ private suspend fun classifyQuery(query: String): QueryType {
         - HOW_TO: User asks how to do something
         - STATUS_CHECK: User asks about status
         - FEATURE_REQUEST: User requests new feature
+        - PROJECT_MANAGEMENT: User asks about project status, task priorities
         - GENERAL: Other questions
 
         Query: "$query"
@@ -232,6 +270,82 @@ private suspend fun classifyQuery(query: String): QueryType {
 
     val response = aiProvider.sendMessage(prompt)
     return QueryType.valueOf(response.trim().uppercase())
+}
+```
+
+### 5.1 Project Management Flow
+
+For `PROJECT_MANAGEMENT` queries, a specialized flow is used:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ 1. CLASSIFY QUERY → PROJECT_MANAGEMENT                       │
+└──────────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 2. EXTRACT PRIORITY FILTER                                   │
+│    - "high" if query contains "high", "важн", "высок"       │
+│    - "medium" if query contains "medium", "средн"            │
+│    - "low" if query contains "low", "низк"                   │
+│    - null for all tasks                                      │
+└──────────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 3. GATHER CONTEXT (Parallel)                                 │
+│    ┌─────────────────────────┐  ┌─────────────────────────┐ │
+│    │ fetchTasksByPriority()  │  │ fetchRagContext()       │ │
+│    │ - Get lists from board  │  │ - Project documentation │ │
+│    │ - Get cards from lists  │  │ - Architecture context  │ │
+│    │ - Filter by label       │  └─────────────────────────┘ │
+│    └─────────────────────────┘                               │
+└──────────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 4. BUILD PROJECT MANAGEMENT PROMPT                           │
+│    - Task list with priorities and statuses                  │
+│    - RAG context for project understanding                   │
+│    - Instructions for prioritization analysis                │
+└──────────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 5. EXTRACT SUGGESTED ACTIONS                                 │
+│    - LIST_TASKS: All filtered tasks                         │
+│    - PRIORITIZE: AI recommendations                          │
+│    - VIEW_TICKET: Links to top tasks                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**fetchTasksByPriority() Implementation:**
+
+```kotlin
+private suspend fun fetchTasksByPriority(
+    boardId: String,
+    priority: String?,
+    maxResults: Int
+): List<TrelloTicketInfo> {
+    // 1. Get all lists from board
+    val lists = trelloMcp.callTool("get_lists", boardId)
+
+    // 2. Get cards from each list
+    val allTasks = mutableListOf<TrelloTicketInfo>()
+    for (list in lists) {
+        val cards = trelloMcp.callTool("get_cards_by_list_id", list.id)
+
+        // 3. Filter by priority label if specified
+        val filtered = if (priority != null) {
+            cards.filter { it.labels.contains(priority, ignoreCase = true) }
+        } else {
+            cards
+        }
+
+        allTasks.addAll(filtered)
+    }
+
+    return allTasks.take(maxResults)
 }
 ```
 

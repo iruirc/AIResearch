@@ -18,6 +18,11 @@ import kotlinx.coroutines.runBlocking
  *   rai support "Why isn't authentication working?"
  *   rai support --session my-session "Check status of my ticket"
  *   rai support --no-rag "Create a ticket for login issue"
+ *
+ * Project Management:
+ *   rai support --priority high            # Show high priority tasks
+ *   rai support --status                   # Show project status
+ *   rai support --recommend                # Get AI recommendations on what to do first
  */
 class SupportCommand : CliktCommand(
     name = "support",
@@ -68,6 +73,22 @@ class SupportCommand : CliktCommand(
         help = "AI model to use"
     )
 
+    // Project Management options
+    private val priority by option(
+        "--priority", "-p",
+        help = "Filter tasks by priority: high, medium, low"
+    )
+
+    private val status by option(
+        "--status",
+        help = "Show project status summary"
+    ).flag(default = false)
+
+    private val recommend by option(
+        "--recommend", "-r",
+        help = "Get AI recommendations for task prioritization"
+    ).flag(default = false)
+
     override fun run() = runBlocking {
         val config = CliConfig.load()
         val serverUrl = serverUrlOption ?: config.serverUrl
@@ -85,15 +106,22 @@ class SupportCommand : CliktCommand(
                 echo(msg, trailingNewline = newline)
             }
 
-            // If no query provided, enter interactive mode
-            val actualQuery = query ?: run {
-                echo("Tech Support Assistant")
-                echo("=" .repeat(50))
-                echo("Enter your question (Ctrl+D to exit):\n")
-                print("> ")
-                readLine() ?: run {
-                    echo("\nGoodbye!")
-                    return@runBlocking
+            // Build query based on project management shortcuts
+            val actualQuery = when {
+                status -> "Show project status summary"
+                recommend -> "What tasks should I do first and why?"
+                priority != null -> "Show tasks with $priority priority"
+                query != null -> query
+                else -> {
+                    // Interactive mode
+                    echo("Tech Support Assistant")
+                    echo("=" .repeat(50))
+                    echo("Enter your question (Ctrl+D to exit):\n")
+                    print("> ")
+                    readLine() ?: run {
+                        echo("\nGoodbye!")
+                        return@runBlocking
+                    }
                 }
             }
 
