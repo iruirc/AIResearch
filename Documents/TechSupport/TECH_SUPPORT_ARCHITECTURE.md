@@ -623,3 +623,254 @@ val trelloContext = try {
 - Trello access controlled via MCP server configuration
 - No sensitive data stored in responses
 - Session management inherited from main application
+
+## Task Workflow Integration
+
+### Overview
+
+The Task Workflow feature enables automated synchronization between Trello task management and GitHub branch/PR workflow. Users can start and complete tasks using natural language commands.
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     User Query                                │
+│  "Выполняю задачу Task_123" / "Завершил Task_123"            │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  TechSupportService                           │
+│    isWorkflowQuery() → detects workflow commands              │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  TaskWorkflowService                          │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  processWorkflow()                                      │  │
+│  │    ├── extractTaskId()      → Fuzzy Task_N matching    │  │
+│  │    ├── detectAction()       → START/COMPLETE/CANCEL    │  │
+│  │    └── execute action:                                  │  │
+│  │         ├── startTask()     → Create branch + move card │  │
+│  │         ├── completeTask()  → Create PR + move card     │  │
+│  │         └── cancelTask()    → Return card to ToDo       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+          │                              │
+          ▼                              ▼
+┌─────────────────────┐      ┌─────────────────────────────────┐
+│     Trello MCP      │      │          GitHub MCP             │
+│  - move_card        │      │  - create_branch                │
+│  - get_lists        │      │  - create_pull_request          │
+│  - get_cards_by_id  │      │  - list_branches                │
+│  - add_comment      │      │                                 │
+└─────────────────────┘      └─────────────────────────────────┘
+```
+
+### Domain Models (`TaskWorkflowModels.kt`)
+
+```kotlin
+// Action types
+enum class TaskAction {
+    START,     // Start working on task
+    COMPLETE,  // Complete task and create PR
+    CANCEL     // Cancel task and return to ToDo
+}
+
+// Request model
+data class TaskWorkflowRequest(
+    val query: String,                    // User's natural language query
+    val action: TaskAction? = null,       // Optional explicit action
+    val taskId: String? = null,           // Optional explicit task ID
+    val githubOwner: String? = null,      // Override GitHub owner
+    val githubRepo: String? = null,       // Override GitHub repo
+    val trelloBoardId: String? = null     // Override Trello board
+)
+
+// Result model
+data class TaskWorkflowResult(
+    val success: Boolean,
+    val taskId: String,
+    val action: TaskAction,
+    val trelloResult: TrelloActionResult? = null,
+    val githubResult: GithubActionResult? = null,
+    val message: String,
+    val errors: List<String> = emptyList(),
+    val wasRolledBack: Boolean = false
+)
+
+// Trello operation result
+data class TrelloActionResult(
+    val success: Boolean,
+    val cardId: String?,
+    val cardName: String?,
+    val fromList: String?,
+    val toList: String?,
+    val cardUrl: String?,
+    val commentAdded: Boolean,
+    val error: String? = null
+)
+
+// GitHub operation result
+data class GithubActionResult(
+    val success: Boolean,
+    val branchName: String?,
+    val branchCreated: Boolean,
+    val branchAlreadyExists: Boolean,
+    val prNumber: Int? = null,
+    val prUrl: String? = null,
+    val prCreated: Boolean = false,
+    val error: String? = null
+)
+```
+
+### TaskWorkflowService
+
+**Key Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `processWorkflow()` | Main entry point, detects action and task ID |
+| `startTask()` | Creates Git branch + moves card to InProgress |
+| `completeTask()` | Creates PR to main + moves card to Review |
+| `cancelTask()` | Returns card to ToDo |
+| `extractTaskId()` | Fuzzy matching for Task_N in user query |
+| `detectAction()` | Detects START/COMPLETE/CANCEL from keywords |
+| `isWorkflowQuery()` | Checks if query is a workflow command |
+
+**Workflow: startTask()**
+
+```
+1. Find Trello card by Task ID
+2. Verify card is in valid list (Inbox/Backlog/ToDo)
+3. Create Git branch feature/Task_N from main
+4. Move card to InProgress
+5. Add comment to card with branch name
+```
+
+**Workflow: completeTask()**
+
+```
+1. Find Trello card by Task ID
+2. Verify card is in valid list (not already in Review/Done)
+3. Create PR from feature/Task_N to main
+4. Move card to Review
+5. Add comment to card with PR link
+```
+
+### Fuzzy Matching
+
+**Supported Task ID Formats:**
+- `Task_123`, `task-123`, `Task 123`
+- `#123`
+- `задача 123`, `задачу №123`
+- `тикет 123`
+
+**START Action Keywords (Russian/English):**
+- выполняю, начинаю, приступаю, беру в работу
+- взял, взяла, начал, начала
+- start, starting, taking, begin, working on
+
+**COMPLETE Action Keywords:**
+- завершил, завершила, закончил, закончила
+- готов, готова, сделал, сделала
+- finished, completed, done, ready
+
+**CANCEL Action Keywords:**
+- отменяю, отказываюсь, бросаю, отмена
+- cancel, abort, drop
+
+### Trello List Order
+
+The service uses list order for validation:
+
+```
+1. Inbox      ─┐
+2. Backlog    ─┼─ Can START from here
+3. ToDo       ─┘
+4. InProgress ─── Working state
+5. Review     ─── After COMPLETE
+6. Done       ─── Final state
+```
+
+### API Endpoint
+
+**POST /api/v2/tech-support/workflow**
+
+```json
+// Request
+{
+  "query": "Выполняю задачу Task_123",
+  "action": "START",           // optional
+  "taskId": "Task_123",        // optional
+  "githubOwner": "owner",      // optional
+  "githubRepo": "repo",        // optional
+  "trelloBoardId": "board-id"  // optional
+}
+
+// Response (success)
+{
+  "success": true,
+  "taskId": "Task_123",
+  "action": "START",
+  "trelloResult": {
+    "success": true,
+    "cardId": "card-id",
+    "cardName": "Task_123: Fix authentication bug",
+    "fromList": "ToDo",
+    "toList": "InProgress",
+    "cardUrl": "https://trello.com/c/...",
+    "commentAdded": true
+  },
+  "githubResult": {
+    "success": true,
+    "branchName": "feature/Task_123",
+    "branchCreated": true,
+    "branchAlreadyExists": false
+  },
+  "message": "Задача Task_123 взята в работу. Ветка feature/Task_123 создана."
+}
+```
+
+### Error Handling
+
+The service handles partial failures gracefully:
+
+```kotlin
+// If GitHub fails after Trello success
+if (trelloResult.success && !githubResult.success) {
+    // Report partial success, don't rollback Trello
+    return TaskWorkflowResult(
+        success = false,
+        message = "Trello OK, but GitHub failed: ${githubResult.error}",
+        trelloResult = trelloResult,
+        githubResult = githubResult,
+        errors = listOf(githubResult.error ?: "GitHub error")
+    )
+}
+```
+
+### Environment Variables
+
+```env
+# Required for Task Workflow
+TRELLO_SUPPORT_BOARD_ID=board-id
+GITHUB_DEFAULT_OWNER=owner
+GITHUB_DEFAULT_REPO=repo
+GITHUB_TOKEN=ghp_xxx
+TRELLO_API_KEY=xxx
+TRELLO_TOKEN=xxx
+```
+
+### Integration with TechSupportService
+
+The workflow is triggered before AI classification:
+
+```kotlin
+// In TechSupportService.processRequest()
+if (taskWorkflowService.isWorkflowQuery(request.query)) {
+    return processWorkflowRequest(request, startTime)
+}
+// Otherwise, proceed with normal classification
+```

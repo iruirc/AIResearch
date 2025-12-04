@@ -792,3 +792,299 @@ rai support --server http://your-server:8080 "query"
 1. Reduce `maxRagResults` and `maxTrelloResults`
 2. Use faster AI model
 3. Disable unused integrations (`--no-rag` or `--no-trello`)
+
+---
+
+## Task Workflow
+
+### Overview
+
+Task Workflow автоматически синхронизирует задачи между Trello и GitHub. Используйте естественные языковые команды для управления задачами.
+
+### Supported Commands
+
+**Start Task (START):**
+- "Выполняю задачу Task_123"
+- "Начинаю работу над Task_123"
+- "Беру в работу тикет #123"
+- "Starting Task_123"
+- "Working on task 123"
+
+**Complete Task (COMPLETE):**
+- "Завершил задачу Task_123"
+- "Готово Task_123"
+- "Закончил работу над #123"
+- "Finished Task_123"
+- "Completed task 123"
+
+**Cancel Task (CANCEL):**
+- "Отменяю задачу Task_123"
+- "Cancel Task_123"
+
+---
+
+### Scenario 14: Starting a Task
+
+**User Story**: As a developer, I want to start working on a task, automatically creating a Git branch and updating Trello.
+
+**Web UI:**
+1. Enable Tech Support mode
+2. Type: "Выполняю задачу Task_48"
+3. System automatically:
+   - Finds card Task_48 in Trello
+   - Creates branch `feature/Task_48` from main
+   - Moves card to InProgress
+   - Adds comment with branch name
+
+**CLI:**
+```bash
+rai support "Выполняю задачу Task_48"
+```
+
+**API:**
+```bash
+curl -X POST http://localhost:8080/api/v2/tech-support/workflow \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Выполняю задачу Task_48"}'
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+✅ Задача Task_48 взята в работу!
+
+Trello:
+  - Карточка: Task_48: Implement user authentication
+  - Перемещено: ToDo → InProgress
+  - Комментарий добавлен: "Started work. Branch: feature/Task_48"
+
+GitHub:
+  - Ветка создана: feature/Task_48
+  - База: main
+
+Suggested Actions:
+  1. 🌿 Open Branch: feature/Task_48
+     URL: https://github.com/owner/repo/tree/feature/Task_48
+
+  2. 👀 View Card: Task_48
+     URL: https://trello.com/c/xxx
+```
+
+---
+
+### Scenario 15: Completing a Task
+
+**User Story**: As a developer, I want to mark a task as complete, automatically creating a PR and updating Trello.
+
+**CLI:**
+```bash
+rai support "Завершил задачу Task_48"
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+✅ Задача Task_48 завершена!
+
+Trello:
+  - Карточка: Task_48: Implement user authentication
+  - Перемещено: InProgress → Review
+  - Комментарий добавлен: "Task completed. PR: #123"
+
+GitHub:
+  - PR создан: #123
+  - feature/Task_48 → main
+  - URL: https://github.com/owner/repo/pull/123
+
+Suggested Actions:
+  1. 🔀 View Pull Request: #123
+     URL: https://github.com/owner/repo/pull/123
+
+  2. 👀 View Card: Task_48
+     URL: https://trello.com/c/xxx
+```
+
+---
+
+### Scenario 16: Task Workflow with Existing Branch
+
+**User Story**: The branch already exists from a previous session.
+
+**CLI:**
+```bash
+rai support "Начинаю Task_48"
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+✅ Задача Task_48 взята в работу!
+
+Trello:
+  - Карточка перемещена в InProgress
+  - Комментарий добавлен
+
+GitHub:
+  - Ветка feature/Task_48 уже существует
+  - Используется существующая ветка
+
+Note: Branch already existed, using existing branch.
+```
+
+---
+
+### Scenario 17: Task Workflow Error Handling
+
+**User Story**: The task card is not found in Trello.
+
+**CLI:**
+```bash
+rai support "Выполняю задачу Task_999"
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+❌ Не удалось выполнить workflow
+
+Ошибка: Карточка с Task_999 не найдена в Trello
+
+Suggested Actions:
+  1. 📝 Create Card: Task_999
+     Create a new card for this task in Trello
+
+  2. 🔍 Search Tasks
+     Search for similar task names
+```
+
+---
+
+### Scenario 18: Task Already in Progress
+
+**User Story**: Trying to start a task that's already in progress.
+
+**CLI:**
+```bash
+rai support "Начинаю Task_48"  # Card already in InProgress
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+⚠️ Задача Task_48 уже в работе
+
+Карточка находится в списке: InProgress
+
+Нельзя начать задачу, которая уже выполняется.
+
+Suggested Actions:
+  1. ✅ Complete Task: Task_48
+     Mark this task as complete
+
+  2. 👀 View Card: Task_48
+     URL: https://trello.com/c/xxx
+```
+
+---
+
+### Scenario 19: Direct Workflow API Call
+
+**User Story**: Call workflow API with explicit parameters.
+
+**API:**
+```bash
+curl -X POST http://localhost:8080/api/v2/tech-support/workflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Start task",
+    "action": "START",
+    "taskId": "Task_48",
+    "githubOwner": "custom-owner",
+    "githubRepo": "custom-repo"
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "taskId": "Task_48",
+  "action": "START",
+  "trelloResult": {
+    "success": true,
+    "cardId": "abc123",
+    "cardName": "Task_48: Feature implementation",
+    "fromList": "ToDo",
+    "toList": "InProgress",
+    "cardUrl": "https://trello.com/c/abc123",
+    "commentAdded": true
+  },
+  "githubResult": {
+    "success": true,
+    "branchName": "feature/Task_48",
+    "branchCreated": true,
+    "branchAlreadyExists": false
+  },
+  "message": "Задача Task_48 взята в работу. Ветка feature/Task_48 создана."
+}
+```
+
+---
+
+### Task Workflow Configuration
+
+**Environment Variables:**
+```bash
+# Trello (required)
+TRELLO_SUPPORT_BOARD_ID=your-board-id
+TRELLO_API_KEY=your-api-key
+TRELLO_TOKEN=your-token
+
+# GitHub (required)
+GITHUB_DEFAULT_OWNER=your-github-owner
+GITHUB_DEFAULT_REPO=your-repo-name
+GITHUB_TOKEN=ghp_your_token
+```
+
+**Trello Board Structure:**
+Your Trello board must have lists in this order:
+1. Inbox
+2. Backlog
+3. ToDo
+4. InProgress
+5. Review
+6. Done
+
+**Card Naming Convention:**
+Cards should include Task ID in the name:
+- `Task_48: Implement feature`
+- `#48 Fix authentication bug`
+- `Task 48 - Update documentation`
+
+---
+
+### Task Workflow Troubleshooting
+
+**"Card not found":**
+- Check card name contains Task ID (Task_N, #N, etc.)
+- Verify TRELLO_SUPPORT_BOARD_ID is correct
+- Ensure Trello MCP server is connected
+
+**"Cannot start task from this list":**
+- Card must be in Inbox, Backlog, or ToDo
+- Cards in InProgress/Review/Done cannot be started
+
+**"Branch creation failed":**
+- Check GITHUB_TOKEN has repo permissions
+- Verify GITHUB_DEFAULT_OWNER and GITHUB_DEFAULT_REPO
+- Ensure GitHub MCP server is connected
+
+**"PR creation failed":**
+- Verify branch exists: `feature/Task_N`
+- Check for merge conflicts with main
+- Ensure GitHub token has PR create permissions
