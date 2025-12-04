@@ -1,5 +1,6 @@
 package com.researchai.services
 
+import com.researchai.data.mcp.MCPClientWrapper
 import com.researchai.data.mcp.MCPServerManager
 import com.researchai.domain.models.*
 import com.researchai.domain.models.techsupport.*
@@ -518,6 +519,40 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
     }
 
     /**
+     * Get list ID by name from Trello board
+     */
+    private suspend fun getListIdByName(trelloClient: MCPClientWrapper, boardId: String, listName: String): String? {
+        val result = trelloClient.callTool(
+            name = "get_lists",
+            arguments = buildJsonObject {
+                put("boardId", boardId)
+            }
+        )
+
+        if (!result.success) {
+            logger.warn("Failed to get lists: ${result.error}")
+            return null
+        }
+
+        val content = result.content.firstOrNull()?.text ?: return null
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val lists = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("lists") -> json["lists"]?.jsonArray
+                else -> null
+            } ?: return null
+
+            lists.firstOrNull { list ->
+                list.jsonObject["name"]?.jsonPrimitive?.content?.equals(listName, ignoreCase = true) == true
+            }?.jsonObject?.get("id")?.jsonPrimitive?.content
+        } catch (e: Exception) {
+            logger.warn("Failed to parse lists response: ${e.message}")
+            null
+        }
+    }
+
+    /**
      * Create a ticket in Trello
      */
     suspend fun createTicket(request: CreateTicketRequest): Result<CreateTicketResponse> {
@@ -528,13 +563,17 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             val boardId = request.boardId ?: config.defaultBoardId
                 ?: throw IllegalArgumentException("Board ID is required. Set TRELLO_SUPPORT_BOARD_ID env variable or provide boardId.")
 
-            logger.info("Creating ticket: ${request.title} on board: $boardId")
+            // Get list ID by name
+            val listId = getListIdByName(trelloClient, boardId, request.listName)
+                ?: throw IllegalArgumentException("List '${request.listName}' not found on board $boardId")
+
+            logger.info("Creating ticket: ${request.title} on board: $boardId, list: $listId (${request.listName})")
 
             val result = trelloClient.callTool(
-                name = "create_card",
+                name = "add_card_to_list",
                 arguments = buildJsonObject {
-                    put("board_id", boardId)
-                    put("list_name", request.listName)
+                    put("boardId", boardId)
+                    put("listId", listId)
                     put("name", request.title)
                     put("description", request.description)
                     if (request.labels.isNotEmpty()) {

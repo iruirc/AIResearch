@@ -404,13 +404,19 @@ export class TechSupportMode {
     }
 
     /**
-     * Escape string for use in JavaScript onclick handlers
-     * Uses JSON.stringify for proper escaping of all special characters
+     * Escape string for use in JavaScript onclick handlers with single quotes
+     * Uses JSON.stringify for proper escaping, then converts for single-quote context
      */
     escapeJs(text) {
         if (!text) return '';
         // JSON.stringify adds quotes, so we slice them off
-        return JSON.stringify(text).slice(1, -1);
+        let escaped = JSON.stringify(text).slice(1, -1);
+        // JSON.stringify escapes double quotes as \", but we use single quotes in onclick
+        // So we need to:
+        // 1. Unescape double quotes: \" -> "
+        // 2. Escape single quotes: ' -> \'
+        escaped = escaped.replace(/\\"/g, '"').replace(/'/g, "\\'");
+        return escaped;
     }
 }
 
