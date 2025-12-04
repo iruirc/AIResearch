@@ -212,6 +212,7 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
 
     /**
      * Fetch related tickets from Trello via MCP
+     * Uses get_lists + get_cards_by_list_id since search_cards is not available
      */
     private suspend fun fetchTrelloContext(
         query: String,
@@ -225,31 +226,64 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
                 return null
             }
 
-            // Search for cards
-            val searchResult = trelloClient.callTool(
-                name = "search_cards",
-                arguments = buildJsonObject {
-                    put("query", query)
-                    boardId?.let { put("board_id", it) }
-                    put("limit", maxResults)
-                }
-            )
-
-            if (!searchResult.success) {
-                logger.warn("Trello search failed: ${searchResult.error}")
+            val effectiveBoardId = boardId ?: config.defaultBoardId
+            if (effectiveBoardId == null) {
+                logger.warn("No board ID configured for Trello search")
                 return null
             }
 
-            val tickets = parseTicketsFromMCP(searchResult)
+            // Get all lists on the board
+            val listsResult = trelloClient.callTool(
+                name = "get_lists",
+                arguments = buildJsonObject {
+                    put("boardId", effectiveBoardId)
+                }
+            )
 
-            if (tickets.isEmpty()) {
+            if (!listsResult.success) {
+                logger.warn("Failed to get Trello lists: ${listsResult.error}")
+                return null
+            }
+
+            val lists = parseListsFromMCP(listsResult)
+            if (lists.isEmpty()) {
+                logger.info("No lists found on board")
+                return null
+            }
+
+            // Get cards from each list and filter by query
+            val allTickets = mutableListOf<TrelloTicketInfo>()
+            val queryWords = query.lowercase().split(Regex("\\s+")).filter { it.length > 2 }
+
+            for (list in lists) {
+                if (allTickets.size >= maxResults) break
+
+                val cardsResult = trelloClient.callTool(
+                    name = "get_cards_by_list_id",
+                    arguments = buildJsonObject {
+                        put("listId", list.id)
+                    }
+                )
+
+                if (cardsResult.success) {
+                    val cards = parseCardsFromListMCP(cardsResult, list.name)
+                    // Filter cards that match the query
+                    val matchingCards = cards.filter { card ->
+                        val cardText = "${card.cardName} ${card.description ?: ""}".lowercase()
+                        queryWords.any { word -> cardText.contains(word) }
+                    }
+                    allTickets.addAll(matchingCards.take(maxResults - allTickets.size))
+                }
+            }
+
+            if (allTickets.isEmpty()) {
                 logger.info("No related tickets found")
                 null
             } else {
-                logger.info("Found ${tickets.size} related tickets")
+                logger.info("Found ${allTickets.size} related tickets")
                 TicketContextResult(
-                    relatedTickets = tickets,
-                    formattedContext = formatTicketResults(tickets)
+                    relatedTickets = allTickets,
+                    formattedContext = formatTicketResults(allTickets)
                 )
             }
         } catch (e: Exception) {
@@ -257,6 +291,89 @@ Respond with ONLY the category name (e.g., "BUG_REPORT"), nothing else.
             null
         }
     }
+
+    /**
+     * Parse lists from MCP result
+     */
+    private fun parseListsFromMCP(result: com.researchai.domain.models.mcp.MCPToolCallResult): List<TrelloListInfo> {
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val lists = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("lists") -> json["lists"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            lists.mapNotNull { listJson ->
+                try {
+                    val list = listJson.jsonObject
+                    TrelloListInfo(
+                        id = list["id"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                        name = list["name"]?.jsonPrimitive?.content ?: "Unknown"
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse list: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse lists MCP response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Parse cards from list MCP result
+     */
+    private fun parseCardsFromListMCP(
+        result: com.researchai.domain.models.mcp.MCPToolCallResult,
+        listName: String
+    ): List<TrelloTicketInfo> {
+        val content = result.content.firstOrNull()?.text ?: return emptyList()
+
+        return try {
+            val json = Json.parseToJsonElement(content)
+            val cards = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("cards") -> json["cards"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            cards.mapNotNull { cardJson ->
+                try {
+                    val card = cardJson.jsonObject
+                    TrelloTicketInfo(
+                        cardId = card["id"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                        cardName = card["name"]?.jsonPrimitive?.content ?: "Untitled",
+                        listName = listName,
+                        description = card["desc"]?.jsonPrimitive?.contentOrNull,
+                        labels = card["labels"]?.jsonArray?.mapNotNull {
+                            it.jsonObject["name"]?.jsonPrimitive?.contentOrNull
+                        } ?: emptyList(),
+                        lastActivity = card["dateLastActivity"]?.jsonPrimitive?.contentOrNull,
+                        url = card["url"]?.jsonPrimitive?.contentOrNull
+                            ?: card["shortUrl"]?.jsonPrimitive?.contentOrNull
+                    )
+                } catch (e: Exception) {
+                    logger.debug("Failed to parse card from list: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to parse cards MCP response", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Simple data class for Trello list info
+     */
+    private data class TrelloListInfo(
+        val id: String,
+        val name: String
+    )
 
     /**
      * Parse tickets from MCP result
