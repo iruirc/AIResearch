@@ -438,8 +438,8 @@ export const modalsUI = {
         confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
 
         // Add new event listener
-        newConfirmButton.addEventListener('click', () => {
-            onConfirm(assistant.id);
+        newConfirmButton.addEventListener('click', async () => {
+            await onConfirm(assistant.id);
             this.closeModal('deleteAssistantModal');
         });
 
