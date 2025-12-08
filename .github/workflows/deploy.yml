@@ -19,6 +19,12 @@ jobs:
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          # Настройка keep-alive для долгих операций
+          cat >> ~/.ssh/config << EOF
+          Host *
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+          EOF
 
       - name: Deploy to server
         env:
