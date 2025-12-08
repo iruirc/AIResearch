@@ -799,7 +799,18 @@ rai support --server http://your-server:8080 "query"
 
 ### Overview
 
-Task Workflow автоматически синхронизирует задачи между Trello и GitHub. Используйте естественные языковые команды для управления задачами.
+Task Workflow обеспечивает **полную автоматизацию рабочего процесса разработчика** с синхронизацией между Trello, GitHub и AI-powered код-ревью. Управляйте всем жизненным циклом задачи через естественные языковые команды.
+
+### Full Workflow Pipeline
+
+```
+START → SYNC → COMPLETE → APPROVE
+
+[START]    "Беру Task_123"        → Создать ветку + показать связанные файлы (RAG)
+[SYNC]     "Синхронизируй Task_123" → Merge main в feature branch
+[COMPLETE] "Task_123 готов"       → Создать PR + автоматический AI код-ревью
+[APPROVE]  "Мержи Task_123"       → Merge PR + удалить ветку + карточка в Done
+```
 
 ### Supported Commands
 
@@ -810,12 +821,26 @@ Task Workflow автоматически синхронизирует задач
 - "Starting Task_123"
 - "Working on task 123"
 
+**Sync Task (SYNC):**
+- "Синхронизируй Task_123"
+- "Обнови ветку Task_123"
+- "Подтяни main в Task_123"
+- "Sync Task_123"
+- "Update branch Task_123"
+
 **Complete Task (COMPLETE):**
 - "Завершил задачу Task_123"
 - "Готово Task_123"
 - "Закончил работу над #123"
 - "Finished Task_123"
 - "Completed task 123"
+
+**Approve Task (APPROVE):**
+- "Task_123 approved"
+- "Мержи Task_123"
+- "Сливай Task_123"
+- "LGTM Task_123"
+- "Merge Task_123"
 
 **Cancel Task (CANCEL):**
 - "Отменяю задачу Task_123"
@@ -848,7 +873,7 @@ curl -X POST http://localhost:8080/api/v2/tech-support/workflow \
   -d '{"query": "Выполняю задачу Task_48"}'
 ```
 
-**Expected Response:**
+**Expected Response (with RAG context):**
 ```
 Query Type: [TASK_WORKFLOW]
 
@@ -863,6 +888,11 @@ GitHub:
   - Ветка создана: feature/Task_48
   - База: main
 
+📁 Связанные файлы:
+  • AuthService.kt
+  • LoginController.kt
+  • UserRepository.kt
+
 Suggested Actions:
   1. 🌿 Open Branch: feature/Task_48
      URL: https://github.com/owner/repo/tree/feature/Task_48
@@ -873,16 +903,56 @@ Suggested Actions:
 
 ---
 
+### Scenario 14.1: Syncing a Task Branch
+
+**User Story**: As a developer, I want to synchronize my feature branch with main to get latest changes.
+
+**CLI:**
+```bash
+rai support "Синхронизируй Task_48"
+```
+
+**API:**
+```bash
+curl -X POST http://localhost:8080/api/v2/tech-support/workflow \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Синхронизируй Task_48"}'
+```
+
+**Expected Response (success):**
+```
+Query Type: [TASK_WORKFLOW]
+
+✅ Ветка feature/Task_48 синхронизирована с main.
+
+GitHub:
+  - Merge: main → feature/Task_48
+  - Статус: Успешно
+```
+
+**Expected Response (conflicts):**
+```
+Query Type: [TASK_WORKFLOW]
+
+⚠️ Конфликты при синхронизации feature/Task_48 с main:
+  - AuthService.kt
+  - LoginController.kt
+
+Требуется ручное разрешение конфликтов.
+```
+
+---
+
 ### Scenario 15: Completing a Task
 
-**User Story**: As a developer, I want to mark a task as complete, automatically creating a PR and updating Trello.
+**User Story**: As a developer, I want to mark a task as complete, automatically creating a PR with AI code review and updating Trello.
 
 **CLI:**
 ```bash
 rai support "Завершил задачу Task_48"
 ```
 
-**Expected Response:**
+**Expected Response (with AI Code Review):**
 ```
 Query Type: [TASK_WORKFLOW]
 
@@ -898,12 +968,95 @@ GitHub:
   - feature/Task_48 → main
   - URL: https://github.com/owner/repo/pull/123
 
+🤖 AI Code Review:
+  - Оценка: 85/100
+  - Критических проблем: 0
+  - Важных замечаний: 2
+  - Предложений: 5
+  - Ревью опубликован как комментарий к PR
+
 Suggested Actions:
   1. 🔀 View Pull Request: #123
      URL: https://github.com/owner/repo/pull/123
 
   2. 👀 View Card: Task_48
      URL: https://trello.com/c/xxx
+```
+
+**Note:** AI Code Review выполняется автоматически при создании PR через PRReviewService в режиме STANDARD.
+
+---
+
+### Scenario 15.1: Approving a Task (Merge PR)
+
+**User Story**: As a reviewer, I want to approve and merge a completed task, automatically merging the PR, deleting the branch, and moving the card to Done.
+
+**CLI:**
+```bash
+rai support "Task_48 approved"
+# or
+rai support "Мержи Task_48"
+# or
+rai support "LGTM Task_48"
+```
+
+**API:**
+```bash
+curl -X POST http://localhost:8080/api/v2/tech-support/workflow \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Task_48 approved"}'
+```
+
+**Expected Response:**
+```
+Query Type: [TASK_WORKFLOW]
+
+✅ Задача Task_48 принята и смержена!
+
+Trello:
+  - Карточка: Task_48: Implement user authentication
+  - Перемещено: Review → Done
+  - Комментарий добавлен: "PR merged and task completed"
+
+GitHub:
+  - PR #123 merged (squash)
+  - Ветка feature/Task_48 удалена
+
+Suggested Actions:
+  1. 👀 View Card: Task_48
+     URL: https://trello.com/c/xxx
+
+  2. 🏠 View Repository
+     URL: https://github.com/owner/repo
+```
+
+**Expected Response (card not in Review):**
+```
+Query Type: [TASK_WORKFLOW]
+
+❌ Не удалось выполнить approve
+
+Ошибка: Карточка Task_48 не находится в списке Review
+Текущий список: InProgress
+
+Для approve карточка должна находиться в Review.
+
+Suggested Actions:
+  1. ✅ Complete Task First: Task_48
+     Move task to Review before approving
+```
+
+**Expected Response (PR not found):**
+```
+Query Type: [TASK_WORKFLOW]
+
+❌ Не удалось выполнить approve
+
+Ошибка: PR для ветки feature/Task_48 не найден
+
+Suggested Actions:
+  1. 🔀 Create PR: feature/Task_48 → main
+     Create a pull request first
 ```
 
 ---

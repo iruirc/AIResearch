@@ -1,6 +1,7 @@
 package com.researchai.services
 
 import com.researchai.data.mcp.MCPServerManager
+import com.researchai.domain.models.SearchResult
 import com.researchai.domain.models.techsupport.TechSupportConfig
 import com.researchai.domain.models.workflow.*
 import kotlinx.serialization.json.*
@@ -8,12 +9,17 @@ import org.slf4j.LoggerFactory
 
 /**
  * Service for handling task workflow operations:
- * - Start task: move Trello card to InProgress + create Git branch
- * - Complete task: move Trello card to Review + create PR
+ * - Start task: move Trello card to InProgress + create Git branch + show RAG context
+ * - Sync task: synchronize feature branch with main
+ * - Complete task: move Trello card to Review + create PR + auto code review
+ * - Approve task: merge PR + delete branch + move card to Done
+ * - Cancel task: move card back to ToDo
  */
 class TaskWorkflowService(
     private val mcpServerManager: MCPServerManager,
-    private val config: TechSupportConfig
+    private val config: TechSupportConfig,
+    private val prReviewService: PRReviewService? = null,
+    private val ragManager: RAGManager? = null
 ) {
     private val logger = LoggerFactory.getLogger(TaskWorkflowService::class.java)
 
@@ -33,11 +39,26 @@ class TaskWorkflowService(
             "start", "starting", "taking", "begin", "working on", "took"
         )
 
+        // Ключевые слова для определения действия SYNC
+        private val SYNC_KEYWORDS = listOf(
+            "синхронизируй", "синхронизация", "синхронизировать",
+            "обнови ветку", "обновить ветку", "обнови бранч",
+            "подтяни main", "подтянуть main", "подтяни мейн",
+            "sync", "synchronize", "update branch", "pull main", "merge main", "rebase"
+        )
+
         // Ключевые слова для определения действия COMPLETE
         private val COMPLETE_KEYWORDS = listOf(
             "завершил", "завершила", "закончил", "закончила", "готов", "готова",
             "сделал", "сделала", "выполнил", "выполнила", "готова", "сделана", "сделано",
             "finished", "completed", "done", "ready", "complete"
+        )
+
+        // Ключевые слова для определения действия APPROVE
+        private val APPROVE_KEYWORDS = listOf(
+            "одобрено", "апрув", "мержи", "сливай", "слить", "принято", "принять",
+            "смержи", "смержить", "замержи", "замержить",
+            "approved", "approve", "merge", "accept", "lgtm"
         )
 
         // Ключевые слова для определения действия CANCEL
@@ -72,7 +93,9 @@ class TaskWorkflowService(
         // 3. Выполнить соответствующий workflow
         return when (action) {
             TaskAction.START -> startTask(taskId, request)
+            TaskAction.SYNC -> syncTask(taskId, request)
             TaskAction.COMPLETE -> completeTask(taskId, request)
+            TaskAction.APPROVE -> approveTask(taskId, request)
             TaskAction.CANCEL -> cancelTask(taskId, request)
         }
     }
@@ -81,9 +104,10 @@ class TaskWorkflowService(
      * Начать работу над задачей:
      * 1. Найти карточку в Trello
      * 2. Проверить, что карточка левее InProgress
-     * 3. Создать ветку в GitHub
-     * 4. Переместить карточку в InProgress
-     * 5. Добавить комментарий
+     * 3. Получить RAG контекст (связанные файлы/задачи)
+     * 4. Создать ветку в GitHub
+     * 5. Переместить карточку в InProgress
+     * 6. Добавить комментарий
      */
     suspend fun startTask(taskId: String, request: TaskWorkflowRequest): TaskWorkflowResult {
         logger.info("Starting task: $taskId")
@@ -109,7 +133,15 @@ class TaskWorkflowService(
             )
         }
 
-        // 3. Создать ветку в GitHub
+        // 3. Получить RAG контекст (если доступен RAGManager)
+        var contextInfo: TaskContextInfo? = null
+
+        if (ragManager != null) {
+            logger.info("Fetching RAG context for task: $taskId")
+            contextInfo = fetchTaskContext(taskId, card.cardName)
+        }
+
+        // 4. Создать ветку в GitHub
         val branchName = "feature/$taskId"
         val githubResult = createBranchSafe(branchName, request)
 
@@ -122,7 +154,7 @@ class TaskWorkflowService(
             )
         }
 
-        // 4. Переместить карточку в InProgress
+        // 5. Переместить карточку в InProgress
         val trelloResult = moveCardToList(card, "InProgress", request.trelloBoardId)
 
         if (!trelloResult.success) {
@@ -134,13 +166,14 @@ class TaskWorkflowService(
                 action = TaskAction.START,
                 trelloResult = trelloResult,
                 githubResult = githubResult,
+                contextInfo = contextInfo,
                 message = "Частичный успех: ветка ${if (githubResult.branchAlreadyExists) "уже существует" else "создана"}, но карточка не перемещена: ${trelloResult.error}",
                 errors = listOf(trelloResult.error ?: "Ошибка Trello"),
                 wasRolledBack = false
             )
         }
 
-        // 5. Добавить комментарий в Trello
+        // 6. Добавить комментарий в Trello
         val branchStatus = if (githubResult.branchAlreadyExists) "использована существующая ветка" else "создана ветка"
         val comment = "Задача взята в работу. ${branchStatus.replaceFirstChar { it.uppercase() }} $branchName"
         val commentAdded = addCommentToCard(card.cardId, comment, request.trelloBoardId)
@@ -153,6 +186,22 @@ class TaskWorkflowService(
                 append("Ветка $branchName создана. ")
             }
             append("Карточка перемещена в InProgress.")
+
+            // Добавить информацию о контексте из RAG
+            contextInfo?.let { ctx ->
+                if (ctx.relatedFiles.isNotEmpty()) {
+                    append("\n\n📁 Связанные файлы:\n")
+                    ctx.relatedFiles.take(5).forEach { file ->
+                        append("  • $file\n")
+                    }
+                }
+                if (ctx.relatedTasks.isNotEmpty()) {
+                    append("\n🔗 Похожие задачи: ${ctx.relatedTasks.joinToString(", ")}")
+                }
+                ctx.suggestedApproach?.let { approach ->
+                    append("\n\n💡 Рекомендуемый подход:\n$approach")
+                }
+            }
         }
 
         logger.info("Task $taskId started successfully")
@@ -163,6 +212,7 @@ class TaskWorkflowService(
             action = TaskAction.START,
             trelloResult = trelloResult.copy(commentAdded = commentAdded),
             githubResult = githubResult,
+            contextInfo = contextInfo,
             message = message
         )
     }
@@ -172,8 +222,9 @@ class TaskWorkflowService(
      * 1. Найти карточку в Trello
      * 2. Проверить, что карточка левее Review
      * 3. Создать PR в GitHub
-     * 4. Переместить карточку в Review
-     * 5. Добавить комментарий с ссылкой на PR
+     * 4. Автоматический AI код-ревью
+     * 5. Переместить карточку в Review
+     * 6. Добавить комментарий с ссылкой на PR и результатом ревью
      */
     suspend fun completeTask(taskId: String, request: TaskWorkflowRequest): TaskWorkflowResult {
         logger.info("Completing task: $taskId")
@@ -213,7 +264,52 @@ class TaskWorkflowService(
             )
         }
 
-        // 4. Переместить карточку в Review
+        // 4. Автоматический AI код-ревью (если доступен PRReviewService)
+        var reviewSummary: ReviewSummaryInfo? = null
+
+        if (prReviewService != null && githubResult.prCreated && githubResult.prNumber != null) {
+            logger.info("Starting automatic code review for PR #${githubResult.prNumber}")
+
+            try {
+                val owner = request.githubOwner ?: config.defaultGithubOwner ?: ""
+                val repo = request.githubRepo ?: config.defaultGithubRepo ?: ""
+
+                val reviewRequest = com.researchai.domain.models.pr.PRReviewRequest(
+                    repositoryOwner = owner,
+                    repositoryName = repo,
+                    pullRequestNumber = githubResult.prNumber,
+                    reviewMode = com.researchai.domain.models.pr.ReviewMode.STANDARD,
+                    focusAreas = listOf(
+                        com.researchai.domain.models.pr.FocusArea.SECURITY,
+                        com.researchai.domain.models.pr.FocusArea.CODE_STYLE,
+                        com.researchai.domain.models.pr.FocusArea.KOTLIN_IDIOMS
+                    ),
+                    useRAG = true
+                )
+
+                val reviewResult = prReviewService.reviewPullRequest(reviewRequest)
+
+                reviewResult.onSuccess { result ->
+                    reviewSummary = ReviewSummaryInfo(
+                        overallScore = result.overallScore,
+                        criticalIssuesCount = result.summary.criticalIssues.size,
+                        importantIssuesCount = result.summary.importantIssues.size,
+                        suggestionsCount = result.summary.suggestions.size,
+                        reviewUrl = result.pullRequestUrl
+                    )
+
+                    // Постить ревью как комментарий к PR
+                    prReviewService.postReviewAsComment(result)
+                    logger.info("Code review completed: score=${result.overallScore}")
+                }.onFailure { error ->
+                    logger.warn("Code review failed, continuing without it: ${error.message}")
+                }
+            } catch (e: Exception) {
+                logger.warn("Code review error, continuing without it: ${e.message}")
+            }
+        }
+
+        // 5. Переместить карточку в Review
         val trelloResult = moveCardToList(card, "Review", request.trelloBoardId)
 
         if (!trelloResult.success) {
@@ -225,18 +321,32 @@ class TaskWorkflowService(
                 action = TaskAction.COMPLETE,
                 trelloResult = trelloResult,
                 githubResult = githubResult,
+                reviewResult = reviewSummary,
                 message = "Частичный успех: PR #${githubResult.prNumber} создан, но карточка не перемещена: ${trelloResult.error}",
                 errors = listOf(trelloResult.error ?: "Ошибка Trello"),
                 wasRolledBack = false
             )
         }
 
-        // 5. Добавить комментарий в Trello с ссылкой на PR
+        // 6. Добавить комментарий в Trello с ссылкой на PR и результатом ревью
         val prLink = githubResult.prUrl ?: "PR #${githubResult.prNumber}"
-        val comment = "Задача завершена. Создан PR: $prLink"
+        val reviewInfo = reviewSummary?.let { review ->
+            "\n\n🔍 AI Code Review: ${review.overallScore}/100" +
+            (if (review.criticalIssuesCount > 0) " (⚠️ ${review.criticalIssuesCount} critical)" else "")
+        } ?: ""
+        val comment = "Задача завершена. Создан PR: $prLink$reviewInfo"
         val commentAdded = addCommentToCard(card.cardId, comment, request.trelloBoardId)
 
-        val message = "Задача $taskId завершена. PR #${githubResult.prNumber} создан, карточка перемещена в Review."
+        val message = buildString {
+            append("Задача $taskId завершена. PR #${githubResult.prNumber} создан")
+            reviewSummary?.let { review ->
+                append(", AI Review: ${review.overallScore}/100")
+                if (review.criticalIssuesCount > 0) {
+                    append(" (⚠️ ${review.criticalIssuesCount} critical)")
+                }
+            }
+            append(", карточка перемещена в Review.")
+        }
 
         logger.info("Task $taskId completed successfully")
 
@@ -246,6 +356,7 @@ class TaskWorkflowService(
             action = TaskAction.COMPLETE,
             trelloResult = trelloResult.copy(commentAdded = commentAdded),
             githubResult = githubResult,
+            reviewResult = reviewSummary,
             message = message
         )
     }
@@ -286,6 +397,134 @@ class TaskWorkflowService(
         )
     }
 
+    /**
+     * Синхронизировать ветку задачи с main:
+     * 1. Проверить наличие ветки
+     * 2. Выполнить merge main -> feature branch
+     * 3. Вернуть информацию о конфликтах
+     */
+    suspend fun syncTask(taskId: String, request: TaskWorkflowRequest): TaskWorkflowResult {
+        logger.info("Syncing task: $taskId")
+
+        val branchName = "feature/$taskId"
+
+        // 1. Проверить существование ветки
+        val branchExists = checkBranchExists(branchName, request)
+        if (!branchExists) {
+            return errorResult(
+                "Ветка $branchName не найдена. Сначала выполните START для задачи.",
+                taskId = taskId,
+                action = TaskAction.SYNC
+            )
+        }
+
+        // 2. Выполнить синхронизацию через GitHub MCP
+        val syncResult = mergeBranches("main", branchName, request)
+
+        val message = if (syncResult.hasConflicts) {
+            "⚠️ Конфликты при синхронизации $branchName с main:\n" +
+            syncResult.conflictingFiles.joinToString("\n") { "  - $it" } +
+            "\nТребуется ручное разрешение конфликтов."
+        } else if (syncResult.success) {
+            "✅ Ветка $branchName синхронизирована с main."
+        } else {
+            "❌ Ошибка синхронизации: ветки уже синхронизированы или произошла ошибка."
+        }
+
+        return TaskWorkflowResult(
+            success = syncResult.success && !syncResult.hasConflicts,
+            taskId = taskId,
+            action = TaskAction.SYNC,
+            githubResult = GithubActionResult(
+                success = syncResult.success && !syncResult.hasConflicts,
+                branchName = branchName,
+                syncResult = syncResult
+            ),
+            message = message
+        )
+    }
+
+    /**
+     * Принять задачу (после ревью):
+     * 1. Найти PR для ветки
+     * 2. Merge PR
+     * 3. Удалить feature branch
+     * 4. Переместить карточку в Done
+     */
+    suspend fun approveTask(taskId: String, request: TaskWorkflowRequest): TaskWorkflowResult {
+        logger.info("Approving task: $taskId")
+
+        // 1. Найти карточку в Trello
+        val card = findCardByTaskId(taskId, request.trelloBoardId)
+        if (card == null) {
+            return errorResult("Задача $taskId не найдена в Trello", taskId = taskId, action = TaskAction.APPROVE)
+        }
+
+        // 2. Проверить позицию карточки (должна быть в Review или правее, но не в Done)
+        val cardPosition = getListPosition(card.listName)
+        val reviewPosition = getListPosition("Review")
+        val donePosition = getListPosition("Done")
+
+        if (cardPosition < reviewPosition) {
+            return errorResult(
+                "Задача $taskId ещё не в Review (текущий статус: ${card.listName}). Сначала выполните COMPLETE.",
+                taskId = taskId,
+                action = TaskAction.APPROVE
+            )
+        }
+
+        if (cardPosition >= donePosition) {
+            return errorResult(
+                "Задача $taskId уже завершена (статус: ${card.listName}).",
+                taskId = taskId,
+                action = TaskAction.APPROVE
+            )
+        }
+
+        // 3. Найти и смержить PR
+        val branchName = "feature/$taskId"
+        val prInfo = findPullRequestByBranch(branchName, request)
+
+        if (prInfo == null || prInfo.number == null) {
+            return errorResult(
+                "PR для ветки $branchName не найден. Возможно, задача не была завершена через COMPLETE.",
+                taskId = taskId,
+                action = TaskAction.APPROVE
+            )
+        }
+
+        val mergeResult = mergePullRequest(prInfo.number!!, request)
+
+        if (!mergeResult.success) {
+            return errorResult(
+                "Ошибка при merge PR #${prInfo.number}: ${mergeResult.error}",
+                taskId = taskId,
+                action = TaskAction.APPROVE,
+                githubResult = mergeResult
+            )
+        }
+
+        // 4. Удалить feature branch
+        val branchDeleted = deleteBranch(branchName, request)
+
+        // 5. Переместить карточку в Done
+        val trelloResult = moveCardToList(card, "Done", request.trelloBoardId)
+
+        // 6. Добавить комментарий
+        val comment = "✅ Задача завершена! PR #${prInfo.number} смержен" +
+                (if (branchDeleted) ", ветка удалена." else ".")
+        addCommentToCard(card.cardId, comment, request.trelloBoardId)
+
+        return TaskWorkflowResult(
+            success = true,
+            taskId = taskId,
+            action = TaskAction.APPROVE,
+            trelloResult = trelloResult,
+            githubResult = mergeResult.copy(branchDeleted = branchDeleted),
+            message = "🎉 Задача $taskId завершена! PR #${prInfo.number} смержен, карточка перемещена в Done."
+        )
+    }
+
     // ==================== Вспомогательные методы ====================
 
     /**
@@ -323,7 +562,9 @@ class TaskWorkflowService(
 
         return when {
             START_KEYWORDS.any { lowerQuery.contains(it) } -> TaskAction.START
+            SYNC_KEYWORDS.any { lowerQuery.contains(it) } -> TaskAction.SYNC
             COMPLETE_KEYWORDS.any { lowerQuery.contains(it) } -> TaskAction.COMPLETE
+            APPROVE_KEYWORDS.any { lowerQuery.contains(it) } -> TaskAction.APPROVE
             CANCEL_KEYWORDS.any { lowerQuery.contains(it) } -> TaskAction.CANCEL
             else -> null
         }
@@ -342,7 +583,7 @@ class TaskWorkflowService(
                 lowerQuery.contains("#")
 
         // И одно из ключевых слов действия
-        val hasActionKeyword = (START_KEYWORDS + COMPLETE_KEYWORDS + CANCEL_KEYWORDS)
+        val hasActionKeyword = (START_KEYWORDS + SYNC_KEYWORDS + COMPLETE_KEYWORDS + APPROVE_KEYWORDS + CANCEL_KEYWORDS)
             .any { lowerQuery.contains(it) }
 
         return hasTaskMention && hasActionKeyword
@@ -712,6 +953,202 @@ class TaskWorkflowService(
         }
     }
 
+    /**
+     * Проверить существование ветки
+     */
+    private suspend fun checkBranchExists(branchName: String, request: TaskWorkflowRequest): Boolean {
+        val owner = request.githubOwner ?: config.defaultGithubOwner ?: return false
+        val repo = request.githubRepo ?: config.defaultGithubRepo ?: return false
+
+        val githubClient = mcpServerManager.getClient(config.githubMcpServerId) ?: return false
+
+        return try {
+            val result = githubClient.callTool("list_branches", buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+            })
+
+            if (!result.success) return false
+
+            val branches = parseBranchesResponse(result.content.firstOrNull()?.text)
+            branches.any { it.equals(branchName, ignoreCase = true) }
+        } catch (e: Exception) {
+            logger.error("Error checking branch existence: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Синхронизация веток (merge source -> target)
+     * Использует GitHub API для создания merge commit
+     */
+    private suspend fun mergeBranches(
+        sourceBranch: String,
+        targetBranch: String,
+        request: TaskWorkflowRequest
+    ): BranchSyncResult {
+        val owner = request.githubOwner ?: config.defaultGithubOwner
+        val repo = request.githubRepo ?: config.defaultGithubRepo
+
+        if (owner == null || repo == null) {
+            return BranchSyncResult(success = false)
+        }
+
+        val githubClient = mcpServerManager.getClient(config.githubMcpServerId)
+        if (githubClient == null) {
+            return BranchSyncResult(success = false)
+        }
+
+        return try {
+            // Попытка merge через GitHub MCP
+            // Используем merge_upstream или аналогичный инструмент если доступен
+            val result = githubClient.callTool("merge_upstream", buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("branch", targetBranch)
+            })
+
+            if (result.success) {
+                val content = result.content.firstOrNull()?.text
+                val mergeCommitSha = parseMergeResponse(content)
+                BranchSyncResult(
+                    success = true,
+                    hasConflicts = false,
+                    mergeCommitSha = mergeCommitSha
+                )
+            } else {
+                // Проверить на конфликты
+                val errorText = result.error?.lowercase() ?: ""
+                if (errorText.contains("conflict") || errorText.contains("merge")) {
+                    BranchSyncResult(
+                        success = false,
+                        hasConflicts = true,
+                        conflictingFiles = listOf("Конфликты обнаружены - требуется ручное разрешение")
+                    )
+                } else if (errorText.contains("already up to date") || errorText.contains("nothing to merge")) {
+                    // Ветки уже синхронизированы
+                    BranchSyncResult(success = true, hasConflicts = false)
+                } else {
+                    BranchSyncResult(success = false)
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Error merging branches: ${e.message}", e)
+            BranchSyncResult(success = false)
+        }
+    }
+
+    /**
+     * Найти PR по имени ветки
+     */
+    private suspend fun findPullRequestByBranch(
+        branchName: String,
+        request: TaskWorkflowRequest
+    ): PRInfo? {
+        val owner = request.githubOwner ?: config.defaultGithubOwner ?: return null
+        val repo = request.githubRepo ?: config.defaultGithubRepo ?: return null
+
+        val githubClient = mcpServerManager.getClient(config.githubMcpServerId) ?: return null
+
+        return try {
+            val result = githubClient.callTool("list_pull_requests", buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("state", "open")
+                put("head", "$owner:$branchName")
+            })
+
+            if (!result.success) return null
+
+            val prs = parsePRListResponse(result.content.firstOrNull()?.text)
+            prs.firstOrNull()
+        } catch (e: Exception) {
+            logger.error("Error finding PR by branch: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * Merge Pull Request
+     */
+    private suspend fun mergePullRequest(
+        prNumber: Int,
+        request: TaskWorkflowRequest
+    ): GithubActionResult {
+        val owner = request.githubOwner ?: config.defaultGithubOwner
+        val repo = request.githubRepo ?: config.defaultGithubRepo
+
+        if (owner == null || repo == null) {
+            return GithubActionResult(
+                success = false,
+                error = "GitHub owner/repo not configured"
+            )
+        }
+
+        val githubClient = mcpServerManager.getClient(config.githubMcpServerId)
+        if (githubClient == null) {
+            return GithubActionResult(
+                success = false,
+                error = "GitHub MCP not connected"
+            )
+        }
+
+        return try {
+            val result = githubClient.callTool("merge_pull_request", buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("pull_number", prNumber)
+                put("merge_method", "squash")
+            })
+
+            if (result.success) {
+                GithubActionResult(
+                    success = true,
+                    prNumber = prNumber,
+                    prMerged = true
+                )
+            } else {
+                GithubActionResult(
+                    success = false,
+                    prNumber = prNumber,
+                    error = result.error ?: "Merge failed"
+                )
+            }
+        } catch (e: Exception) {
+            logger.error("Error merging PR: ${e.message}", e)
+            GithubActionResult(
+                success = false,
+                prNumber = prNumber,
+                error = e.message ?: "Unknown error"
+            )
+        }
+    }
+
+    /**
+     * Удалить ветку
+     */
+    private suspend fun deleteBranch(
+        branchName: String,
+        request: TaskWorkflowRequest
+    ): Boolean {
+        val owner = request.githubOwner ?: config.defaultGithubOwner ?: return false
+        val repo = request.githubRepo ?: config.defaultGithubRepo ?: return false
+
+        val githubClient = mcpServerManager.getClient(config.githubMcpServerId) ?: return false
+
+        return try {
+            val result = githubClient.callTool("delete_branch", buildJsonObject {
+                put("owner", owner)
+                put("repo", repo)
+                put("branch", branchName)
+            })
+            result.success
+        } catch (e: Exception) {
+            logger.warn("Failed to delete branch $branchName: ${e.message}")
+            false
+        }
+    }
+
     // ==================== Парсинг ответов MCP ====================
 
     private data class TrelloList(val id: String, val name: String)
@@ -804,6 +1241,95 @@ class TaskWorkflowService(
         } catch (e: Exception) {
             logger.error("Error parsing PR response: ${e.message}")
             PRInfo(null, null)
+        }
+    }
+
+    private fun parsePRListResponse(content: String?): List<PRInfo> {
+        if (content.isNullOrBlank()) return emptyList()
+
+        return try {
+            val json = Json.parseToJsonElement(content)
+
+            val prsArray = when {
+                json is JsonArray -> json
+                json is JsonObject && json.containsKey("pull_requests") -> json["pull_requests"]?.jsonArray
+                json is JsonObject && json.containsKey("items") -> json["items"]?.jsonArray
+                else -> null
+            } ?: return emptyList()
+
+            prsArray.mapNotNull { element ->
+                val obj = element.jsonObject
+                val number = obj["number"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+                val url = obj["html_url"]?.jsonPrimitive?.contentOrNull
+                    ?: obj["url"]?.jsonPrimitive?.contentOrNull
+                PRInfo(number, url)
+            }
+        } catch (e: Exception) {
+            logger.error("Error parsing PR list response: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun parseMergeResponse(content: String?): String? {
+        if (content.isNullOrBlank()) return null
+
+        return try {
+            val json = Json.parseToJsonElement(content).jsonObject
+            json["sha"]?.jsonPrimitive?.contentOrNull
+                ?: json["merge_commit_sha"]?.jsonPrimitive?.contentOrNull
+        } catch (e: Exception) {
+            logger.error("Error parsing merge response: ${e.message}")
+            null
+        }
+    }
+
+    // ==================== RAG Context ====================
+
+    /**
+     * Получить контекст задачи из RAG (связанные файлы и задачи)
+     */
+    private suspend fun fetchTaskContext(taskId: String, cardName: String): TaskContextInfo? {
+        if (ragManager == null) return null
+
+        return try {
+            // Сформировать запросы для поиска
+            val queries = listOf(
+                cardName,
+                "$taskId implementation",
+                cardName.split(" ").filter { it.length > 3 }.joinToString(" ")
+            ).filter { it.isNotBlank() }.distinct()
+
+            val allResults = mutableSetOf<SearchResult>()
+
+            for (query in queries) {
+                val results = ragManager.searchRelevantContext(
+                    query = query,
+                    topK = 5,
+                    minScore = 0.5f
+                )
+                allResults.addAll(results)
+            }
+
+            if (allResults.isEmpty()) {
+                logger.info("No RAG context found for task: $taskId")
+                return null
+            }
+
+            // Извлечь файлы из результатов
+            val relatedFiles = allResults
+                .mapNotNull { it.sourceFileName }
+                .distinct()
+                .take(10)
+
+            logger.info("Found ${relatedFiles.size} related files for task: $taskId")
+
+            TaskContextInfo(
+                relatedFiles = relatedFiles,
+                relatedTasks = emptyList() // TODO: можно добавить поиск похожих задач в Trello
+            )
+        } catch (e: Exception) {
+            logger.warn("Failed to fetch RAG context for task $taskId: ${e.message}")
+            null
         }
     }
 

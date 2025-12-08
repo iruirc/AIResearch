@@ -8,7 +8,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class TaskAction {
     START,      // Начать работу над задачей
+    SYNC,       // Синхронизировать ветку с main
     COMPLETE,   // Завершить задачу
+    APPROVE,    // Принять PR и смержить
     CANCEL      // Отменить работу над задачей
 }
 
@@ -61,10 +63,26 @@ data class GithubActionResult(
     val branchName: String? = null,
     val branchCreated: Boolean = false,
     val branchAlreadyExists: Boolean = false,
+    val branchDeleted: Boolean = false,
     val prNumber: Int? = null,
     val prUrl: String? = null,
     val prCreated: Boolean = false,
+    val prMerged: Boolean = false,
+    val syncResult: BranchSyncResult? = null,
     val error: String? = null
+)
+
+/**
+ * Результат синхронизации веток
+ */
+@Serializable
+data class BranchSyncResult(
+    val success: Boolean,
+    val hasConflicts: Boolean = false,
+    val conflictingFiles: List<String> = emptyList(),
+    val commitsAhead: Int = 0,
+    val commitsBehind: Int = 0,
+    val mergeCommitSha: String? = null
 )
 
 /**
@@ -77,9 +95,33 @@ data class TaskWorkflowResult(
     val action: TaskAction,
     val trelloResult: TrelloActionResult? = null,
     val githubResult: GithubActionResult? = null,
+    val reviewResult: ReviewSummaryInfo? = null,
+    val contextInfo: TaskContextInfo? = null,
     val message: String,
     val errors: List<String> = emptyList(),
     val wasRolledBack: Boolean = false
+)
+
+/**
+ * Краткая информация о код-ревью
+ */
+@Serializable
+data class ReviewSummaryInfo(
+    val overallScore: Int,
+    val criticalIssuesCount: Int,
+    val importantIssuesCount: Int,
+    val suggestionsCount: Int,
+    val reviewUrl: String? = null
+)
+
+/**
+ * Контекст задачи из RAG
+ */
+@Serializable
+data class TaskContextInfo(
+    val relatedFiles: List<String> = emptyList(),
+    val relatedTasks: List<String> = emptyList(),
+    val suggestedApproach: String? = null
 )
 
 /**

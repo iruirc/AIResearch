@@ -169,7 +169,9 @@ class AppModule(
     val taskWorkflowService: com.researchai.services.TaskWorkflowService by lazy {
         com.researchai.services.TaskWorkflowService(
             mcpServerManager = mcpServerManager,
-            config = techSupportConfig
+            config = techSupportConfig,
+            prReviewService = prReviewService,
+            ragManager = ragManager
         )
     }
 

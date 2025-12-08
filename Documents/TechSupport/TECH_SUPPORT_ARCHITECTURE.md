@@ -628,14 +628,25 @@ val trelloContext = try {
 
 ### Overview
 
-The Task Workflow feature enables automated synchronization between Trello task management and GitHub branch/PR workflow. Users can start and complete tasks using natural language commands.
+The Task Workflow feature enables **full developer workflow automation** with synchronization between Trello task management, GitHub branch/PR workflow, and AI-powered code review. Users can manage the entire task lifecycle using natural language commands.
+
+### Full Workflow Pipeline
+
+```
+START → SYNC → COMPLETE → APPROVE
+
+[START]    "Беру Task_123"      → Create branch + show RAG context
+[SYNC]     "Синхронизируй"      → Merge main into feature branch
+[COMPLETE] "Task_123 готов"     → Create PR + auto code review
+[APPROVE]  "Merge Task_123"     → Merge PR + delete branch + Done
+```
 
 ### Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                     User Query                                │
-│  "Выполняю задачу Task_123" / "Завершил Task_123"            │
+│  "Беру Task_123" / "Синхронизируй" / "Готов" / "Мержи"       │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -650,31 +661,34 @@ The Task Workflow feature enables automated synchronization between Trello task 
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │  processWorkflow()                                      │  │
 │  │    ├── extractTaskId()      → Fuzzy Task_N matching    │  │
-│  │    ├── detectAction()       → START/COMPLETE/CANCEL    │  │
+│  │    ├── detectAction()       → START/SYNC/COMPLETE/     │  │
+│  │    │                           APPROVE/CANCEL          │  │
 │  │    └── execute action:                                  │  │
-│  │         ├── startTask()     → Create branch + move card │  │
-│  │         ├── completeTask()  → Create PR + move card     │  │
+│  │         ├── startTask()     → Branch + RAG context     │  │
+│  │         ├── syncTask()      → Merge main → feature     │  │
+│  │         ├── completeTask()  → PR + AI code review      │  │
+│  │         ├── approveTask()   → Merge PR + delete branch │  │
 │  │         └── cancelTask()    → Return card to ToDo       │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
-          │                              │
-          ▼                              ▼
-┌─────────────────────┐      ┌─────────────────────────────────┐
-│     Trello MCP      │      │          GitHub MCP             │
-│  - move_card        │      │  - create_branch                │
-│  - get_lists        │      │  - create_pull_request          │
-│  - get_cards_by_id  │      │  - list_branches                │
-│  - add_comment      │      │                                 │
-└─────────────────────┘      └─────────────────────────────────┘
+          │              │              │              │
+          ▼              ▼              ▼              ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ Trello MCP  │  │ GitHub MCP  │  │ PRReview    │  │ RAGManager  │
+│ - move_card │  │ - branch    │  │ Service     │  │ - context   │
+│ - comment   │  │ - PR/merge  │  │ - review    │  │ - files     │
+└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
 ```
 
 ### Domain Models (`TaskWorkflowModels.kt`)
 
 ```kotlin
-// Action types
+// Action types - Full workflow pipeline
 enum class TaskAction {
-    START,     // Start working on task
-    COMPLETE,  // Complete task and create PR
+    START,     // Start working on task (branch + RAG context)
+    SYNC,      // Synchronize branch with main
+    COMPLETE,  // Complete task (PR + auto code review)
+    APPROVE,   // Merge PR and finish task
     CANCEL     // Cancel task and return to ToDo
 }
 
@@ -688,98 +702,189 @@ data class TaskWorkflowRequest(
     val trelloBoardId: String? = null     // Override Trello board
 )
 
-// Result model
+// Result model - Extended with review and context info
 data class TaskWorkflowResult(
     val success: Boolean,
     val taskId: String,
     val action: TaskAction,
     val trelloResult: TrelloActionResult? = null,
     val githubResult: GithubActionResult? = null,
+    val reviewResult: ReviewSummaryInfo? = null,   // Code review results
+    val contextInfo: TaskContextInfo? = null,       // RAG context
     val message: String,
     val errors: List<String> = emptyList(),
     val wasRolledBack: Boolean = false
 )
 
-// Trello operation result
-data class TrelloActionResult(
-    val success: Boolean,
-    val cardId: String?,
-    val cardName: String?,
-    val fromList: String?,
-    val toList: String?,
-    val cardUrl: String?,
-    val commentAdded: Boolean,
-    val error: String? = null
-)
-
-// GitHub operation result
+// GitHub operation result - Extended
 data class GithubActionResult(
     val success: Boolean,
-    val branchName: String?,
-    val branchCreated: Boolean,
-    val branchAlreadyExists: Boolean,
+    val branchName: String? = null,
+    val branchCreated: Boolean = false,
+    val branchAlreadyExists: Boolean = false,
+    val branchDeleted: Boolean = false,            // For APPROVE
     val prNumber: Int? = null,
     val prUrl: String? = null,
     val prCreated: Boolean = false,
+    val prMerged: Boolean = false,                 // For APPROVE
+    val syncResult: BranchSyncResult? = null,      // For SYNC
     val error: String? = null
+)
+
+// Branch synchronization result
+data class BranchSyncResult(
+    val success: Boolean,
+    val hasConflicts: Boolean = false,
+    val conflictingFiles: List<String> = emptyList(),
+    val commitsAhead: Int = 0,
+    val commitsBehind: Int = 0,
+    val mergeCommitSha: String? = null
+)
+
+// Code review summary
+data class ReviewSummaryInfo(
+    val overallScore: Int,
+    val criticalIssuesCount: Int,
+    val importantIssuesCount: Int,
+    val suggestionsCount: Int,
+    val reviewUrl: String? = null
+)
+
+// RAG context for task
+data class TaskContextInfo(
+    val relatedFiles: List<String> = emptyList(),
+    val relatedTasks: List<String> = emptyList(),
+    val suggestedApproach: String? = null
 )
 ```
 
 ### TaskWorkflowService
+
+**Constructor Dependencies:**
+
+```kotlin
+class TaskWorkflowService(
+    private val mcpServerManager: MCPServerManager,
+    private val config: TechSupportConfig,
+    private val prReviewService: PRReviewService? = null,  // For auto code review
+    private val ragManager: RAGManager? = null              // For context enrichment
+)
+```
 
 **Key Methods:**
 
 | Method | Description |
 |--------|-------------|
 | `processWorkflow()` | Main entry point, detects action and task ID |
-| `startTask()` | Creates Git branch + moves card to InProgress |
-| `completeTask()` | Creates PR to main + moves card to Review |
+| `startTask()` | Creates Git branch + shows RAG context (related files) |
+| `syncTask()` | Merges main into feature branch, detects conflicts |
+| `completeTask()` | Creates PR + runs auto AI code review |
+| `approveTask()` | Merges PR + deletes branch + moves card to Done |
 | `cancelTask()` | Returns card to ToDo |
 | `extractTaskId()` | Fuzzy matching for Task_N in user query |
-| `detectAction()` | Detects START/COMPLETE/CANCEL from keywords |
+| `detectAction()` | Detects START/SYNC/COMPLETE/APPROVE/CANCEL from keywords |
 | `isWorkflowQuery()` | Checks if query is a workflow command |
 
-**Workflow: startTask()**
+### Workflow Actions Detail
+
+**1. startTask() - Start working on task**
 
 ```
+Input: "Беру Task_123" / "Start task 123"
+
+Steps:
 1. Find Trello card by Task ID
 2. Verify card is in valid list (Inbox/Backlog/ToDo)
-3. Create Git branch feature/Task_N from main
-4. Move card to InProgress
-5. Add comment to card with branch name
+3. Fetch RAG context (related files from codebase)
+4. Create Git branch feature/Task_N from main
+5. Move card to InProgress
+6. Add comment to card with branch name
+
+Output:
+- Branch: feature/Task_123 created
+- Card: moved to InProgress
+- Context: related files shown (if RAG enabled)
 ```
 
-**Workflow: completeTask()**
+**2. syncTask() - Synchronize with main**
 
 ```
+Input: "Синхронизируй Task_123" / "Sync task 123"
+
+Steps:
+1. Verify branch feature/Task_N exists
+2. Merge main into feature branch via GitHub MCP
+3. Detect and report conflicts if any
+
+Output:
+- Success: "Branch synchronized with main"
+- Conflicts: "Conflicts detected in: file1.kt, file2.kt"
+```
+
+**3. completeTask() - Complete task with PR and code review**
+
+```
+Input: "Task_123 готов" / "Complete task 123"
+
+Steps:
 1. Find Trello card by Task ID
-2. Verify card is in valid list (not already in Review/Done)
+2. Verify card position (not already in Review/Done)
 3. Create PR from feature/Task_N to main
-4. Move card to Review
-5. Add comment to card with PR link
+4. Run automatic AI code review (via PRReviewService)
+5. Post review as PR comment
+6. Move card to Review
+7. Add comment to card with PR link and review summary
+
+Output:
+- PR: #45 created
+- Review: Score 85/100, 0 critical, 2 suggestions
+- Card: moved to Review
 ```
 
-### Fuzzy Matching
+**4. approveTask() - Merge PR and finish**
 
-**Supported Task ID Formats:**
-- `Task_123`, `task-123`, `Task 123`
-- `#123`
-- `задача 123`, `задачу №123`
-- `тикет 123`
+```
+Input: "Task_123 approved" / "Merge task 123"
 
-**START Action Keywords (Russian/English):**
-- выполняю, начинаю, приступаю, беру в работу
-- взял, взяла, начал, начала
-- start, starting, taking, begin, working on
+Steps:
+1. Find Trello card in Review
+2. Find PR by branch name
+3. Merge PR (squash)
+4. Delete feature branch
+5. Move card to Done
+6. Add completion comment
 
-**COMPLETE Action Keywords:**
+Output:
+- PR: merged
+- Branch: feature/Task_123 deleted
+- Card: moved to Done
+```
+
+### Action Keywords
+
+**START Keywords (Russian/English):**
+- выполняю, начинаю, приступаю, беру в работу, беру
+- взял, взяла, начал, начала, приступил
+- start, starting, taking, begin, working on, took
+
+**SYNC Keywords:**
+- синхронизируй, синхронизация, синхронизировать
+- обнови ветку, обновить ветку, подтяни main
+- sync, synchronize, update branch, pull main, merge main, rebase
+
+**COMPLETE Keywords:**
 - завершил, завершила, закончил, закончила
-- готов, готова, сделал, сделала
-- finished, completed, done, ready
+- готов, готова, сделал, сделала, выполнил
+- finished, completed, done, ready, complete
 
-**CANCEL Action Keywords:**
+**APPROVE Keywords:**
+- одобрено, апрув, мержи, сливай, слить, принято
+- смержи, смержить, замержи, замержить
+- approved, approve, merge, accept, lgtm
+
+**CANCEL Keywords:**
 - отменяю, отказываюсь, бросаю, отмена
-- cancel, abort, drop
+- cancel, abort, drop, cancelled
 
 ### Trello List Order
 
@@ -789,9 +894,9 @@ The service uses list order for validation:
 1. Inbox      ─┐
 2. Backlog    ─┼─ Can START from here
 3. ToDo       ─┘
-4. InProgress ─── Working state
-5. Review     ─── After COMPLETE
-6. Done       ─── Final state
+4. InProgress ─── Working state (after START)
+5. Review     ─── After COMPLETE (PR created)
+6. Done       ─── After APPROVE (PR merged)
 ```
 
 ### API Endpoint
@@ -809,7 +914,7 @@ The service uses list order for validation:
   "trelloBoardId": "board-id"  // optional
 }
 
-// Response (success)
+// Response - START with RAG context
 {
   "success": true,
   "taskId": "Task_123",
@@ -829,9 +934,67 @@ The service uses list order for validation:
     "branchCreated": true,
     "branchAlreadyExists": false
   },
-  "message": "Задача Task_123 взята в работу. Ветка feature/Task_123 создана."
+  "contextInfo": {
+    "relatedFiles": ["AuthService.kt", "LoginController.kt"],
+    "relatedTasks": []
+  },
+  "message": "Задача Task_123 взята в работу. Ветка feature/Task_123 создана.\n\n📁 Связанные файлы:\n  • AuthService.kt\n  • LoginController.kt"
+}
+
+// Response - COMPLETE with code review
+{
+  "success": true,
+  "taskId": "Task_123",
+  "action": "COMPLETE",
+  "trelloResult": {...},
+  "githubResult": {
+    "success": true,
+    "branchName": "feature/Task_123",
+    "prNumber": 45,
+    "prUrl": "https://github.com/owner/repo/pull/45",
+    "prCreated": true
+  },
+  "reviewResult": {
+    "overallScore": 85,
+    "criticalIssuesCount": 0,
+    "importantIssuesCount": 2,
+    "suggestionsCount": 3,
+    "reviewUrl": "https://github.com/owner/repo/pull/45"
+  },
+  "message": "Задача Task_123 завершена. PR #45 создан, AI Review: 85/100, карточка перемещена в Review."
+}
+
+// Response - APPROVE
+{
+  "success": true,
+  "taskId": "Task_123",
+  "action": "APPROVE",
+  "trelloResult": {
+    "success": true,
+    "fromList": "Review",
+    "toList": "Done"
+  },
+  "githubResult": {
+    "success": true,
+    "prNumber": 45,
+    "prMerged": true,
+    "branchDeleted": true
+  },
+  "message": "🎉 Задача Task_123 завершена! PR #45 смержен, карточка перемещена в Done."
 }
 ```
+
+### GitHub MCP Tools Used
+
+| Tool | Action | Description |
+|------|--------|-------------|
+| `list_branches` | START, SYNC | Check if branch exists |
+| `create_branch` | START | Create feature branch |
+| `merge_upstream` | SYNC | Merge main into feature |
+| `create_pull_request` | COMPLETE | Create PR |
+| `list_pull_requests` | APPROVE | Find PR by branch |
+| `merge_pull_request` | APPROVE | Merge PR |
+| `delete_branch` | APPROVE | Delete feature branch |
 
 ### Error Handling
 
@@ -840,7 +1003,6 @@ The service handles partial failures gracefully:
 ```kotlin
 // If GitHub fails after Trello success
 if (trelloResult.success && !githubResult.success) {
-    // Report partial success, don't rollback Trello
     return TaskWorkflowResult(
         success = false,
         message = "Trello OK, but GitHub failed: ${githubResult.error}",
@@ -848,6 +1010,17 @@ if (trelloResult.success && !githubResult.success) {
         githubResult = githubResult,
         errors = listOf(githubResult.error ?: "GitHub error")
     )
+}
+
+// Code review failure doesn't block PR creation
+if (prReviewService != null && githubResult.prCreated) {
+    try {
+        val reviewResult = prReviewService.reviewPullRequest(...)
+        // ... handle success
+    } catch (e: Exception) {
+        logger.warn("Code review failed, continuing without it")
+        // Continue without review
+    }
 }
 ```
 
