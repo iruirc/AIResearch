@@ -276,8 +276,8 @@ All providers are configured via environment variables (loaded from `.env` file)
 
 **Tech Support** (optional):
 - `TRELLO_SUPPORT_BOARD_ID` - Trello board ID for ticket management
-- `GITHUB_DEFAULT_OWNER` - Default GitHub repository owner for Tech Support queries
-- `GITHUB_DEFAULT_REPO` - Default GitHub repository name for Tech Support queries
+- `GH_DEFAULT_OWNER` - Default GitHub repository owner for Tech Support queries
+- `GH_DEFAULT_REPO` - Default GitHub repository name for Tech Support queries
 
 **GitHub MCP** (required for GitHub features):
 - `GITHUB_TOKEN` - GitHub personal access token for GitHub MCP server
@@ -569,8 +569,8 @@ When a query is classified as `GITHUB_INFO`, the service fetches context from Gi
 
 **Configuration:**
 ```env
-GITHUB_DEFAULT_OWNER=owner-name
-GITHUB_DEFAULT_REPO=repo-name
+GH_DEFAULT_OWNER=owner-name
+GH_DEFAULT_REPO=repo-name
 GITHUB_TOKEN=ghp_xxx
 ```
 

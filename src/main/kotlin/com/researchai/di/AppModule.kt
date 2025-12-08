@@ -159,8 +159,8 @@ class AppModule(
             defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID") ?: System.getProperty("TRELLO_SUPPORT_BOARD_ID"),
             trelloMcpServerId = "trello",
             // GitHub settings - must be configured via .env or system properties
-            defaultGithubOwner = System.getenv("GITHUB_DEFAULT_OWNER") ?: System.getProperty("GITHUB_DEFAULT_OWNER"),
-            defaultGithubRepo = System.getenv("GITHUB_DEFAULT_REPO") ?: System.getProperty("GITHUB_DEFAULT_REPO"),
+            defaultGithubOwner = System.getenv("GH_DEFAULT_OWNER") ?: System.getProperty("GH_DEFAULT_OWNER"),
+            defaultGithubRepo = System.getenv("GH_DEFAULT_REPO") ?: System.getProperty("GH_DEFAULT_REPO"),
             githubMcpServerId = "github"
         )
     }

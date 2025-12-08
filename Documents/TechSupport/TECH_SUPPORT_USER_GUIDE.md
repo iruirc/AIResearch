@@ -29,8 +29,8 @@ TRELLO_API_KEY=your-api-key
 TRELLO_TOKEN=your-token
 
 # GitHub integration (optional)
-GITHUB_DEFAULT_OWNER=your-github-owner
-GITHUB_DEFAULT_REPO=your-repo-name
+GH_DEFAULT_OWNER=your-github-owner
+GH_DEFAULT_REPO=your-repo-name
 GITHUB_TOKEN=ghp_your_token
 ```
 
@@ -56,8 +56,8 @@ GITHUB_TOKEN=ghp_your_token
 
 | Operation | Default Value | Override |
 |-----------|---------------|----------|
-| **Repository Owner** | `GITHUB_DEFAULT_OWNER` env variable | `githubOwner` in request |
-| **Repository Name** | `GITHUB_DEFAULT_REPO` env variable | `githubRepo` in request |
+| **Repository Owner** | `GH_DEFAULT_OWNER` env variable | `githubOwner` in request |
+| **Repository Name** | `GH_DEFAULT_REPO` env variable | `githubRepo` in request |
 
 > **Note:** GitHub integration requires `GITHUB_TOKEN` environment variable for authentication.
 
@@ -776,8 +776,8 @@ rai support --server http://your-server:8080 "query"
 2. Verify `GITHUB_TOKEN` is set in `.env`
 3. Ensure GitHub MCP server is registered in `mcp-config.json`
 4. For repository access, configure:
-   - `GITHUB_DEFAULT_OWNER` - Repository owner (e.g., `iruirc`)
-   - `GITHUB_DEFAULT_REPO` - Repository name (e.g., `AIResearch`)
+   - `GH_DEFAULT_OWNER` - Repository owner (e.g., `iruirc`)
+   - `GH_DEFAULT_REPO` - Repository name (e.g., `AIResearch`)
 5. Check health endpoint: `GET /api/v2/tech-support/health`
 
 ### "No relevant context found"
@@ -1199,8 +1199,8 @@ TRELLO_API_KEY=your-api-key
 TRELLO_TOKEN=your-token
 
 # GitHub (required)
-GITHUB_DEFAULT_OWNER=your-github-owner
-GITHUB_DEFAULT_REPO=your-repo-name
+GH_DEFAULT_OWNER=your-github-owner
+GH_DEFAULT_REPO=your-repo-name
 GITHUB_TOKEN=ghp_your_token
 ```
 
@@ -1234,7 +1234,7 @@ Cards should include Task ID in the name:
 
 **"Branch creation failed":**
 - Check GITHUB_TOKEN has repo permissions
-- Verify GITHUB_DEFAULT_OWNER and GITHUB_DEFAULT_REPO
+- Verify GH_DEFAULT_OWNER and GH_DEFAULT_REPO
 - Ensure GitHub MCP server is connected
 
 **"PR creation failed":**

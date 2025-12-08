@@ -568,8 +568,8 @@ val techSupportConfig: TechSupportConfig by lazy {
         defaultBoardId = System.getenv("TRELLO_SUPPORT_BOARD_ID"),
         trelloMcpServerId = "trello",
         // GitHub settings - must be configured via .env
-        defaultGithubOwner = System.getenv("GITHUB_DEFAULT_OWNER"),
-        defaultGithubRepo = System.getenv("GITHUB_DEFAULT_REPO"),
+        defaultGithubOwner = System.getenv("GH_DEFAULT_OWNER"),
+        defaultGithubRepo = System.getenv("GH_DEFAULT_REPO"),
         githubMcpServerId = "github"
     )
 }
@@ -1029,8 +1029,8 @@ if (prReviewService != null && githubResult.prCreated) {
 ```env
 # Required for Task Workflow
 TRELLO_SUPPORT_BOARD_ID=board-id
-GITHUB_DEFAULT_OWNER=owner
-GITHUB_DEFAULT_REPO=repo
+GH_DEFAULT_OWNER=owner
+GH_DEFAULT_REPO=repo
 GITHUB_TOKEN=ghp_xxx
 TRELLO_API_KEY=xxx
 TRELLO_TOKEN=xxx

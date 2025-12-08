@@ -811,7 +811,7 @@ class TaskWorkflowService(
             return GithubActionResult(
                 success = false,
                 branchName = branchName,
-                error = "GitHub owner/repo not configured (set GITHUB_DEFAULT_OWNER and GITHUB_DEFAULT_REPO)"
+                error = "GitHub owner/repo not configured (set GH_DEFAULT_OWNER and GH_DEFAULT_REPO)"
             )
         }
 

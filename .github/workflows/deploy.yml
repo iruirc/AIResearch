@@ -26,10 +26,23 @@ jobs:
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USER: ${{ secrets.VPS_USER }}
+          # API Keys
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_ORGANIZATION_ID: ${{ secrets.OPENAI_ORGANIZATION_ID }}
+          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          # Authentication
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
+          # MCP Servers
           GH_TOKEN_MCP: ${{ secrets.GH_TOKEN_MCP }}
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          # Tech Support
+          TRELLO_SUPPORT_BOARD_ID: ${{ secrets.TRELLO_SUPPORT_BOARD_ID }}
+          GH_DEFAULT_OWNER: ${{ secrets.GH_DEFAULT_OWNER }}
+          GH_DEFAULT_REPO: ${{ secrets.GH_DEFAULT_REPO }}
         run: |
           # Копируем файлы проекта на сервер
           rsync -avz --delete \
@@ -48,14 +61,40 @@ jobs:
 
             # Создаём .env файл с секретами
             cat > .env << EOF
+          # API Keys
           CLAUDE_API_KEY=${CLAUDE_API_KEY}
           OPENAI_API_KEY=${OPENAI_API_KEY}
+          OPENAI_ORGANIZATION_ID=${OPENAI_ORGANIZATION_ID}
+          OPENAI_PROJECT_ID=${OPENAI_PROJECT_ID}
           HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-          GITHUB_TOKEN=${GH_TOKEN_MCP}
+
+          # Authentication
+          ENABLE_AUTH=false
+          JWT_SECRET=${JWT_SECRET}
+          JWT_ISSUER=researchai
+          JWT_AUDIENCE=researchai-users
+          JWT_REALM=ResearchAI
+          JWT_EXPIRATION_MS=3600000
+          ALLOWED_EMAILS=${ALLOWED_EMAILS}
+
+          # PostgreSQL
           ENABLE_POSTGRES=true
+          DATABASE_URL=jdbc:postgresql://postgres:5432/researchai
           DATABASE_NAME=researchai
           DATABASE_USER=researchai
           DATABASE_PASSWORD=researchai_prod_secret
+          DATABASE_PORT=5432
+          DATABASE_POOL_SIZE=10
+
+          # MCP Servers
+          GITHUB_TOKEN=${GH_TOKEN_MCP}
+          TRELLO_API_KEY=${TRELLO_API_KEY}
+          TRELLO_TOKEN=${TRELLO_TOKEN}
+
+          # Tech Support
+          TRELLO_SUPPORT_BOARD_ID=${TRELLO_SUPPORT_BOARD_ID}
+          GH_DEFAULT_OWNER=${GH_DEFAULT_OWNER}
+          GH_DEFAULT_REPO=${GH_DEFAULT_REPO}
           EOF
 
             # Останавливаем старые контейнеры
