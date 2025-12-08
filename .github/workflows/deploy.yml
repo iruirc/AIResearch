@@ -1,0 +1,76 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          GH_TOKEN_MCP: ${{ secrets.GH_TOKEN_MCP }}
+        run: |
+          # Копируем файлы проекта на сервер
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude '.idea' \
+            --exclude 'build' \
+            --exclude '.gradle' \
+            --exclude 'data' \
+            --exclude '.env' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./ ${USER}@${HOST}:/opt/researchai/
+
+          # Создаём .env файл и запускаем контейнеры
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${USER}@${HOST} << ENDSSH
+            cd /opt/researchai
+
+            # Создаём .env файл с секретами
+            cat > .env << EOF
+          CLAUDE_API_KEY=${CLAUDE_API_KEY}
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+          GITHUB_TOKEN=${GH_TOKEN_MCP}
+          ENABLE_POSTGRES=true
+          DATABASE_NAME=researchai
+          DATABASE_USER=researchai
+          DATABASE_PASSWORD=researchai_prod_secret
+          EOF
+
+            # Останавливаем старые контейнеры
+            docker compose down || true
+
+            # Собираем и запускаем новые
+            docker compose build --no-cache
+            docker compose up -d
+
+            # Проверяем статус
+            sleep 10
+            docker compose ps
+            docker compose logs --tail=50
+          ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 15
+          curl -f http://${{ secrets.VPS_HOST }}:8080/health || exit 1
+          echo "✅ Deployment successful!"
