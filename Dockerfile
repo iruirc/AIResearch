@@ -8,10 +8,12 @@ WORKDIR /app
 # Копируем только файлы для загрузки зависимостей (для кэширования слоев)
 COPY gradle gradle
 COPY gradlew .
-COPY settings.gradle.kts .
 COPY build.gradle.kts .
 COPY gradle.properties .
 COPY gradle/libs.versions.toml gradle/
+
+# Создаём settings.gradle.kts без researchai-cli (CLI не нужен на сервере)
+RUN echo 'rootProject.name = "ResearchAI"\n\ndependencyResolutionManagement {\n    repositories {\n        mavenCentral()\n    }\n}' > settings.gradle.kts
 
 # Загружаем зависимости (этот слой будет закэширован)
 RUN ./gradlew dependencies --no-daemon
