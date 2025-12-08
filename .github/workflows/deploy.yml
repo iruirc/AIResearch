@@ -20,7 +20,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           # Настройка keep-alive для долгих операций
-          echo -e "Host *\n  ServerAliveInterval 60\n  ServerAliveCountMax 10" >> ~/.ssh/config
+          printf "Host *\n  ServerAliveInterval 60\n  ServerAliveCountMax 10\n" >> ~/.ssh/config
 
       - name: Deploy to server
         env:
